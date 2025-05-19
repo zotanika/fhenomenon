@@ -1,0 +1,47 @@
+#!/bin/sh
+set -eu
+# Find the base commit of the current commit, make a diff (including unstaged changes), and do clang-tidy,
+# assuming that the `build` directory has `compile_commands.json`.
+#
+# Usage:
+#
+# ./tidy
+# emit errors
+#
+# ./tidy -quiet -fix -j 4
+# emit errors with minimum messages, automatically fix them if possible with 4 threads
+#
+TOP_LEVEL_DIR=$(git rev-parse --show-toplevel)
+cd ${TOP_LEVEL_DIR}
+
+# Add header file entries to compile_commands.json for clang-tidy.
+#
+# This is a workaround for clang-tidy not finding proper compile flags for header files.
+# By default, cmake does not put header files in compile_commands.json.
+# For any header file, clang-tidy picks compilation flags from a source file that matches the header file's name
+# (see https://clangd.llvm.org/design/compile-commands#commands-for-header-files).
+# This leads to errors when a header file has no corresponding .cpp file: the header is tidied with default (no) flag;
+# by adding the headers to compilation database using compdb, we expect the proper flags are added even for such headers.
+#
+# XXX(wk): Another workaround is that adding a .cpp (even if empty) file for every .hpp file so that clang-tidy can find a matching cpp file.
+# See those issues; this issue will likely be fixed in a future version of clang.
+# https://github.com/clangd/clangd/issues/123
+# https://github.com/clangd/clangd/issues/695
+#
+# Install compdb locally
+if ! [ -x .compdb/bin/compdb ]; then
+  pip install compdb -t .compdb
+fi
+# Run only if compile_commands.json does not have header entries.
+if grep ".hpp" build/compile_commands.json -q; then
+  echo "No need to add header entries.."
+else
+  echo "Adding header entries..."
+  COMPDB="python .compdb/compdb"
+  $COMPDB -p build list > temp 2>/dev/null
+  mv temp build/compile_commands.json
+fi
+
+# Compare with TARGET_SHA env variable. If not given, compare with the closest branching base.
+TARGET_SHA="${TARGET_SHA:-$(git merge-base HEAD origin/main)}"
+git diff "${TARGET_SHA}" -U0 | tools/clang-tidy-diff -path build "$@"  -extra-arg=-std=c++17

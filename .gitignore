@@ -1,0 +1,11 @@
+Doxyfile
+bin/
+build/
+dist/
+cmake/launch-cxx
+cmake/launch-cuda
+.vscode
+*.egg-info
+*.whl
+.cache/
+.compdb/

@@ -1,0 +1,82 @@
+
+---
+Checks:          '-*,
+                 bugprone-*,
+                 -bugprone-easily-swappable-parameters,
+                  performance-*,
+                  ccpcoreguidelines-*,
+                  misc-static-assert,
+                  misc-throw-by-value-catch-by-reference,
+                  misc-unconventional-assign-operator,
+                  misc-definitions-in-headers,
+                  misc-misplaced-const,
+                  misc-no-recursion,
+                  misc-non-copyable-objects,
+                  misc-redundant-expression,
+                  misc-non-private-member-variables-in-classes,
+                  modernize-*,
+                  -modernize-use-nodiscard,
+                  -modernize-use-trailing-return-type,
+                  -modernize-raw-string-literal,
+                  readability-*,
+                  -readability-braces-around-statements,
+                  -readability-uppercase-literal-suffix,
+                  -readability-isolate-declaration,
+                  -readability-avoid-const-params-in-decls'
+WarningsAsErrors: '*'
+
+CheckOptions:
+  - key:             readability-identifier-naming.ClassCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.ClassMemberCase
+    value:           lower_case
+  - key:             readability-identifier-naming.ConstexprVariableCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.EnumCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.EnumConstantCase
+    value:           aNy_CasE
+  - key:             readability-identifier-naming.FunctionCase
+    value:           camelBack
+  - key:             readability-identifier-naming.GlobalConstantCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.StaticConstantCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.StaticVariableCase
+    value:           lower_case
+  - key:             readability-identifier-naming.MacroDefinitionCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.MacroDefinitionIgnoredRegexp
+    value:           '^[A-Z]+(_[A-Z]+)*_$'
+  - key:             readability-identifier-naming.MemberCase
+    value:           lower_case
+    # XXX(wk): Because MemberCase, which should be applied, is not doing its job.
+  - key:             readability-identifier-naming.PrivateMemberCase
+    value:           lower_case
+  - key:             readability-identifier-naming.PrivateMemberSuffix
+    value:           _
+  - key:             readability-identifier-naming.PublicMemberSuffix
+    value:           ''
+  - key:             readability-identifier-naming.NamespaceCase
+    value:           aNy_CasE
+  - key:             readability-identifier-naming.ParameterCase
+    value:           lower_case
+  - key:             readability-identifier-naming.TypeAliasCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.TypedefCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.VariableCase
+    value:           lower_case
+  - key:             readability-identifier-naming.IgnoreMainLikeFunctions
+    value:           1
+  - key:             misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value:           1
+
+# XXX(wk): clang-tidy does not support exclusion (only inclusion is available) as of now; see
+# https://reviews.llvm.org/D34654.
+# Meanwhile, to exclude 3rd party headers, you have to specify the part of paths like:
+# HeaderFilterRegex: 'Example/(include|src|test)'
+HeaderFilterRegex: 'include/'
+AnalyzeTemporaryDtors: false
+FormatStyle:     file
+...
