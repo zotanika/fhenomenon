@@ -1,0 +1,77 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build"
+    },
+    {
+      "name": "release",
+      "displayName": "Release build",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "ci",
+      "inherits": "release",
+      "installDir": "${sourceDir}/build/install",
+      "cacheVariables": {
+        "BUILD_TEST": "ON",
+        "BUILD_DOCUMENTATION": "ON"
+      }
+    },
+    {
+      "name": "clang-ci",
+      "inherits": "ci",
+      "cacheVariables": {
+        "CMAKE_CUDA_COMPILER": "clang++-14",
+        "CMAKE_CXX_COMPILER": "clang++-14",
+        "CMAKE_C_COMPILER": "clang-14"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "configurePreset": "default"
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "configuration": "release",
+      "jobs": 8
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      },
+      "environment": {
+        "OMP_NUM_THREADS": "8"
+      }
+    },
+    {
+      "name": "all-test",
+      "inherits": "test-base",
+      "configurePreset": "ci",
+      "configuration": "release"
+    }
+  ]
+}
