@@ -1,172 +1,585 @@
-FHENOMENON
+# FHENOMENON: A Catalyst for Enabling Practical Fully Homomorphic Encryption Programming Model
+[Convergent Evolution: Why Secure Homomorphic Encryption Will Ressemble High-Performance GPU Computing](https://hackmd.io/f2N90VpeQiKtB4OOTOA-Zw)
+
+## Abstract
+
+Fully Homomorphic Encryption (FHE) enables computations on encrypted data without decryption, preserving privacy during processing. However, FHE's complexity and resource-intensive nature have limited its adoption. **Fhenomenon** proposes a C++ library framework that bridges this gap through a flexible, user-friendly interface abstracting FHE complexities while supporting multiple backend libraries and hardware acceleration. This note outlines the architectural vision, design principles, and implementation strategy for **Fhenomenon**, positioning it as a community-driven effort to democratize FHE adoption.
+
 ---
-## **1. Introduction**
-Fully Homomorphic Encryption (FHE) enables computations on encrypted data without decrypting it first, thus preserving data privacy during processing. Despite its powerful potential, FHE is complex and resource-intensive, making it challenging for widespread adoption. **Fhenomenon** is a C++ library designed to bridge this gap, providing a flexible, user-friendly interface that abstracts the complexities of FHE. This white paper outlines the architecture, design principles, and implementation details of **Fhenomenon**, highlighting how it simplifies FHE use while supporting a wide range of backend libraries and acceleration hardware.
 
-## **2. Objectives**
-The primary objectives of **Fhenomenon** are:
-- **Ease of Use**: Avoid cryptography-native APIs or terminologies, provide more intuitive APIs minimize the need for users to understand the underlying theoretical details of FHE.
-- **Flexibility**: Support multiple FHE libraries as backends through a common interface, enabling dynamic linking of external FHE libraries as plugins.
-- **Performance**: Leverage hardware acceleration and optimized scheduling to enhance the efficiency of FHE operations.
-- **Security**: Ensure robust key management.
+## 1. Introduction
 
-## 3. Requirements
-- The implementation of FHE cryptographic primitives can be outsourced to external libraries as well as **Fhenomenon**'s built-in implementation. Such actual FHE implementations are considered as `Backends` in **Fhenomenon**. Accordingly, the remaining parts that are not directly related to homomorphic encryption implementation can be referred to as `Frontend`.
-- Under assuming a common interface exists among various open-sourced FHE libraries, external libraries can be dynamically linked as plugins. In reality, the FHE ecosystem is not yet technologically mature enough to provide a standardized interface as a software product, so full support may be challenging for now. Of course, the built-in implementations are also based on this common interface and have an acceleration layer that delegates computational workloads to hardware accelerators.
-- When using this library, the user should be able to write code with minimal knowledge. For example, in `Compuon<T>`, `T` can be any basic C++ type such as `int`, `float`, `double`, or `complex`. By specifying the mathematical properties of the set that `Compuon<T>` should belong to at a desired point, `Compuon<T>` is mapped as an element of the set defined by the given properties. According to the mathematical context of FHE, mapping an array of plaintext data into a quotient ring polynomial form is called encryption.
-- For example, the code snippet `Compuon<int> a = 10; a.belong(rlwe::ckks::configA); a.belong(rlwe::bgv::configA);` means the programmer declares a message of an integer scalar 10, encrypts it with CKKS configA parameters (automatically padding remaining slots with 0), and then transcrypts the ciphertext with BGV configA parameters. `T` can be a plain C POD struct, and if using RLWE-based schemes (e.g., CKKS), each element of the struct can be compiled to map to each slot of a CKKS message. In other words, the user should not need to manually create their own class by inheriting the basic `Compuon<T>` class.
-- It supports a runtime detector that detects installed acceleration hardware in the system.
-- A scheduler consisting of several modules is also required. For example:
-    - `Receiver` collects frontend API calls from the user.
-    - `Scheduler` constructs a complete graph representing the relationships between operations and ciphertext nodes.
-    - `Strategy` provides a list of strategies to modify and optimize the scheduling graph in a manner similar to compiler passes, and serves as a framework that allows open-source community developers to add techniques to optimize homomorphic encryption operations, based on basic templates.
-    - `Dispatcher` dispatches computational workloads to appropriate devices, such as dispatching some subgraphs to specific accelerators (GPUs) and the rest to the CPU.
-    - One of the purposes of tracking operations in the scheduler is to facilitate defining coarse-grained parallel processing kernels, by fusing operations applied to a single ciphertext or bundling multiple ciphertexts involved in common operations, maximizing data reuse and minimizing data I/O by keeping loaded data in accelerators as much as possible. To achieve this, `Receiver` and `Scheduler` should build a graph that easily recognizes computational partitions per ciphertext object, accumulate operations along the partitions, and manage them based on the lifecycle of the ciphertext object until it expires.
-    - This functionality does not need to be as complex as a real compiler for programming languages, but a well-structured framework is needed to help developers add manually scheduled strategies according to well-defined templates (e.g., lambda functions) and generate bundles of computations to be dispatched to the backend.
-- The `BuiltinBackend` itself has an extended API list closely related to FHE libraries, unlike the basic frontend API that excludes cryptographic concepts as much as possible. This is similar to the general APIs typically provided by open-source FHE libraries (which `ExternalBackend` inherits and provides as is). The `BuiltinBackend` interface is an extended version of these basic APIs, with a much more extensive catalog of combinations to maximize parallel processing, such as fusing multiple operations and batching multiple ciphertexts. Naturally, some acceleration hardware may only partially support or not support these extended APIs at all; highly programmable GPUs may support all these extensions. Thus, the `BuiltinBackend` needs a delegate pattern to keep the hardware binding development process of the acceleration kernel independent of the `BuiltinBackend` development itself.
-- `ExternalBackend` receives the shared library file path from the user during object creation.
-- The frontend programming model should provide an intuitive interface for users. For instance, a Pythonic interface like `Session sess; { code block need to be scheduled }.run()` would be desirable. If the user calls an API outside the scope, it executes immediately; if called inside the scope, the code block is executed in a scheduling/optimization manner.
-- Just `.run()` should guarantee execution on the actual acceleration hardware. The user first decides whether to use the built-in or external library when creating the Backend object, which is then brought in as an argument to the `Session`.
-- The `Backend` should be designed as a singleton pattern because it represents the FHE system, making it intuitive for the user to perceive that the system environment is bound to FHE as a building block. Since the optimization strategy is determined by the type of Backend, the `Scheduler` also becomes a substructure of the `Backend`. Specifically, the `Scheduler` related methods in `Backend` are `virtual` and are concretely overridden in `BuiltinBackend` or `ExternalBackend`.
-- Setting scheme parameters directly can be quite cumbersome for the user, so the scheduler should determine the parameters for the code blocks written within the session scope, with this process hidden from the user.
-- Let's consider key management. In FHE schemes, the secret key must be kept hidden, and the public encryption key and evaluation keys are needed to preserve the algebraic structure of the distorted ciphertext through homomorphic operations. These public keys may be precomputed and stored before application execution or generated in real-time during the application's runtime; however, for performance reasons, it is assumed that key generation has been precomputed in a separate preparation phase and stored in storage before the application runs. The secret key, unlike other public keys, must be isolated in secure storage.
-- The paths to these keys should be recorded in a configuration file, which also defines a configuration binary (in JSON format or a lighter serialization solution) that contains various settings that may be necessary for the operation of the library. Additionally, a `Configuration` class that parses this file and specifies runtime settings is needed. It includes loaders that load keys into host memory or accelerator memory, and an IO scheduler that decides whether to load all keys at once for performance or load/unload them in real-time considering hardware constraints (e.g., memory size). Public encryption keys can be used within the `belong()` sequence of `Compuon`, and other evaluation keys can be used within the overloaded operator call sequence of `Compuon`.
-- Since the public evaluation keys provided by the `KeyManager` are used in RLWE homomorphic encryption schemes like CKKS to correct the distortions relative to the corresponding plaintext results after homomorphic operations (multiplication, rotation, complex conjugation), in some respects, they act as precomputed cheatsheets referenced during the computation process. This means the `KeyManager` must be integrated with the homomorphic encryption library under the actual computing `Backend`.
+Fully Homomorphic Encryption represents a paradigm shift in privacy-preserving computation, enabling third parties to process encrypted data without access to plaintext. Despite its transformative potential, FHE remains largely inaccessible due to:
 
-## **4. Architecture Overview**
-**Fhenomenon** is structured into two main components: the **Frontend** and the **Backend**. The **Frontend** offers a user-facing API that abstracts cryptographic complexities, while the **Backend** handles the actual FHE computations. The architecture supports dynamic integration of various FHE libraries through a common interface.
+- **Cryptographic complexity**: Users must understand various FHE schemes, parameter selection, and noise management
+- **Performance barriers**: FHE operations are computationally expensive, requiring specialized optimization
+- **Library fragmentation**: Multiple FHE libraries exist with incompatible interfaces, making portability difficult
+- **Hardware diversity**: Accelerators (GPUs, ASICs, FPGAs) require specialized integration
 
-## **4.1 Frontend**
-The frontend provides the primary interface for users, allowing them to define and manipulate encrypted entities with minimal cryptographic knowledge. Key components include:
-- **Compuon<T>**: A template class(derived from "_Compute + -on_" meaning a computational-capable atomic object) that allows basic C++ types (`int`, `float`, `double`, `complex`) to be encrypted and manipulated as FHE entities. The `Compuon<T>` class maps these types into their corresponding FHE forms based on specified mathematical properties.
-- **Session Management**: A Pythonic interface enables users to define code blocks within a session scope. Operations inside the session scope are scheduled and optimized, while those outside the scope are executed immediately. This model promotes a clear and straightforward user experience.
-- **Backend Selection**: Users can choose between built-in backends or external libraries during the creation of the backend object. This decision dictates how the library schedules and executes operations.
+**Fhenomenon** addresses these challenges through a unified architecture that separates user-facing APIs from cryptographic implementation, enabling:
 
-## **4.2 Backend**
-The backend manages the actual FHE operations, either through built-in implementations or by interfacing with external FHE libraries. Two types of backends are supported:
-- **BuiltinBackend**: Integrates deeply with the FHE library and offers extended APIs for enhanced parallel processing, including operation fusion and batching. A delegate pattern is used to separate hardware acceleration from core backend logic, allowing for independent development of acceleration kernels.
-- **ExternalBackend**: Allows for the dynamic loading of external FHE libraries via shared library paths specified by the user. This backend leverages a common FHE interface to maintain compatibility across different libraries.
+- **Intuitive programming**: Work with familiar C++ types (`int`, `double`, `std::complex`) through `Compuon<T>` without cryptographic knowledge
+- **Backend flexibility**: Support both built-in and external FHE libraries through a common interface
+- **Performance optimization**: A scheduler that builds operation graphs, fuses computations, and dispatches to accelerators
+- **Extensible framework**: Community-contributed optimization strategies and hardware acceleration modules
 
-## **5. Scheduler Design**
-The scheduler is a critical component of **Fhenomenon**, optimizing the execution of FHE operations to enhance performance. It consists of several submodules:
-- **Receiver**: Collects API calls from the frontend and prepares them for scheduling.
-- **Graph Construction**: Builds a directed graph representing the relationships between ciphertext nodes and operations. This graph serves as the basis for optimization and scheduling strategies.
-- **Strategy Module**: Provides a framework for optimization strategies, allowing developers to add new techniques using templates, such as lambda functions. This module aims to maximize data reuse and minimize data I/O, especially when utilizing acceleration hardware.
-- **Dispatcher**: Distributes computation tasks to appropriate devices, such as CPUs or GPUs, optimizing resource allocation and performance.
+This document describes the design **Fhenomenon** should realize through collaborative development.
 
-The scheduler is designed to facilitate coarse-grained parallel processing, recognizing computational partitions per ciphertext object and managing them based on their lifecycle. This approach allows **Fhenomenon** to bundle operations efficiently, reducing I/O overhead and maximizing the use of acceleration hardware.
+---
 
-## **6. Key Management**
-Key management is a crucial aspect of FHE, where public keys must be accessible, but secret keys need to remain secure. **Fhenomenon** addresses key management with a dedicated module:
-- **KeyManager**: Manages the loading and usage of cryptographic keys, ensuring that secret keys are securely isolated while public keys are available for encryption and evaluation operations. Keys are loaded from configuration files, typically defined in JSON format, which specify paths and settings for various keys.
-- **IO Scheduler**: Decides whether keys should be preloaded or managed in real-time, balancing performance needs with hardware constraints. This component ensures efficient use of memory and acceleration resources.
+## 2. Design Objectives
 
-## **7. Acceleration and Hardware Detection**
-To optimize performance, **Fhenomenon** includes a runtime detector that identifies available hardware accelerators (e.g., GPUs, ASICs). It uses a delegate pattern to bind hardware-specific acceleration kernels independently of the core backend logic, enabling flexible support for various hardware configurations.
+The primary objectives guiding **Fhenomenon**'s architecture are:
 
-## **8. Implementation Details**
+### 2.1 Ease of Use
+- **Cryptography-agnostic APIs**: Users work with standard C++ types and operators, never directly with ciphertexts or keys
+- **Intuitive semantics**: `Compuon<T>` behaves like a regular type, with encryption/decryption handled implicitly
+- **Minimal configuration**: Scheduler automatically determines FHE parameters based on computation requirements
 
-## **8.1 Common Interfaces**
-At the heart of **Fhenomenon** is a set of common interfaces that define the interaction between the frontend, backend, and scheduler components. These interfaces abstract the specifics of different FHE libraries, providing a unified API for users. Key interfaces include:
-- **Frontend Interface**: Defines the basic operations available to users, such as encryption, decryption, and transcryption of `Compuon<T>` objects.
-- **Backend Interface**: Outlines the operations required for different FHE backends, including initialization, execution of FHE operations, and interaction with hardware accelerators.
-- **Scheduler Interface**: Specifies the methods for constructing and optimizing the operation graph, dispatching tasks, and managing the lifecycle of ciphertext objects.
+### 2.2 Flexibility
+- **Backend abstraction**: Support multiple FHE libraries (SEAL, HElib, OpenFHE, etc.) through a common interface
+- **Plugin architecture**: External libraries loaded dynamically as shared libraries
+- **Scheme agnosticism**: Users can switch between CKKS, BGV, BFV, and other schemes transparently
 
-## **8.2 Backend Implementation**
-The **BuiltinBackend** extends the basic backend interface with additional APIs to maximize parallel processing. It uses a delegate pattern to manage hardware-specific acceleration, ensuring that the core backend remains agnostic to the details of the underlying hardware.
+### 2.3 Performance
+- **Operation fusion**: Scheduler identifies and fuses operations on the same ciphertext to reduce overhead
+- **Hardware acceleration**: Automatic detection and utilization of GPUs, ASICs, and specialized accelerators
+- **Data locality**: Minimize host-accelerator data movement by keeping ciphertexts in accelerator memory
 
-The **ExternalBackend** supports dynamic linking of external FHE libraries by loading shared library paths specified by the user. This backend conforms to the common backend interface, ensuring compatibility and ease of integration with various FHE libraries.
+### 2.4 Security
+- **Key isolation**: Secret keys remain isolated in secure storage; public keys managed through configuration
+- **Secure defaults**: Library enforces secure parameter choices and key management practices
+- **Side-channel resilience**: Design considerations for timing and memory-based side-channel attacks
 
-## **9. Example Usage**
-Below is an example illustrating how a user might interact with **Fhenomenon**:
+---
+
+## 3. Core Architecture
+
+**Fhenomenon** is structured into two primary layers: the **Frontend** (user-facing API) and the **Backend** (FHE implementation). This separation enables multiple backend implementations while maintaining a consistent user experience.
+
+### 3.1 Frontend Layer
+
+The frontend provides the primary interface for application developers, abstracting all cryptographic details.
+
+#### 3.1.1 Compuon<T>: The Computational Atom
+
+`Compuon<T>` (derived from "Compute + -on") is a template class representing an encrypted computational entity. The template parameter `T` can be any basic C++ type (`int`, `float`, `double`, `std::complex<T>`) or a Plain Old Data (POD) struct.
+
+**Design Philosophy**: Users declare values normally, then specify encryption context through `belong()`:
+
 ```cpp
+Compuon<int> a = 10;
+a.belong(rlwe::ckks::configA);  // Encrypts with CKKS scheme, configA parameters
+```
+
+Multiple `belong()` calls enable transcryption between schemes:
+
+```cpp
+Compuon<int> a = 10;
+a.belong(rlwe::ckks::configA);  // Encrypt with CKKS
+a.belong(rlwe::bgv::configB);   // Transcrypt to BGV
+```
+
+For POD structs using RLWE-based schemes (e.g., CKKS), each struct member maps to a slot in the underlying polynomial, enabling SIMD-like operations on encrypted arrays.
+
+**Operator Overloading**: `Compuon<T>` supports standard arithmetic operators (`+`, `-`, `*`, `/`, `=`) that automatically trigger homomorphic operations. The scheduler tracks these operations to build an optimization graph.
+
+#### 3.1.2 Session Management: Scoped Execution
+
+The `Session` class provides a Pythonic interface for defining code blocks that should be scheduled and optimized:
+
+```cpp
+auto backend = BuiltinBackend::Instance();
+Session sess(backend);
+
+sess.run([&]() {
+    Compuon<int> a = 10;
+    a.belong(rlwe::ckks::configA);
+    auto b = a * 2;  // Homomorphic multiplication
+    auto c = a + b;  // Homomorphic addition
+});
+```
+
+**Execution Model**:
+- **Outside session scope**: Operations execute immediately (useful for debugging, setup)
+- **Inside session scope**: Operations are collected, scheduled, optimized, and executed on acceleration hardware
+
+This dual-mode execution provides flexibility while ensuring performance-critical paths benefit from optimization.
+
+### 3.2 Backend Layer
+
+The backend manages actual FHE computations, either through built-in implementations or external libraries.
+
+#### 3.2.1 Backend Interface
+
+All backends implement a common interface defining:
+- Encryption/decryption operations
+- Homomorphic arithmetic (add, multiply)
+- Rotation and slot manipulation (for RLWE schemes)
+- Key management integration
+- Parameter generation and validation
+
+#### 3.2.2 BuiltinBackend
+
+The built-in backend provides:
+- **Extended APIs**: Fused operations (e.g., `multiplyAndRelinearize`, `rotateAndAdd`) that combine multiple FHE operations into single kernel calls
+- **Batching**: Operations on multiple ciphertexts bundled into batches for parallel execution
+- **Hardware abstraction**: Delegate pattern separates hardware-specific acceleration kernels from core backend logic
+
+The delegate pattern enables independent development of acceleration kernels for different hardware targets (NVIDIA GPUs, AMD GPUs, Intel FPGAs, etc.) without modifying the core backend.
+
+#### 3.2.3 ExternalBackend
+
+External backends load FHE libraries dynamically via shared library paths:
+
+```cpp
+auto backend = ExternalBackend::Create("/path/to/libfhe.so");
+```
+
+This enables:
+- **Library selection**: Users choose their preferred FHE library (SEAL, HElib, OpenFHE)
+- **Version flexibility**: Different library versions can coexist
+- **Gradual migration**: Applications can transition from external to built-in backends incrementally
+
+**Challenge**: The FHE ecosystem lacks a standardized interface. **Fhenomenon** should define a common interface specification that external libraries can implement, with adapters for popular libraries provided by the community.
+
+---
+
+## 4. Scheduler: The Optimization Engine
+
+The scheduler is the heart of **Fhenomenon**'s performance optimization, transforming a sequence of user operations into an optimized execution plan.
+
+### 4.1 Scheduler Architecture
+
+The scheduler consists of four primary components:
+
+#### 4.1.1 Receiver
+
+The `Receiver` intercepts all frontend API calls within a session scope, collecting:
+- Operation type (add, multiply, rotate, etc.)
+- Operands (ciphertext references)
+- Metadata (scalar values, rotation amounts, etc.)
+
+Operations are annotated with ciphertext lifecycle information to enable lifetime-based optimization.
+
+#### 4.1.2 Graph Construction
+
+The `Scheduler` builds a directed acyclic graph (DAG) representing:
+- **Nodes**: Ciphertexts (encrypted values) and operations
+- **Edges**: Data dependencies between operations
+- **Attributes**: Operation costs, data sizes, hardware preferences
+
+The graph enables:
+- **Dependency analysis**: Identify independent operations for parallel execution
+- **Ciphertext partitioning**: Group operations by ciphertext to enable fusion
+- **Lifecycle tracking**: Track when ciphertexts are created, used, and no longer needed
+
+#### 4.1.3 Strategy Framework
+
+The `Strategy` module provides a pluggable optimization framework, similar to compiler passes. Strategies modify the graph to:
+- **Fuse operations**: Combine multiple operations on the same ciphertext (e.g., multiply → relinearize → rotate)
+- **Batch operations**: Group independent operations for parallel execution
+- **Minimize data movement**: Schedule operations to keep data in accelerator memory
+- **Parameter optimization**: Adjust FHE parameters based on operation depth
+
+**Community Extensibility**: The framework should provide templates (e.g., lambda functions) enabling developers to contribute custom optimization strategies:
+
+```cpp
+class MyOptimizationStrategy : public Strategy {
+    Graph optimize(Graph g) override {
+        // Custom graph transformation
+        return g;
+    }
+};
+```
+
+#### 4.1.4 Dispatcher
+
+The `Dispatcher` executes the optimized graph by:
+- **Device selection**: Assign operations to CPUs, GPUs, or specialized accelerators based on availability and operation characteristics
+- **Kernel generation**: Generate or select appropriate acceleration kernels
+- **Memory management**: Allocate and manage ciphertext storage in host and accelerator memory
+- **Execution coordination**: Coordinate multi-device execution with proper synchronization
+
+### 4.2 Optimization Goals
+
+The scheduler aims to:
+1. **Maximize data reuse**: Keep ciphertexts in accelerator memory across multiple operations
+2. **Minimize I/O**: Reduce host-accelerator data transfers
+3. **Exploit parallelism**: Identify and execute independent operations concurrently
+4. **Fuse operations**: Combine operations to reduce intermediate ciphertext noise growth
+
+---
+
+## 5. Key Management
+
+FHE requires careful key management, as different keys serve different purposes:
+
+- **Secret Key**: Must remain secure and isolated; used only for decryption
+- **Public Encryption Key**: Used for encryption; can be shared
+- **Evaluation Keys**: Used during homomorphic operations (relinearization, rotation keys, etc.); can be large
+
+### 5.1 KeyManager Design
+
+The `KeyManager` handles:
+- **Key loading**: Load keys from secure storage (secret keys) or configuration (public/evaluation keys)
+- **Key lifecycle**: Track which keys are needed for current operations
+- **Memory management**: Decide whether to preload all keys or load/unload dynamically based on hardware constraints
+
+### 5.2 Configuration System
+
+A `Configuration` class parses JSON (or lighter serialization format) configuration files specifying:
+- Key file paths
+- Key storage locations (host memory, accelerator memory, secure enclave)
+- Runtime settings (preload strategy, memory limits, etc.)
+
+Example configuration:
+```json
+{
+  "keys": {
+    "secret": {
+      "path": "/secure/path/to/secret.key",
+      "storage": "secure_enclave"
+    },
+    "public": {
+      "path": "/config/public.key",
+      "storage": "host_memory"
+    },
+    "evaluation": {
+      "path": "/config/eval_keys/",
+      "storage": "accelerator_memory",
+      "preload": true
+    }
+  }
+}
+```
+
+### 5.3 IO Scheduler
+
+The IO scheduler balances performance and memory constraints:
+- **Preload strategy**: Load all evaluation keys at startup for maximum performance
+- **On-demand strategy**: Load keys only when needed, useful for memory-constrained systems
+- **Hybrid strategy**: Preload frequently-used keys, load others on-demand
+
+---
+
+## 6. Hardware Acceleration
+
+FHE operations are computationally intensive, making hardware acceleration essential for practical performance.
+
+### 6.1 Hardware Detection
+
+**Fhenomenon** should include runtime hardware detection that:
+- Identifies available accelerators (GPUs via CUDA/OpenCL, FPGAs, ASICs)
+- Reports capabilities (memory size, compute units, supported operations)
+- Selects optimal acceleration targets based on operation characteristics
+
+### 6.2 Delegate Pattern for Acceleration
+
+The built-in backend uses a delegate pattern to separate acceleration kernel development from core backend logic:
+
+```cpp
+class AccelerationDelegate {
+public:
+    virtual void executeFusedKernel(const FusedOperation& op) = 0;
+    virtual void executeBatch(const BatchOperation& batch) = 0;
+    // ...
+};
+
+class CUDADelegate : public AccelerationDelegate { /* ... */ };
+class OpenCLDelegate : public AccelerationDelegate { /* ... */ };
+```
+
+This enables:
+- **Independent development**: Hardware-specific kernels developed separately
+- **Multiple backends**: Support for different acceleration APIs simultaneously
+- **Community contributions**: Community can contribute acceleration delegates for new hardware
+
+### 6.3 Acceleration API
+
+The acceleration API should support:
+- **Fused operations**: Single kernel calls for operation sequences
+- **Batched operations**: Parallel execution across multiple ciphertexts
+- **Memory management**: Efficient allocation and transfer of ciphertext data
+- **Asynchronous execution**: Overlap computation and data transfer
+
+---
+
+## 7. Implementation Strategy
+
+This section outlines the implementation approach **Fhenomenon** should follow.
+
+### 7.1 Development Phases
+
+**Phase 1: Core Frontend** (Foundation)
+- Implement `Compuon<T>` with basic operator overloading
+- Implement `Session` with immediate execution mode
+- Define `Backend` interface
+- Implement basic `BuiltinBackend` stub
+
+**Phase 2: Scheduler Framework** (Optimization)
+- Implement `Receiver` for operation collection
+- Build graph construction in `Scheduler`
+- Create `Strategy` framework with example strategies
+- Implement basic `Dispatcher` for single-device execution
+
+**Phase 3: Backend Integration** (FHE Implementation)
+- Implement or integrate FHE library for `BuiltinBackend`
+- Create `ExternalBackend` with adapter for one external library (e.g., SEAL)
+- Implement `KeyManager` and configuration system
+
+**Phase 4: Acceleration** (Performance)
+- Implement hardware detection
+- Create acceleration delegate interface
+- Implement GPU acceleration delegate (CUDA or OpenCL)
+- Integrate acceleration into dispatcher
+
+**Phase 5: Community Contributions** (Ecosystem)
+- Document extension points (Strategy framework, acceleration delegates)
+- Provide examples and templates for contributions
+- Establish contribution guidelines and review process
+
+### 7.2 Community Engagement
+
+**Fhenomenon** should be designed as a community-driven project:
+
+- **Modular architecture**: Clear extension points enable independent contributions
+- **Comprehensive documentation**: Architecture, API, and contribution guides
+- **Example implementations**: Reference implementations for common use cases
+- **Open specification**: Common interface specification for external backend integration
+
+---
+
+## 8. Example Usage
+
+### 8.1 Basic Usage
+
+```cpp
+#include "Fhenomenon.h"
+
 int main() {
-    // Initialize the backend as a singleton
+    // Initialize backend (singleton pattern)
     auto backend = BuiltinBackend::Instance();
 
-    // Create a session with the chosen backend
+    // Create session with backend
     Session sess(backend);
 
-    // Define operations within the session scope
+    // Define encrypted computation
     sess.run([&]() {
         Compuon<int> a = 10;
-        a.belong(rlwe::ckks::configA);
-	    auto b = a * 2;
+        Compuon<int> b = 20;
+        
+        a.belong(rlwe::ckks::configA);  // Encrypt a
+        b.belong(rlwe::ckks::configA);  // Encrypt b
+        
+        auto c = a * b;  // Homomorphic multiplication
+        auto d = c + 5;  // Homomorphic addition with scalar
+        
+        std::cout << "Result: " << d.decrypt() << std::endl;
     });
 
     return 0;
 }
 ```
 
-## **10. Security Considerations**
-Security is paramount in FHE applications. **Fhenomenon** ensures the secure handling of cryptographic keys, with secret keys isolated in secure storage and public keys managed through a dedicated KeyManager. The library adheres to best practices for cryptographic software, including secure memory management and avoidance of side-channel vulnerabilities.
+### 8.2 Advanced Usage: Scheme Switching
 
-## 11. Dependency Diagram
-```jsx
-+---------------------+
-|      Compuon<T>      |
-+---------------------+
-          |
-          v
-+---------------------+
-|      Session        |
-+---------------------+
-          |
-          v
-+-----------------------------+
-|       Backend (Interface)   |
-+-----------------------------+
-        /              \
-       /                \
-+----------------+   +--------------------+
-| BuiltinBackend |   |  ExternalBackend   |
-+----------------+   +--------------------+
-        |                      |
-        | (inherits from)      |
-        +----------------------+
-                           |
-+--------------------------------------------------------+
-|          Hardware Abstraction Layer (Delegate)         |
-+--------------------------------------------------------+
-                           |
-                           v
-                 +------------------+
-                 | Acceleration API |
-                 +------------------+
-                           |
-                           v
-+------------------------------+
-|     Hardware Detection       |
-+------------------------------+
-                           |
-                           v
-+--------------------------------------------------------+
-|                      Scheduler                         |
-+--------------------------------------------------------+
-        |                  |                   |
-        |                  |                   |
-+------------+     +--------------+     +-------------+
-|  Receiver  |<--> |    Graph     |<--> | Dispatcher  |
-+------------+     +--------------+     +-------------+
-                         |
-                         v
-              +-------------------+
-              |    Strategy       |
-              +-------------------+
-                         |
-                         v
-                +----------------+
-                |  Optimization  |
-                +----------------+
-                         |
-                         v
-+--------------------------------------------------------+
-|                   KeyManager                           |
-+--------------------------------------------------------+
-                         |
-                         v
-+----------------+     +----------------+
-|    Key I/O     |<--> |    Config      |
-+----------------+     +----------------+
+```cpp
+sess.run([&]() {
+    Compuon<double> x = 3.14;
+    
+    // Start with CKKS (for approximate arithmetic)
+    x.belong(rlwe::ckks::configA);
+    x = x * x;  // Square
+    
+    // Switch to BGV (for exact arithmetic)
+    x.belong(rlwe::bgv::configB);
+    x = x + 1;  // Exact addition
+    
+    std::cout << "Result: " << x.decrypt() << std::endl;
+});
+```
+
+### 8.3 Struct-based SIMD Operations
+
+```cpp
+struct Point {
+    double x, y, z;
+};
+
+sess.run([&]() {
+    Compuon<Point> p = {1.0, 2.0, 3.0};
+    p.belong(rlwe::ckks::configA);  // Each field maps to a CKKS slot
+    
+    // Operations apply to all slots simultaneously
+    auto p2 = p;  // Copy
+    p2 = p2 * 2.0;  // Scale all coordinates
+    
+    Point result = p2.decrypt();
+    std::cout << "Scaled: (" << result.x << ", " << result.y << ", " << result.z << ")" << std::endl;
+});
+```
+
+---
+
+## 9. Architecture Diagram
 
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Application Layer                        │
+│                    (User Code with Compuon<T>)                   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                           Frontend Layer                         │
+│  ┌──────────────┐  ┌──────────────────────────────────────┐   │
+│  │  Compuon<T>  │  │           Session                     │   │
+│  │  - Operators │  │  - Scoped execution                   │   │
+│  │  - belong()  │  │  - Operation collection               │   │
+│  └──────────────┘  └──────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         Backend Interface                        │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  - Encryption/Decryption                                  │  │
+│  │  - Homomorphic Operations                                 │  │
+│  │  - Key Management Integration                             │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+         │                                    │
+         │                                    │
+    ┌────▼────┐                        ┌──────▼──────┐
+    │ Builtin │                        │  External   │
+    │ Backend │                        │   Backend   │
+    └────┬────┘                        └──────┬──────┘
+         │                                    │
+         │                                    │
+         └──────────────┬─────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Hardware Abstraction Layer                    │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              Acceleration Delegate Interface              │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │  │
+│  │  │  CUDA    │  │  OpenCL  │  │   FPGA   │  ...         │  │
+│  │  └──────────┘  └──────────┘  └──────────┘              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                          Scheduler Layer                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
+│  │ Receiver │→ │  Graph   │→ │ Strategy │→ │Dispatcher│      │
+│  │          │  │ Builder  │  │ Framework│  │          │      │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
+└─────────────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Key Management Layer                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │  KeyManager  │  │ Configuration│  │  IO Scheduler│        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 10. Security Considerations
+
+**Fhenomenon** must adhere to cryptographic best practices:
+
+### 10.1 Key Security
+- **Secret key isolation**: Secret keys never leave secure storage (secure enclave, HSM, or encrypted filesystem)
+- **Key lifecycle**: Proper key generation, rotation, and destruction
+- **Key access control**: Runtime enforcement of key access policies
+
+### 10.2 Parameter Security
+- **Secure defaults**: Library enforces minimum security levels for parameters
+- **Parameter validation**: Validate parameters against known vulnerabilities
+- **Noise management**: Automatically track and manage noise growth in ciphertexts
+
+### 10.3 Side-Channel Resistance
+- **Constant-time operations**: Critical paths implemented in constant time where possible
+- **Memory management**: Secure memory clearing for sensitive data
+- **Timing analysis**: Consideration of timing-based side channels in scheduling decisions
+
+### 10.4 Implementation Security
+- **Dependency management**: Careful vetting of cryptographic dependencies
+- **Update strategy**: Clear security update and patching process
+- **Audit trail**: Logging and auditing capabilities for security-sensitive operations
+
+---
+
+## 11. Future Directions and Community Vision
+
+**Fhenomenon** is envisioned as a community-driven project that evolves with the FHE ecosystem:
+
+### 11.1 Extensibility Points
+- **Optimization strategies**: Community-contributed graph optimization passes
+- **Acceleration delegates**: Hardware-specific acceleration implementations
+- **External backend adapters**: Integrations with new FHE libraries
+- **Parameter presets**: Domain-specific parameter configurations
+
+### 11.2 Research Integration
+- **New FHE schemes**: Framework should accommodate emerging schemes (e.g., TFHE, FHEW)
+- **Optimization techniques**: Integration of research advances in FHE optimization
+- **Hardware exploration**: Support for new acceleration hardware as it emerges
+
+### 11.3 Ecosystem Building
+- **Benchmarks**: Standardized benchmarks for performance evaluation
+- **Best practices**: Community-curated guidelines for FHE application development
+- **Case studies**: Real-world applications demonstrating Fhenomenon usage
+
+---
+
+## 12. Getting Started
+
+### 12.1 Building Fhenomenon
+
+**Prerequisites**:
+- CMake ≥ 3.21
+- C++17-compatible compiler (Clang, GCC, or MSVC)
+- Dependencies managed via CPM (included)
+
+**Build steps**:
+```bash
+# Configure build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+# Build library and examples
+cmake --build build -j8
+
+# Run examples
+./build/bin/compuon-basic
+./build/bin/session-basic
+```
+
+### 12.2 Current Status
+
+**Fhenomenon** is currently in early development. The repository contains:
+- Core `Compuon<T>` implementation with basic operators
+- Session framework skeleton
+- Backend interface definitions
+- Example implementations demonstrating the intended API
+
+**Contributions welcome**: See the project repository for contribution guidelines and development roadmap.
+
+---
+
+## 13. Conclusion
+
+**Fhenomenon** represents a vision for making Fully Homomorphic Encryption accessible to application developers without requiring deep cryptographic expertise. Through a clean separation of concerns—user-facing frontend, flexible backend abstraction, and intelligent scheduling—the framework aims to democratize FHE while maintaining the performance and security characteristics necessary for real-world deployment.
+
+The success of **Fhenomenon** depends on community engagement: contributions of optimization strategies, acceleration implementations, backend integrations, and real-world use cases. This white paper serves as both a technical specification and an invitation to participate in building the future of privacy-preserving computation.
+
+---
+
+## License
+
+This project is licensed under the terms specified in the LICENSE file in this repository.
