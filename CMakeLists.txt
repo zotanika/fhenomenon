@@ -11,6 +11,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(PROJECT_LIB_NAME ${PROJECT_NAME})
 
+# Ensure macOS SDK is detected so C++ standard headers (e.g., <cstddef>) are found
+if(APPLE)
+  # Discover the active SDK path if not already set
+  if(NOT CMAKE_OSX_SYSROOT)
+    execute_process(
+      COMMAND xcrun --show-sdk-path
+      OUTPUT_VARIABLE CMAKE_OSX_SYSROOT
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+    )
+  endif()
+
+  # Help Clang/LLVM find libc++ headers and link correctly when using non-Apple clang
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-isysroot ${CMAKE_OSX_SYSROOT} -stdlib=libc++)
+    add_link_options(-isysroot ${CMAKE_OSX_SYSROOT} -stdlib=libc++)
+  endif()
+endif()
+
 include(BuildType)
 include(LTO)
 include(CTest)
@@ -30,7 +49,8 @@ endif()
 add_subdirectory(external)
 add_library(external-libs INTERFACE)
 target_link_libraries(external-libs INTERFACE fmt::fmt
-                                              nlohmann_json::nlohmann_json)
+                                              nlohmann_json::nlohmann_json
+                                              SEAL::seal)
 
 macro(add_fhenomenon_sources)
   file(GLOB_RECURSE SUBDIR_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
