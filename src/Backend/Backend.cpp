@@ -33,8 +33,7 @@ Backend &Backend::getInstance(std::string_view libPath, std::string_view configP
 }
 
 std::unique_ptr<Backend> Backend::createBuiltinBackend() {
-  return std::make_unique<BuiltinBackendMockup>();
-  // return std::unique_ptr<Backend>(new BuiltinBackendMockup());
+  return std::make_unique<BuiltinBackend>();
 }
 
 std::unique_ptr<Backend> Backend::createExternalBackend(std::string_view libPath) {
