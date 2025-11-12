@@ -55,7 +55,7 @@ The primary objectives guiding **Fhenomenon**'s architecture are:
 
 ## 3. Core Architecture
 
-**Fhenomenon** is structured into two primary layers: the **Frontend** (user-facing API) and the **Backend** (FHE implementation). This separation enables multiple backend implementations while maintaining a consistent user experience.
+**Fhenomenon** is structured into three collaborative layers: the **Frontend** (user-facing API), the **Scheduler** (optimization and orchestration engine), and the **Backend** (FHE implementation). This separation allows the scheduler to translate high-level intent into optimized execution plans while each backend focuses on providing concrete homomorphic operations and hardware utilization.
 
 ### 3.1 Frontend Layer
 
@@ -106,11 +106,15 @@ sess.run([&]() {
 
 This dual-mode execution provides flexibility while ensuring performance-critical paths benefit from optimization.
 
-### 3.2 Backend Layer
+### 3.2 Scheduler Layer
 
-The backend manages actual FHE computations, either through built-in implementations or external libraries.
+The scheduler bridges the frontend and backend. It collects abstract operations emitted by the frontend, builds dependency graphs, applies optimization strategies, and delegates executable workloads to the backend while remaining agnostic of the actual homomorphic implementation. Section 4 provides a deep dive into the scheduler design.
 
-#### 3.2.1 Backend Interface
+### 3.3 Backend Layer
+
+The backend manages actual FHE computations, either through built-in implementations or external libraries. Each backend owns its operation catalog, hardware integration, and optimization techniques for the operations it supports.
+
+#### 3.3.1 Backend Interface
 
 All backends implement a common interface defining:
 - Encryption/decryption operations
@@ -119,16 +123,17 @@ All backends implement a common interface defining:
 - Key management integration
 - Parameter generation and validation
 
-#### 3.2.2 BuiltinBackend
+#### 3.3.2 BuiltinBackend
 
 The built-in backend provides:
 - **Extended APIs**: Fused operations (e.g., `multiplyAndRelinearize`, `rotateAndAdd`) that combine multiple FHE operations into single kernel calls
 - **Batching**: Operations on multiple ciphertexts bundled into batches for parallel execution
-- **Hardware abstraction**: Delegate pattern separates hardware-specific acceleration kernels from core backend logic
+- **Backend-owned acceleration**: Hardware utilization (GPU kernels, multi-core CPUs, etc.) implemented directly within the backend’s stack
+- **Internal decomposition**: When a fused operation is requested but not natively supported, the backend decomposes it into supported primitives and executes the resulting local program
 
-The delegate pattern enables independent development of acceleration kernels for different hardware targets (NVIDIA GPUs, AMD GPUs, Intel FPGAs, etc.) without modifying the core backend.
+Having the backend manage fusion and decomposition keeps the scheduler decoupled from low-level implementation details.
 
-#### 3.2.3 ExternalBackend
+#### 3.3.3 ExternalBackend
 
 External backends load FHE libraries dynamically via shared library paths:
 
@@ -140,6 +145,8 @@ This enables:
 - **Library selection**: Users choose their preferred FHE library (SEAL, HElib, OpenFHE)
 - **Version flexibility**: Different library versions can coexist
 - **Gradual migration**: Applications can transition from external to built-in backends incrementally
+
+Each external backend maintains its own substantial operation stack. Unsupported fused operations must be decomposed internally into primitive operations provided by the library, ensuring consistent behaviour across backends.
 
 **Challenge**: The FHE ecosystem lacks a standardized interface. **Fhenomenon** should define a common interface specification that external libraries can implement, with adapters for popular libraries provided by the community.
 
@@ -274,34 +281,23 @@ FHE operations are computationally intensive, making hardware acceleration essen
 - Reports capabilities (memory size, compute units, supported operations)
 - Selects optimal acceleration targets based on operation characteristics
 
-### 6.2 Delegate Pattern for Acceleration
+### 6.2 Backend-owned Acceleration
 
-The built-in backend uses a delegate pattern to separate acceleration kernel development from core backend logic:
+Each backend owns the logic for leveraging hardware accelerators. Rather than introducing a separate hardware abstraction layer, a backend:
+- Detects and initializes accelerator resources it supports
+- Provides fused and batched kernels tailored to its underlying FHE library
+- Manages ciphertext residency to minimize data movement
+- Falls back to CPU implementations when acceleration is unavailable
 
-```cpp
-class AccelerationDelegate {
-public:
-    virtual void executeFusedKernel(const FusedOperation& op) = 0;
-    virtual void executeBatch(const BatchOperation& batch) = 0;
-    // ...
-};
+This approach keeps acceleration concerns encapsulated within the backend while presenting a uniform interface to the scheduler. Community contributors can extend backends with new accelerator support by enhancing the backend’s internal implementation.
 
-class CUDADelegate : public AccelerationDelegate { /* ... */ };
-class OpenCLDelegate : public AccelerationDelegate { /* ... */ };
-```
+### 6.3 Acceleration API Expectations
 
-This enables:
-- **Independent development**: Hardware-specific kernels developed separately
-- **Multiple backends**: Support for different acceleration APIs simultaneously
-- **Community contributions**: Community can contribute acceleration delegates for new hardware
-
-### 6.3 Acceleration API
-
-The acceleration API should support:
-- **Fused operations**: Single kernel calls for operation sequences
-- **Batched operations**: Parallel execution across multiple ciphertexts
-- **Memory management**: Efficient allocation and transfer of ciphertext data
-- **Asynchronous execution**: Overlap computation and data transfer
+To interoperate smoothly with the scheduler, backends should expose mechanisms for:
+- **Fused operations**: Executing sequences as single accelerated kernels when available
+- **Batched operations**: Running independent operations in parallel across ciphertext sets
+- **Memory management**: Efficient allocation and transfer of ciphertext data between host and accelerator
+- **Asynchronous execution**: Overlapping computation and data transfer when the backend’s platform supports it
 
 ---
 
@@ -330,12 +326,12 @@ This section outlines the implementation approach **Fhenomenon** should follow.
 
 **Phase 4: Acceleration** (Performance)
 - Implement hardware detection
-- Create acceleration delegate interface
-- Implement GPU acceleration delegate (CUDA or OpenCL)
-- Integrate acceleration into dispatcher
+- Enhance backends with accelerator-aware execution paths (e.g., CUDA/OpenCL kernels)
+- Provide sample GPU-enabled backend configuration
+- Integrate accelerated paths into dispatcher/backends coordination
 
 **Phase 5: Community Contributions** (Ecosystem)
-- Document extension points (Strategy framework, acceleration delegates)
+- Document extension points (Strategy framework, backend acceleration hooks)
 - Provide examples and templates for contributions
 - Establish contribution guidelines and review process
 
@@ -439,14 +435,25 @@ sess.run([&]() {
 │  │  - belong()  │  │  - Operation collection               │   │
 │  └──────────────┘  └──────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
-                              │
+                              │ (abstract ops)
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                          Scheduler Layer                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
+│  │ Receiver │→ │  Graph   │→ │ Strategy │→ │Dispatcher│      │
+│  │          │  │ Builder  │  │ Framework│  │          │      │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
+│      (collect)         (analyze)        (optimize)      (delegate)
+└─────────────────────────────────────────────────────────────────┘
+                              │ (delegated workloads)
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Backend Interface                        │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  - Encryption/Decryption                                  │  │
-│  │  - Homomorphic Operations                                 │  │
-│  │  - Key Management Integration                             │  │
+│  │  - Encryption / Decryption                                │  │
+│  │  - Primitive & fused homomorphic ops                      │  │
+│  │  - Operation decomposition                                │  │
+│  │  - Key management hooks                                   │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
          │                                    │
@@ -456,28 +463,11 @@ sess.run([&]() {
     │ Backend │                        │   Backend   │
     └────┬────┘                        └──────┬──────┘
          │                                    │
+         │ (operation catalog, hardware use)  │
+         │ (primitive + fused kernels)         │
+         │ (internal decomposition)           │
          │                                    │
          └──────────────┬─────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Hardware Abstraction Layer                    │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              Acceleration Delegate Interface              │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │  │
-│  │  │  CUDA    │  │  OpenCL  │  │   FPGA   │  ...         │  │
-│  │  └──────────┘  └──────────┘  └──────────┘              │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          Scheduler Layer                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
-│  │ Receiver │→ │  Graph   │→ │ Strategy │→ │Dispatcher│      │
-│  │          │  │ Builder  │  │ Framework│  │          │      │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
-└─────────────────────────────────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -522,7 +512,7 @@ sess.run([&]() {
 
 ### 11.1 Extensibility Points
 - **Optimization strategies**: Community-contributed graph optimization passes
-- **Acceleration delegates**: Hardware-specific acceleration implementations
+- **Backend acceleration hooks**: Hardware-specific acceleration logic within backends
 - **External backend adapters**: Integrations with new FHE libraries
 - **Parameter presets**: Domain-specific parameter configurations
 
