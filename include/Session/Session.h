@@ -10,6 +10,7 @@
 #include "Profile.h"
 
 #include <unordered_map>
+#include <memory>
 
 namespace fhenomenon {
 
@@ -86,7 +87,8 @@ class Session final : public std::enable_shared_from_this<Session> {
   private:
   // prevent direct instantiation
 
-  explicit Session(const Backend &backend) : active_(false), backend_(backend) {}
+  explicit Session(const Backend &backend) 
+    : active_(false), backend_(backend), scheduler_(std::make_unique<scheduler::Scheduler>(backend)) {}
 
   Session(const Session &) = delete;
   Session &operator=(const Session &) = delete;
@@ -96,6 +98,7 @@ class Session final : public std::enable_shared_from_this<Session> {
   
   bool active_;
   const Backend &backend_;
+  std::unique_ptr<scheduler::Scheduler> scheduler_;  // Scheduler with backend delegate
   // set of operations
   std::vector<std::shared_ptr<scheduler::OperationBase>> operations_;
   std::vector<std::shared_ptr<void>> tmp_entities_;

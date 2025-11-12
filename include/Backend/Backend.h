@@ -4,8 +4,6 @@
 #include "Configuration.h"
 #include "KeyManager.h"
 #include "Parameter/Parameter.h"
-#include "Scheduler/Scheduler.h"
-//#include "Scheduler/Strategy.h"
 
 #include <any>
 
@@ -64,11 +62,6 @@ class Backend {
   static KeyManager &getKeyManager() {
     static KeyManager keyManager;
     return keyManager;
-  }
-
-  static scheduler::Scheduler &getScheduler() {
-    static scheduler::Scheduler scheduler;
-    return scheduler;
   }
 };
 
