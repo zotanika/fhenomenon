@@ -14,9 +14,8 @@ public:
 template <typename T>
 class OperatorNode : public ASTNode{
 public :
-    OperatorNode(std::shared_ptr<Operation<T>> operation, OperationType type, std::shared_ptr<ASTNode> left, std::shared_ptr<ASTNode> right, std::shared_ptr<Compuon<int>> result)
+    OperatorNode(std::shared_ptr<Operation<T>> operation, OperationType type, std::shared_ptr<ASTNode> left, std::shared_ptr<ASTNode> right, std::shared_ptr<Compuon<T>> result)
         : operation_(operation), type_(type), left_(left), right_(right), result_(result), evaluated_(false) {}
-
 
     OperationType getType() const {return type_;}
     std::shared_ptr<ASTNode> getRight() const {return right_;}
@@ -52,7 +51,6 @@ class OperandNode : public ASTNode {
 public:
     explicit OperandNode(std::shared_ptr<Compuon<T>> entity)
         : entity_(entity), evaluated_(false) {}
-
 
     std::shared_ptr<Compuon<T>> getEntity() const {return entity_;}
 

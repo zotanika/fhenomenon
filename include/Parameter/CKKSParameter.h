@@ -16,9 +16,21 @@ class CKKSParameter : public Parameter {
     setDegree(degree);
   }
 
-  void printParams() const override { std::cout << "(TODO) CKKS Parameters" << std::endl; }
+  void printParams() const override {
+    std::cout << "CKKS Parameters:" << std::endl;
+    std::cout << "  Key Size: " << key_size_ << " bits" << std::endl;
+    std::cout << "  Polynomial Modulus Degree: " << degree_ << std::endl;
+  }
 
-  void init() override { std::cout << "(TODO) Initialize CKKS parameters" << std::endl; }
+  void init() override {
+    // Initialize default values if not set
+    if (key_size_ == 0) {
+      setKeySize(128);
+    }
+    if (degree_ == 0) {
+      setDegree(8192);
+    }
+  }
 
   private:
   void setParams(CKKSParamPreset preset);

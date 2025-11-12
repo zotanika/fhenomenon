@@ -9,15 +9,33 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 namespace fhenomenon {
+
+// Forward declaration
+class Backend;
+
 namespace scheduler {
 
 class Scheduler {
   private:
   std::vector<std::shared_ptr<Strategy>> strategies;
+  const Backend* backend_delegate_;  // Backend delegate for executing operations
 
   public:
+  // Constructor - takes backend as delegate
+  explicit Scheduler(const Backend& backend) : backend_delegate_(&backend) {}
+  
+  // Set backend delegate
+  void setBackendDelegate(const Backend& backend) { backend_delegate_ = &backend; }
+  
+  const Backend& getBackendDelegate() const { 
+    if (!backend_delegate_) {
+      throw std::runtime_error("Scheduler: Backend delegate not set");
+    }
+    return *backend_delegate_;
+  }
   template <typename T>
   void buildAST(const std::vector<std::shared_ptr<scheduler::OperationBase>>& operations, Planner<T> &plan) {
     std::unordered_map<std::shared_ptr<Compuon<T>>, std::shared_ptr<ASTNode>> entityToNodeMap;
@@ -27,6 +45,9 @@ class Scheduler {
         if (!operation) {
             throw std::runtime_error("Invalid operation cast.");
         }
+        
+        // Set backend delegate on operation (scheduler orchestrates, backend executes)
+        operation->setBackendDelegate(&getBackendDelegate());
 
         auto operand1 = operation->getOperand1();
         auto operand2 = operation->getOperand2();
@@ -88,6 +109,7 @@ class Scheduler {
         throw std::runtime_error("No roots available for evaluation.");
     }
 
+    // Evaluate graph using backend delegate
     for (const auto& root : roots) {
         root->evaluate();
     }

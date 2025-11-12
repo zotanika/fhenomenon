@@ -4,6 +4,12 @@
 #include "Utils/log.h"
 
 #include <typeindex>
+#include <memory>
+
+// Forward declaration
+namespace seal {
+  class Ciphertext;
+}
 
 namespace fhenomenon {
 
@@ -14,6 +20,10 @@ class CompuonBase {
   public:
   virtual ~CompuonBase() = default;
   virtual std::type_index type() const = 0;
+  
+  // Store SEAL ciphertext for encrypted values
+  std::shared_ptr<seal::Ciphertext> ciphertext_;
+  bool isEncrypted_ = false;
 };
 
 template <typename T> class Compuon final : public CompuonBase, public std::enable_shared_from_this<Compuon<T>> {
