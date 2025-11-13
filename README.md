@@ -1,5 +1,6 @@
 # FHENOMENON: A Catalyst for Enabling Practical Fully Homomorphic Encryption Programming Model
 [Convergent Evolution: Why Secure Homomorphic Encryption Will Ressemble High-Performance GPU Computing](https://hackmd.io/f2N90VpeQiKtB4OOTOA-Zw)
+> Building these kernels also solves the ecosystem’s chicken-and-egg problem: useful, coarse-grained kernels must come first to create immediate value, attract developers, and enable sustainable growth. **A lightweight orchestration framework can manage this efficiently, where the trusted host performs simple runtime scheduling—dispatching fused kernels when available and falling back to basic ones otherwise.** Since scheduling depends only on the public sequence of API calls, it remains inherently secure.
 
 ## Abstract
 
