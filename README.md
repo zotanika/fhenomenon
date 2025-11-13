@@ -421,62 +421,72 @@ sess.run([&]() {
 
 ## 9. Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Application Layer                        │
-│                    (User Code with Compuon<T>)                   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                           Frontend Layer                         │
-│  ┌──────────────┐  ┌──────────────────────────────────────┐   │
-│  │  Compuon<T>  │  │           Session                     │   │
-│  │  - Operators │  │  - Scoped execution                   │   │
-│  │  - belong()  │  │  - Operation collection               │   │
-│  └──────────────┘  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              │ (abstract ops)
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          Scheduler Layer                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
-│  │ Receiver │→ │  Graph   │→ │ Strategy │→ │Dispatcher│      │
-│  │          │  │ Builder  │  │ Framework│  │          │      │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
-│      (collect)         (analyze)        (optimize)      (delegate)
-└─────────────────────────────────────────────────────────────────┘
-                              │ (delegated workloads)
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         Backend Interface                        │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  - Encryption / Decryption                                │  │
-│  │  - Primitive & fused homomorphic ops                      │  │
-│  │  - Operation decomposition                                │  │
-│  │  - Key management hooks                                   │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-         │                                    │
-         │                                    │
-    ┌────▼────┐                        ┌──────▼──────┐
-    │ Builtin │                        │  External   │
-    │ Backend │                        │   Backend   │
-    └────┬────┘                        └──────┬──────┘
-         │                                    │
-         │ (operation catalog, hardware use)  │
-         │ (primitive + fused kernels)         │
-         │ (internal decomposition)           │
-         │                                    │
-         └──────────────┬─────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        Key Management Layer                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│  │  KeyManager  │  │ Configuration│  │  IO Scheduler│        │
-│  └──────────────┘  └──────────────┘  └──────────────┘        │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Application["Application Layer"]
+        UserCode["User Code with Compuon&lt;T&gt;"]
+    end
+    
+    subgraph Frontend["Frontend Layer"]
+        Compuon["Compuon&lt;T&gt;<br/>- Operators<br/>- belong()"]
+        Session["Session<br/>- Scoped execution<br/>- Operation collection"]
+    end
+    
+    subgraph Scheduler["Scheduler Layer<br/>(Orchestrates, decoupled from computations)"]
+        Receiver["Receiver<br/>(collect)"]
+        GraphBuilder["Graph Builder<br/>(analyze)"]
+        Strategy["Strategy Framework<br/>(optimize)"]
+        Dispatcher["Dispatcher<br/>(delegate)"]
+        
+        Receiver --> GraphBuilder
+        GraphBuilder --> Strategy
+        Strategy --> Dispatcher
+    end
+    
+    subgraph BackendInterface["Backend Interface"]
+        BackendOps["- Encryption / Decryption<br/>- Primitive & fused homomorphic ops<br/>- Operation decomposition<br/>- Key management hooks"]
+    end
+    
+    subgraph Backends["Backend Implementations"]
+        BuiltinBackend["Builtin Backend"]
+        ExternalBackend["External Backend"]
+    end
+    
+    subgraph BackendStack["Backend Stack<br/>(Each backend owns)"]
+        OpCatalog["Operation catalog<br/>Hardware utilization<br/>Primitive + fused kernels<br/>Internal decomposition"]
+    end
+    
+    subgraph KeyMgmt["Key Management Layer"]
+        KeyManager["KeyManager"]
+        Configuration["Configuration"]
+        IOScheduler["IO Scheduler"]
+    end
+    
+    UserCode -->|uses| Frontend
+    Compuon -.->|part of| Frontend
+    Session -.->|part of| Frontend
+    
+    Frontend -->|"abstract ops"| Scheduler
+    Scheduler -->|"delegated workloads"| BackendInterface
+    
+    BackendInterface --> Backends
+    BuiltinBackend -.->|implements| BackendInterface
+    ExternalBackend -.->|implements| BackendInterface
+    
+    Backends --> BackendStack
+    BackendStack --> KeyMgmt
+    
+    KeyManager -.->|part of| KeyMgmt
+    Configuration -.->|part of| KeyMgmt
+    IOScheduler -.->|part of| KeyMgmt
+    
+    style Application fill:#e1f5ff
+    style Frontend fill:#fff4e1
+    style Scheduler fill:#f0e1ff
+    style BackendInterface fill:#e1ffe1
+    style Backends fill:#e1ffe1
+    style BackendStack fill:#e1ffe1
+    style KeyMgmt fill:#ffe1e1
 ```
 
 ---
