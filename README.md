@@ -143,7 +143,7 @@ auto backend = ExternalBackend::Create("/path/to/libfhe.so");
 ```
 
 This enables:
-- **Library selection**: Users choose their preferred FHE library (SEAL, HElib, OpenFHE)
+- **Library selection**: Users choose their preferred FHE library (SEAL, OpenFHE, HEAAN, etc.)
 - **Version flexibility**: Different library versions can coexist
 - **Gradual migration**: Applications can transition from external to built-in backends incrementally
 
@@ -479,14 +479,6 @@ graph TB
     KeyManager -.->|part of| KeyMgmt
     Configuration -.->|part of| KeyMgmt
     IOScheduler -.->|part of| KeyMgmt
-    
-    style Application fill:#e1f5ff
-    style Frontend fill:#fff4e1
-    style Scheduler fill:#f0e1ff
-    style BackendInterface fill:#e1ffe1
-    style Backends fill:#e1ffe1
-    style BackendStack fill:#e1ffe1
-    style KeyMgmt fill:#ffe1e1
 ```
 
 ---
