@@ -15,7 +15,6 @@ int main() {
     profile->setParam(param);
 
     auto session = Session::create(Backend::getInstance());
-    
 
     Compuon<int> a = 0;
     a.belong(profile);
