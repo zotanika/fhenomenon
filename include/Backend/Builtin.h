@@ -29,9 +29,9 @@ class BuiltinBackend final : public Backend {
   void saveKeys(const std::string &publicKeyPath, const std::string &secretKeyPath);
   
   // Backend interface implementation
-  void transform(CompuonBase &entity, const Parameter &params) override;
-  std::shared_ptr<CompuonBase> add(const CompuonBase &a, const CompuonBase &b) override;
-  std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) override;
+  void transform(CompuonBase &entity, const Parameter &params) const override;
+  std::shared_ptr<CompuonBase> add(const CompuonBase &a, const CompuonBase &b) const override;
+  std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) const override;
   std::shared_ptr<CompuonBase> addPlain(const CompuonBase &a, double scalar);
   std::shared_ptr<CompuonBase> multiplyPlain(const CompuonBase &a, double scalar);
   std::any decrypt(const CompuonBase &entity) const override;

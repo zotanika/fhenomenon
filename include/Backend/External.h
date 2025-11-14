@@ -2,12 +2,9 @@
 
 #include "Backend/Backend.h"
 
-// (FIXME) using Microsoft SEAL
-namespace seal {
-
-class Ciphertext {};
-
-} // namespace seal
+#include <string>
+#include <memory>
+#include <any>
 
 namespace fhenomenon {
 
@@ -19,18 +16,18 @@ class ExternalBackend : public Backend {
     // Load the external library and initialize the backend
   }
 
-  void transform([[maybe_unused]] CompuonBase &entity, [[maybe_unused]] const Parameter &params) override {
+  void transform([[maybe_unused]] CompuonBase &entity, [[maybe_unused]] const Parameter &params) const override {
     // Transform the entity using the external backend
   }
 
-  std::shared_ptr<CompuonBase> add([[maybe_unused]] const CompuonBase &a, [[maybe_unused]] const CompuonBase &b) override {
+  std::shared_ptr<CompuonBase> add([[maybe_unused]] const CompuonBase &a, [[maybe_unused]] const CompuonBase &b) const override {
     // Add entities using the external backend
     // return Compuon<int>(0);  // Placeholder
     return nullptr;
   }
 
   std::shared_ptr<CompuonBase> multiply([[maybe_unused]] const CompuonBase &a,
-                                       [[maybe_unused]] const CompuonBase &b) override {
+                                       [[maybe_unused]] const CompuonBase &b) const override {
     // Multiply entities using the external backend
     // return Compuon<int>(0);  // Placeholder
     return nullptr;

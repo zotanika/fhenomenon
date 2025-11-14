@@ -1,117 +1,59 @@
 #include "Fhenomenon.h"
-#include <iostream>
-#include <string>
-#include <map>
-#include <vector>
 
+#if 1
+// (FIXME) below headers should be removed later
+#include "Parameter/ParameterGen.h"
+#include "Profile.h"
+#endif
 
-#define AaBbCc "sword"
-#define XxYyZz "potion"
 using namespace fhenomenon;
 
-std::string encryptDecrypt(std::string to_encrypt) {
-    char key = 'K';
-    std::string output = to_encrypt;
-    
-    for (int i = 0; i < to_encrypt.size(); i++)
-        output[i] = to_encrypt[i] ^ key;
-    
-    return output;
-}
-template<typename T>
-class Helix{
-private:
-    Compuon<T> entity_;
-    std::shared_ptr<Profile> profile_;
-
-public:
-    inline Helix(T value = T()): entity_(Compuon<T>(value)){
-        profile_ = Profile::getProfile();
-        entity_.belong(profile_);
-    }
-
-    inline Helix(const Compuon<T>& entity): entity_(entity){
-        profile_ = Profile::getProfile();
-    }
-
-    inline ~Helix() = default;
-
-    inline Helix& operator=(const Helix& other) {
-        entity_ = other.entity_;
-        return *this;     
-    }
-    inline Helix& operator=(const T& num) {
-        auto scalar = Helix<T>(num);
-        entity_ = scalar.entity_;
-        return *this;
-    }
-    inline Helix operator+(const Helix& other) const {
-        Helix<T> result = entity_ + other.entity_;
-        return result;
-    }
-
-    inline Helix operator+(const T& num) const {
-        return *this + Helix<T>(num);  
-    }
-
-    T getValue() const{
-        return this->entity_.decrypt();
-    }
-};
-
-class HEInventoryManager {
-private:
-    std::map<std::string, Helix<int>> inventory_;
-public:
-    void addItem(const std::string& item, int count) {
-        if (inventory_.find(item) == inventory_.end())
-            inventory_[item] = 0;
-        inventory_[item] = inventory_[item] + count;
-    }
-    
-    void showInventory() {
-        for (auto& item : inventory_) {
-            std::cout << encryptDecrypt(item.first) << ": " << item.second.getValue() << std::endl;
-        }
-    }
-};
-
 int main() {
-    std::shared_ptr<Parameter> param_;
-    std::shared_ptr<Profile> profile_ = Profile::createProfile(param_);
-    HEInventoryManager manager;
-    char choice;
-    int dummy_var = 0;
-    const int dummy_mask = 0xCC;
+  try {
+    std::shared_ptr<Parameter> param = ParameterGen::createCKKSParam(CKKSParamPreset::FGb);
+    std::shared_ptr<Profile> profile = Profile::createProfile(param);
 
-    while (true) {
-        std::cout << "1. Add Sword\n";
-        std::cout << "2. Add Potion\n";
-        std::cout << "3. Show Inventory\n";
-        std::cout << "4. Exit\n";
-        std::cout << "Enter choice: ";
-        std::cin >> choice;
+    auto session = Session::create(Backend::getInstance());
+    
 
-        switch(choice) {
-            case '1':
-                manager.addItem(AaBbCc, 1);
-                dummy_var++;
-                break;
-            case '2':
-                manager.addItem(XxYyZz, 1);
-                dummy_var--;
-                break;
-            case '3':
-                manager.showInventory();
-                dummy_var ^= dummy_mask;
-                break;
-            case '4':
-                return 0;
-            default:
-                std::cout << "Invalid choice\n";
-                break;
-        }
-    }
+    Compuon<int> a = 0;
+    a.belong(profile);
+    std::cout <<"a's address: "<< &a << std::endl; 
 
-    return 0;
+    Compuon<int> b = 10;
+    b.belong(profile);
+    std::cout <<"b's address: "<< &b << std::endl; 
+
+    Compuon<int> c = 0;
+    c.belong(profile);
+    std::cout <<"c's address: "<< &c << std::endl; 
+
+    Compuon<int> d = 0;
+    d.belong(profile);
+    std::cout <<"d's address: "<< &d<< std::endl; 
+
+    std::cout << "Input: " << a.getValue() << ", " << b.getValue() << ", " << c.getValue() << ", " << d.getValue()
+              << std::endl;
+    std::cout << "Input decrypted: " << a.decrypt() << ", " << b.decrypt() << ", " << c.decrypt() << ", " << d.decrypt()
+              << std::endl;
+
+    session->run([&]() {
+      a = a + 2;
+      b = b + a;
+      c = a * b;
+      d = a + 2;
+      d = c * b;
+      d = d + a;      
+    });
+
+    std::cout << "Result: " << a.getValue() << ", " << b.getValue() << ", " << c.getValue() << ", " << d.getValue()
+              << std::endl;
+    std::cout << "Result decrypted: " << a.decrypt() << ", " << b.decrypt() << ", " << c.decrypt() << ", "
+              << d.decrypt() << std::endl;
+  } catch (const std::exception &e) {
+    std::cerr << "Exception: " << e.what() << std::endl;
+    return 1;
+  }
+
+  return 0;
 }

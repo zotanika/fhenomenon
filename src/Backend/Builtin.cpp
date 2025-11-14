@@ -24,7 +24,7 @@ void BuiltinBackend::saveKeys(const std::string &publicKeyPath, const std::strin
   sealBackend_->saveKeys(publicKeyPath, secretKeyPath);
 }
 
-void BuiltinBackend::transform(CompuonBase &entity, const Parameter &params) {
+void BuiltinBackend::transform(CompuonBase &entity, const Parameter &params) const {
   if (!sealBackend_->isInitialized()) {
     sealBackend_->initialize(params);
   }
@@ -70,7 +70,7 @@ void BuiltinBackend::transform(CompuonBase &entity, const Parameter &params) {
   }
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const CompuonBase &b) {
+std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const CompuonBase &b) const {
   if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_ || !b.ciphertext_) {
     throw std::runtime_error("BuiltinBackend: Cannot add unencrypted Compuon values");
   }
@@ -79,7 +79,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
   
   if (type == typeid(int)) {
     const Compuon<int> &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    const Compuon<int> &derivedB = dynamic_cast<const Compuon<int> &>(b);
+    [[maybe_unused]] const Compuon<int> &derivedB = dynamic_cast<const Compuon<int> &>(b);
     
     // Perform homomorphic addition
     seal::Ciphertext result = sealBackend_->add(*a.ciphertext_, *b.ciphertext_);
@@ -88,13 +88,13 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
     auto resultCompuon = std::make_shared<Compuon<int>>(0);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition");
     return resultCompuon;
   } else if (type == typeid(double)) {
     const Compuon<double> &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    const Compuon<double> &derivedB = dynamic_cast<const Compuon<double> &>(b);
+    [[maybe_unused]] const Compuon<double> &derivedB = dynamic_cast<const Compuon<double> &>(b);
     
     // Perform homomorphic addition
     seal::Ciphertext result = sealBackend_->add(*a.ciphertext_, *b.ciphertext_);
@@ -103,13 +103,13 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
     auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition (double)");
     return resultCompuon;
   } else if (type == typeid(float)) {
     const Compuon<float> &derivedA = dynamic_cast<const Compuon<float> &>(a);
-    const Compuon<float> &derivedB = dynamic_cast<const Compuon<float> &>(b);
+    [[maybe_unused]] const Compuon<float> &derivedB = dynamic_cast<const Compuon<float> &>(b);
     
     // Perform homomorphic addition
     seal::Ciphertext result = sealBackend_->add(*a.ciphertext_, *b.ciphertext_);
@@ -118,7 +118,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
     auto resultCompuon = std::make_shared<Compuon<float>>(0.0f);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition (float)");
     return resultCompuon;
@@ -127,7 +127,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
   return nullptr;
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, const CompuonBase &b) {
+std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, const CompuonBase &b) const {
   if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_ || !b.ciphertext_) {
     throw std::runtime_error("BuiltinBackend: Cannot multiply unencrypted Compuon values");
   }
@@ -140,7 +140,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
   
   if (type == typeid(int)) {
     const Compuon<int> &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    const Compuon<int> &derivedB = dynamic_cast<const Compuon<int> &>(b);
+    [[maybe_unused]] const Compuon<int> &derivedB = dynamic_cast<const Compuon<int> &>(b);
     
     // Perform homomorphic multiplication
     seal::Ciphertext result = sealBackend_->multiply(*a.ciphertext_, *b.ciphertext_);
@@ -149,13 +149,13 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
     auto resultCompuon = std::make_shared<Compuon<int>>(0);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication");
     return resultCompuon;
   } else if (type == typeid(double)) {
     const Compuon<double> &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    const Compuon<double> &derivedB = dynamic_cast<const Compuon<double> &>(b);
+    [[maybe_unused]] const Compuon<double> &derivedB = dynamic_cast<const Compuon<double> &>(b);
     
     // Perform homomorphic multiplication
     seal::Ciphertext result = sealBackend_->multiply(*a.ciphertext_, *b.ciphertext_);
@@ -164,13 +164,13 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
     auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication (double)");
     return resultCompuon;
   } else if (type == typeid(float)) {
     const Compuon<float> &derivedA = dynamic_cast<const Compuon<float> &>(a);
-    const Compuon<float> &derivedB = dynamic_cast<const Compuon<float> &>(b);
+    [[maybe_unused]] const Compuon<float> &derivedB = dynamic_cast<const Compuon<float> &>(b);
     
     // Perform homomorphic multiplication
     seal::Ciphertext result = sealBackend_->multiply(*a.ciphertext_, *b.ciphertext_);
@@ -179,7 +179,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
     auto resultCompuon = std::make_shared<Compuon<float>>(0.0f);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication (float)");
     return resultCompuon;
@@ -205,7 +205,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::addPlain(const CompuonBase &a, doub
     auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition with plain " << scalar);
     return resultCompuon;
@@ -231,7 +231,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiplyPlain(const CompuonBase &a,
     auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
     resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
     resultCompuon->isEncrypted_ = true;
-    resultCompuon->profile_ = derivedA.getProfile();
+    resultCompuon->setProfile(derivedA.getProfile());
     
     LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication with plain " << scalar);
     return resultCompuon;

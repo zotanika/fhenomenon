@@ -52,7 +52,7 @@ void SEALBackend::setupCKKS(std::size_t polyModulusDegree, std::vector<int> coef
   LOG_MESSAGE("SEALBackend: Initialized CKKS with poly_modulus_degree=" << polyModulusDegree);
 }
 
-void SEALBackend::setupBFV(std::size_t polyModulusDegree, std::vector<int> coeffModulusBits, int plainModulusBits) {
+void SEALBackend::setupBFV(std::size_t polyModulusDegree, std::vector<int> coeffModulusBits [[maybe_unused]], int plainModulusBits) {
   seal::EncryptionParameters parms(seal::scheme_type::bfv);
   parms.set_poly_modulus_degree(polyModulusDegree);
   parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(polyModulusDegree));
@@ -76,11 +76,11 @@ void SEALBackend::generateKeys() {
   }
   
   seal::KeyGenerator keygen(*context_);
-  publicKey_ = keygen.create_public_key();
+  keygen.create_public_key(publicKey_);
   secretKey_ = keygen.secret_key();
   
   // Generate relinearization keys for multiplication
-  relinKeys_ = keygen.create_relin_keys();
+  keygen.create_relin_keys(relinKeys_);
   
   // Create encryptor, decryptor
   encryptor_ = std::make_unique<seal::Encryptor>(*context_, publicKey_);
