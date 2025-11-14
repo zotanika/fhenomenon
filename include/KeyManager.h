@@ -1,7 +1,19 @@
 #pragma once
 
 #include "Configuration.h"
+
+// Suppress warnings from SEAL library headers
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wduplicated-branches"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#endif
+
 #include "seal/seal.h"
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #include <fstream>
 #include <memory>
@@ -17,14 +29,14 @@ class KeyManager {
 
     std::ifstream pkFile(config.getPublicKeyPath().data(), std::ios::binary);
     if (!pkFile.is_open()) {
-      throw std::runtime_error("KeyManager: Cannot open public key file: " + config.getPublicKeyPath());
+      throw std::runtime_error(std::string("KeyManager: Cannot open public key file: ") + std::string(config.getPublicKeyPath()));
     }
     publicKey_.load(*context_, pkFile);
     pkFile.close();
 
     std::ifstream skFile(config.getSecretKeyPath().data(), std::ios::binary);
     if (!skFile.is_open()) {
-      throw std::runtime_error("KeyManager: Cannot open secret key file: " + config.getSecretKeyPath());
+      throw std::runtime_error(std::string("KeyManager: Cannot open secret key file: ") + std::string(config.getSecretKeyPath()));
     }
     secretKey_.load(*context_, skFile);
     skFile.close();

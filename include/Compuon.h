@@ -63,6 +63,7 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
 
   void belong(std::shared_ptr<Profile> newProfile);
   std::shared_ptr<Profile> getProfile() const { return profile_; }
+  void setProfile(std::shared_ptr<Profile> newProfile) { profile_ = newProfile; }
 
   bool isScalar() const{ return isScalar_; }
   void setScalar() { isScalar_ = true; }
