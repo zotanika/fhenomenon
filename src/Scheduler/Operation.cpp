@@ -64,7 +64,7 @@ template <typename T> void Operation<T>::execute() {
       if (result->isEncrypted_ && result->ciphertext_) {
         result_ref->ciphertext_ = std::make_shared<seal::Ciphertext>(*result->ciphertext_);
         result_ref->isEncrypted_ = true;
-        result_ref->profile_ = result->getProfile();
+        result_ref->setProfile(result->getProfile());
         LOG_MESSAGE("OperationType::Add: Copied encrypted ciphertext to result");
       }
     }
@@ -97,7 +97,7 @@ template <typename T> void Operation<T>::execute() {
       if (result->isEncrypted_ && result->ciphertext_) {
         result_ref->ciphertext_ = std::make_shared<seal::Ciphertext>(*result->ciphertext_);
         result_ref->isEncrypted_ = true;
-        result_ref->profile_ = result->getProfile();
+        result_ref->setProfile(result->getProfile());
         LOG_MESSAGE("OperationType::Multiply: Copied encrypted ciphertext to result");
       }
     }
