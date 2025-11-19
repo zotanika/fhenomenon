@@ -16,13 +16,36 @@ int64_t mod(int64_t value, int64_t modulus) {
   return result;
 }
 
-int64_t mulMod(int64_t lhs, int64_t rhs, int64_t modulus) {
-  __int128 wide = static_cast<__int128>(lhs) * static_cast<__int128>(rhs);
+#if defined(__SIZEOF_INT128__)
+__extension__ int64_t mulMod(int64_t lhs, int64_t rhs, int64_t modulus) {
+  using wide_int = __int128;
+  wide_int wide = static_cast<wide_int>(lhs) * static_cast<wide_int>(rhs);
   int64_t result = static_cast<int64_t>(wide % modulus);
   if (result < 0) {
     result += modulus;
   }
   return result;
+}
+#else
+int64_t mulMod(int64_t lhs, int64_t rhs, int64_t modulus) {
+  lhs = mod(lhs, modulus);
+  rhs = mod(rhs, modulus);
+  int64_t result = 0;
+  while (rhs > 0) {
+    if (rhs & 1) {
+      result = mod(result + lhs, modulus);
+    }
+    lhs = mod(lhs + lhs, modulus);
+    rhs >>= 1;
+  }
+  return result;
+}
+#endif
+
+bool isApproximatelyInteger(double scalar, long double tolerance = 1e-9L) {
+  const long double scalar_ld = static_cast<long double>(scalar);
+  const long double rounded_ld = static_cast<long double>(std::llround(scalar));
+  return std::fabs(scalar_ld - rounded_ld) <= tolerance;
 }
 } // namespace
 
@@ -149,7 +172,7 @@ Ciphertext Engine::addPlain(const Ciphertext &cipher, double scalar) const {
   const int64_t plain = mod(encodedScalar, params_.t);
   const int64_t scaled = mulMod(delta(), plain, params_.q);
   result.c0 = mod(result.c0 + scaled, params_.q);
-  if (cipher.encoding == Encoding::Integer && std::fabs(scalar - std::llround(scalar)) > 1e-9) {
+  if (cipher.encoding == Encoding::Integer && !isApproximatelyInteger(scalar)) {
     result.encoding = Encoding::FixedPoint;
   }
   return result;
@@ -160,7 +183,7 @@ Ciphertext Engine::multiplyPlain(const Ciphertext &cipher, double scalar) const 
     throw std::runtime_error("ToyFHE: keys not generated");
   }
 
-  const bool scalarIsInteger = std::fabs(scalar - std::llround(scalar)) <= 1e-9;
+  const bool scalarIsInteger = isApproximatelyInteger(scalar);
 
   if (scalarIsInteger && cipher.encoding == Encoding::Integer) {
     const int64_t factor = static_cast<int64_t>(std::llround(scalar));
@@ -227,4 +250,3 @@ long double Engine::scaleFactor(int scalePower) const {
 }
 
 } // namespace fhenomenon::toyfhe
-
