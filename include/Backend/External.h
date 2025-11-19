@@ -38,19 +38,6 @@ class ExternalBackend : public Backend {
     return 0; // Placeholder
   }
 
-  /*
-  Compuon<seal::Ciphertext> add(const Compuon<seal::Ciphertext>& a, const
-  Compuon<seal::Ciphertext>& b) {
-      // Add ciphertexts using the external backend
-      return Compuon<seal::Ciphertext>(*a.encrypted_data);  // Placeholder
-  }
-
-  Compuon<seal::Ciphertext> multiply(const Compuon<seal::Ciphertext>& a, const
-  Compuon<seal::Ciphertext>& b) {
-      // Multiply ciphertexts using the external backend
-      return Compuon<seal::Ciphertext>(*a.encrypted_data);  // Placeholder
-  }
-  */
 };
 
 } // namespace fhenomenon

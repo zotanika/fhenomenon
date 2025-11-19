@@ -23,6 +23,7 @@ Fully Homomorphic Encryption represents a paradigm shift in privacy-preserving c
 - **Backend flexibility**: Support both built-in and external FHE libraries through a common interface
 - **Performance optimization**: A scheduler that builds operation graphs, fuses computations, and dispatches to accelerators
 - **Extensible framework**: Community-contributed optimization strategies and hardware acceleration modules
+- **Self-contained reference backend**: A ToyFHE implementation ships with the repo so contributors can build and run end-to-end flows without pulling a third-party FHE stack
 
 This document describes the design **Fhenomenon** should realize through collaborative development.
 
@@ -126,13 +127,14 @@ All backends implement a common interface defining:
 
 #### 3.3.2 BuiltinBackend
 
-The built-in backend provides:
-- **Extended APIs**: Fused operations (e.g., `multiplyAndRelinearize`, `rotateAndAdd`) that combine multiple FHE operations into single kernel calls
-- **Batching**: Operations on multiple ciphertexts bundled into batches for parallel execution
-- **Backend-owned acceleration**: Hardware utilization (GPU kernels, multi-core CPUs, etc.) implemented directly within the backend’s stack
-- **Internal decomposition**: When a fused operation is requested but not natively supported, the backend decomposes it into supported primitives and executes the resulting local program
+The built-in backend now ships with **ToyFHE**, a compact RLWE-inspired engine that we fully control. While intentionally simple—it works with scalar ciphertexts (degree-1 polynomials) and performs relinearization with the secret key—it demonstrates every architectural concept end to end:
 
-Having the backend manage fusion and decomposition keeps the scheduler decoupled from low-level implementation details.
+- **Reference scheme**: Implements a CKKS-style fixed-point workflow with plaintext modulus `t = 2^40`, ciphertext modulus `q = 2^55`, and automatic scale tracking. Integers, floats, and doubles encrypt into the same format, providing deterministic decryptions for demos and CI.
+- **Operation coverage**: Supports ciphertext addition, ciphertext multiplication, ciphertext–plaintext combination, and alignment of scale factors. The evaluator exposes fused helpers the scheduler can call when it wants to keep temporaries inside the backend.
+- **Internal decomposition**: When the scheduler requests an operation the ToyFHE core does not provide natively (e.g., adding ciphertexts of different scales), the backend builds a tiny local program: lift scales via plaintext multiplication, execute the primitive, and relinearize if needed.
+- **Acceleration-ready stack**: Even though ToyFHE currently runs on the CPU, it owns the entire call chain. Dropping in GPU kernels or ASIC-specific code requires touching only this backend layer, leaving the scheduler untouched.
+
+ToyFHE trades cryptographic strength for clarity: it is not meant for production workloads, but it allows the community to reason about memory layouts, strategy passes, and backend orchestration without depending on SEAL. You can still integrate battle-tested libraries (SEAL, OpenFHE, HEAAN, etc.) through `ExternalBackend`, but the repository remains self-contained from the very first clone.
 
 #### 3.3.3 ExternalBackend
 
@@ -321,7 +323,7 @@ This section outlines the implementation approach **Fhenomenon** should follow.
 - Implement basic `Dispatcher` for single-device execution
 
 **Phase 3: Backend Integration** (FHE Implementation)
-- Implement or integrate FHE library for `BuiltinBackend`
+- Implement the ToyFHE reference backend (or integrate an alternative library) for `BuiltinBackend`
 - Create `ExternalBackend` with adapter for one external library (e.g., SEAL)
 - Implement `KeyManager` and configuration system
 
@@ -448,7 +450,7 @@ graph TB
     end
     
     subgraph Backends["Backend Implementations"]
-        BuiltinBackend["Builtin Backend"]
+    BuiltinBackend["Builtin Backend<br/>(ToyFHE reference)"]
         ExternalBackend["External Backend"]
     end
     

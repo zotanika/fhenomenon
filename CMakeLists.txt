@@ -49,8 +49,7 @@ endif()
 add_subdirectory(external)
 add_library(external-libs INTERFACE)
 target_link_libraries(external-libs INTERFACE fmt::fmt
-                                              nlohmann_json::nlohmann_json
-                                              SEAL::seal)
+                                              nlohmann_json::nlohmann_json)
 
 macro(add_fhenomenon_sources)
   file(GLOB_RECURSE SUBDIR_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)

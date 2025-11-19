@@ -1,10 +1,8 @@
 #pragma once
 
 #include "Backend/Backend.h"
-#include "Backend/SEALBackend.h"
 #include "Compuon.h"
-
-#include <memory>
+#include "Crypto/ToyFHE.h"
 
 namespace fhenomenon {
 
@@ -12,7 +10,11 @@ extern template class Compuon<int>;
 
 class BuiltinBackend final : public Backend {
   private:
-  std::unique_ptr<SEALBackend> sealBackend_;
+  mutable toyfhe::Engine engine_;
+  toyfhe::Parameters params_;
+  mutable bool initialized_;
+
+  void ensureReady() const;
 
   public:
   BuiltinBackend();
@@ -20,8 +22,8 @@ class BuiltinBackend final : public Backend {
 
   BackendType getBackendType() const override { return BackendType::BuiltinBackend; }
   
-  // Initialize with parameters
-  void initialize(const Parameter &params);
+  // Initialize ToyFHE engine
+  void initialize();
   
   // Key management
   void generateKeys();
@@ -35,10 +37,6 @@ class BuiltinBackend final : public Backend {
   std::shared_ptr<CompuonBase> addPlain(const CompuonBase &a, double scalar);
   std::shared_ptr<CompuonBase> multiplyPlain(const CompuonBase &a, double scalar);
   std::any decrypt(const CompuonBase &entity) const override;
-
-  // Accessors
-  SEALBackend &getSEALBackend() { return *sealBackend_; }
-  const SEALBackend &getSEALBackend() const { return *sealBackend_; }
 };
 
 } // namespace fhenomenon

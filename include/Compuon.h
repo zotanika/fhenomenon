@@ -1,15 +1,11 @@
 #pragma once
 
 #include "Common.h"
+#include "Crypto/ToyFHE.h"
 #include "Utils/log.h"
 
 #include <typeindex>
 #include <memory>
-
-// Forward declaration
-namespace seal {
-  class Ciphertext;
-}
 
 namespace fhenomenon {
 
@@ -21,8 +17,8 @@ class CompuonBase {
   virtual ~CompuonBase() = default;
   virtual std::type_index type() const = 0;
   
-  // Store SEAL ciphertext for encrypted values
-  std::shared_ptr<seal::Ciphertext> ciphertext_;
+  // Store encrypted values using the toy FHE ciphertext representation
+  std::shared_ptr<toyfhe::Ciphertext> ciphertext_;
   bool isEncrypted_ = false;
 };
 
