@@ -16,12 +16,8 @@ Backend &Backend::getInstance(std::string_view libPath, std::string_view configP
 
     // Initialize KeyManager
     if (!configPath.empty()) {
-      Configuration config(configPath);
-      // (TODO)
-      // std::shared_ptr<seal::SEALContext> context =
-      // std::make_shared<seal::SEALContext>(
-      //    seal::EncryptionParameters(seal::scheme_type::ckks));
-      // keyManager.reset(new KeyManager(context, config));
+      [[maybe_unused]] Configuration config(configPath);
+      // TODO: Wire configuration into backend selection/key loading flow.
     }
 
     // Register scheduling strategies
