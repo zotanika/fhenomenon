@@ -22,8 +22,8 @@ class BuiltinBackend final : public Backend {
 
   BackendType getBackendType() const override { return BackendType::BuiltinBackend; }
   
-  // Initialize with parameters
-  void initialize(const Parameter &params);
+  // Initialize ToyFHE engine
+  void initialize();
   
   // Key management
   void generateKeys();

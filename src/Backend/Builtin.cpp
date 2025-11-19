@@ -8,12 +8,13 @@ namespace fhenomenon {
 BuiltinBackend::BuiltinBackend() : initialized_(false) {
   engine_.initialize(params_);
   engine_.generateKeys();
-  initialized_ = true;
+  initialize();
+  generateKeys();
 }
 
 void BuiltinBackend::ensureReady() const {
   if (!initialized_) {
-    const_cast<BuiltinBackend *>(this)->initialize(Parameter{});
+    const_cast<BuiltinBackend *>(this)->initialize();
   }
 
   if (!engine_.areKeysGenerated()) {
@@ -21,7 +22,7 @@ void BuiltinBackend::ensureReady() const {
   }
 }
 
-void BuiltinBackend::initialize([[maybe_unused]] const Parameter &params) {
+void BuiltinBackend::initialize() {
   engine_.initialize(params_);
   initialized_ = true;
 }
