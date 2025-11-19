@@ -3,131 +3,121 @@
 
 #include <stdexcept>
 
-using namespace fhenomenon;
+namespace fhenomenon {
 
-BuiltinBackend::BuiltinBackend() : sealBackend_(std::make_unique<SEALBackend>()) {
+BuiltinBackend::BuiltinBackend() : initialized_(false) {
+  engine_.initialize(params_);
+  engine_.generateKeys();
+  initialize();
+  generateKeys();
 }
 
-void BuiltinBackend::initialize(const Parameter &params) {
-  sealBackend_->initialize(params);
+void BuiltinBackend::ensureReady() const {
+  if (!initialized_) {
+    const_cast<BuiltinBackend *>(this)->initialize();
+  }
+
+  if (!engine_.areKeysGenerated()) {
+    const_cast<BuiltinBackend *>(this)->generateKeys();
+  }
+}
+
+void BuiltinBackend::initialize() {
+  engine_.initialize(params_);
+  initialized_ = true;
 }
 
 void BuiltinBackend::generateKeys() {
-  sealBackend_->generateKeys();
+  engine_.generateKeys();
 }
 
-void BuiltinBackend::loadKeys(const std::string &publicKeyPath, const std::string &secretKeyPath) {
-  sealBackend_->loadKeys(publicKeyPath, secretKeyPath);
+void BuiltinBackend::loadKeys([[maybe_unused]] const std::string &publicKeyPath,
+                              [[maybe_unused]] const std::string &secretKeyPath) {
+  LOG_MESSAGE("BuiltinBackend: ToyFHE backend currently generates keys at runtime; loadKeys is a no-op.");
 }
 
-void BuiltinBackend::saveKeys(const std::string &publicKeyPath, const std::string &secretKeyPath) {
-  sealBackend_->saveKeys(publicKeyPath, secretKeyPath);
+void BuiltinBackend::saveKeys([[maybe_unused]] const std::string &publicKeyPath,
+                              [[maybe_unused]] const std::string &secretKeyPath) {
+  LOG_MESSAGE("BuiltinBackend: ToyFHE backend currently does not persist keys; saveKeys is a no-op.");
 }
 
-void BuiltinBackend::transform(CompuonBase &entity, const Parameter &params) const {
-  if (!sealBackend_->isInitialized()) {
-    sealBackend_->initialize(params);
-  }
-  
-  if (!sealBackend_->areKeysGenerated()) {
-    sealBackend_->generateKeys();
-  }
+void BuiltinBackend::transform(CompuonBase &entity, [[maybe_unused]] const Parameter &params) const {
+  ensureReady();
 
   auto type = entity.type();
 
   if (type == typeid(int)) {
-    Compuon<int> &derivedEntity = dynamic_cast<Compuon<int> &>(entity);
-    int value = derivedEntity.getValue();
-    
-    // Encrypt using SEAL
-    seal::Ciphertext ciphertext = sealBackend_->encryptInt(value);
-    entity.ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(ciphertext));
+    auto &derivedEntity = dynamic_cast<Compuon<int> &>(entity);
+    const int value = derivedEntity.getValue();
+    auto ciphertext = std::make_shared<toyfhe::Ciphertext>(engine_.encryptInt(value));
+    entity.ciphertext_ = ciphertext;
     entity.isEncrypted_ = true;
-    
     LOG_MESSAGE("BuiltinBackend: Encrypted int value " << value);
   } else if (type == typeid(double)) {
-    Compuon<double> &derivedEntity = dynamic_cast<Compuon<double> &>(entity);
-    double value = derivedEntity.getValue();
-    
-    // Encrypt using SEAL CKKS
-    seal::Ciphertext ciphertext = sealBackend_->encryptDouble(value);
-    entity.ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(ciphertext));
+    auto &derivedEntity = dynamic_cast<Compuon<double> &>(entity);
+    const double value = derivedEntity.getValue();
+    auto ciphertext = std::make_shared<toyfhe::Ciphertext>(engine_.encryptDouble(value));
+    entity.ciphertext_ = ciphertext;
     entity.isEncrypted_ = true;
-    
     LOG_MESSAGE("BuiltinBackend: Encrypted double value " << value);
   } else if (type == typeid(float)) {
-    Compuon<float> &derivedEntity = dynamic_cast<Compuon<float> &>(entity);
-    float value = derivedEntity.getValue();
-    
-    // Encrypt using SEAL CKKS (treat float as double)
-    seal::Ciphertext ciphertext = sealBackend_->encryptDouble(static_cast<double>(value));
-    entity.ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(ciphertext));
+    auto &derivedEntity = dynamic_cast<Compuon<float> &>(entity);
+    const double value = static_cast<double>(derivedEntity.getValue());
+    auto ciphertext = std::make_shared<toyfhe::Ciphertext>(engine_.encryptDouble(value));
+    entity.ciphertext_ = ciphertext;
     entity.isEncrypted_ = true;
-    
     LOG_MESSAGE("BuiltinBackend: Encrypted float value " << value);
   } else {
     throw std::runtime_error("BuiltinBackend: Unsupported type for encryption");
   }
 }
 
+namespace {
+template <typename T>
+std::shared_ptr<CompuonBase> makeResultCompuon(const Compuon<T> &reference, const toyfhe::Ciphertext &ciphertext) {
+  auto resultCompuon = std::make_shared<Compuon<T>>(0);
+  resultCompuon->ciphertext_ = std::make_shared<toyfhe::Ciphertext>(ciphertext);
+  resultCompuon->isEncrypted_ = true;
+  resultCompuon->setProfile(reference.getProfile());
+  return resultCompuon;
+}
+} // namespace
+
 std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const CompuonBase &b) const {
+  ensureReady();
+
   if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_ || !b.ciphertext_) {
     throw std::runtime_error("BuiltinBackend: Cannot add unencrypted Compuon values");
   }
 
   auto type = a.type();
-  
+
   if (type == typeid(int)) {
-    const Compuon<int> &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    [[maybe_unused]] const Compuon<int> &derivedB = dynamic_cast<const Compuon<int> &>(b);
-    
-    // Perform homomorphic addition
-    seal::Ciphertext result = sealBackend_->add(*a.ciphertext_, *b.ciphertext_);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<int>>(0);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition");
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    [[maybe_unused]] const auto &derivedB = dynamic_cast<const Compuon<int> &>(b);
+    const auto result = engine_.add(*a.ciphertext_, *b.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (int)");
+    return makeResultCompuon(derivedA, result);
   } else if (type == typeid(double)) {
-    const Compuon<double> &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    [[maybe_unused]] const Compuon<double> &derivedB = dynamic_cast<const Compuon<double> &>(b);
-    
-    // Perform homomorphic addition
-    seal::Ciphertext result = sealBackend_->add(*a.ciphertext_, *b.ciphertext_);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition (double)");
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    [[maybe_unused]] const auto &derivedB = dynamic_cast<const Compuon<double> &>(b);
+    const auto result = engine_.add(*a.ciphertext_, *b.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (double)");
+    return makeResultCompuon(derivedA, result);
   } else if (type == typeid(float)) {
-    const Compuon<float> &derivedA = dynamic_cast<const Compuon<float> &>(a);
-    [[maybe_unused]] const Compuon<float> &derivedB = dynamic_cast<const Compuon<float> &>(b);
-    
-    // Perform homomorphic addition
-    seal::Ciphertext result = sealBackend_->add(*a.ciphertext_, *b.ciphertext_);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<float>>(0.0f);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition (float)");
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<float> &>(a);
+    [[maybe_unused]] const auto &derivedB = dynamic_cast<const Compuon<float> &>(b);
+    const auto result = engine_.add(*a.ciphertext_, *b.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (float)");
+    return makeResultCompuon(derivedA, result);
   }
-  
-  return nullptr;
+
+  throw std::runtime_error("BuiltinBackend: Unsupported type for add");
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, const CompuonBase &b) const {
+  ensureReady();
+
   if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_ || !b.ciphertext_) {
     throw std::runtime_error("BuiltinBackend: Cannot multiply unencrypted Compuon values");
   }
@@ -137,141 +127,100 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
   }
 
   auto type = a.type();
-  
+
   if (type == typeid(int)) {
-    const Compuon<int> &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    [[maybe_unused]] const Compuon<int> &derivedB = dynamic_cast<const Compuon<int> &>(b);
-    
-    // Perform homomorphic multiplication
-    seal::Ciphertext result = sealBackend_->multiply(*a.ciphertext_, *b.ciphertext_);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<int>>(0);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication");
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto result = engine_.multiply(*a.ciphertext_, *b.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (int)");
+    return makeResultCompuon(derivedA, result);
   } else if (type == typeid(double)) {
-    const Compuon<double> &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    [[maybe_unused]] const Compuon<double> &derivedB = dynamic_cast<const Compuon<double> &>(b);
-    
-    // Perform homomorphic multiplication
-    seal::Ciphertext result = sealBackend_->multiply(*a.ciphertext_, *b.ciphertext_);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication (double)");
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto result = engine_.multiply(*a.ciphertext_, *b.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (double)");
+    return makeResultCompuon(derivedA, result);
   } else if (type == typeid(float)) {
-    const Compuon<float> &derivedA = dynamic_cast<const Compuon<float> &>(a);
-    [[maybe_unused]] const Compuon<float> &derivedB = dynamic_cast<const Compuon<float> &>(b);
-    
-    // Perform homomorphic multiplication
-    seal::Ciphertext result = sealBackend_->multiply(*a.ciphertext_, *b.ciphertext_);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<float>>(0.0f);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication (float)");
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<float> &>(a);
+    const auto result = engine_.multiply(*a.ciphertext_, *b.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (float)");
+    return makeResultCompuon(derivedA, result);
   }
-  
-  return nullptr;
+
+  throw std::runtime_error("BuiltinBackend: Unsupported type for multiply");
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::addPlain(const CompuonBase &a, double scalar) {
+  ensureReady();
+
   if (!a.isEncrypted_ || !a.ciphertext_) {
     throw std::runtime_error("BuiltinBackend: Cannot add plain to unencrypted Compuon value");
   }
 
   auto type = a.type();
-  
+
   if (type == typeid(double)) {
-    const Compuon<double> &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    
-    // Perform homomorphic addition with plaintext
-    seal::Ciphertext result = sealBackend_->addPlain(*a.ciphertext_, scalar);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic addition with plain " << scalar);
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto result = engine_.addPlain(*a.ciphertext_, scalar);
+    LOG_MESSAGE("BuiltinBackend: ToyFHE addPlain(double) with scalar " << scalar);
+    return makeResultCompuon(derivedA, result);
   }
-  
-  return nullptr;
+
+  throw std::runtime_error("BuiltinBackend: addPlain currently supports double types only");
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::multiplyPlain(const CompuonBase &a, double scalar) {
+  ensureReady();
+
   if (!a.isEncrypted_ || !a.ciphertext_) {
     throw std::runtime_error("BuiltinBackend: Cannot multiply plain with unencrypted Compuon value");
   }
 
   auto type = a.type();
-  
+
   if (type == typeid(double)) {
-    const Compuon<double> &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    
-    // Perform homomorphic multiplication with plaintext
-    seal::Ciphertext result = sealBackend_->multiplyPlain(*a.ciphertext_, scalar);
-    
-    // Create result Compuon
-    auto resultCompuon = std::make_shared<Compuon<double>>(0.0);
-    resultCompuon->ciphertext_ = std::make_shared<seal::Ciphertext>(std::move(result));
-    resultCompuon->isEncrypted_ = true;
-    resultCompuon->setProfile(derivedA.getProfile());
-    
-    LOG_MESSAGE("BuiltinBackend: Performed homomorphic multiplication with plain " << scalar);
-    return resultCompuon;
+    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto result = engine_.multiplyPlain(*a.ciphertext_, scalar);
+    LOG_MESSAGE("BuiltinBackend: ToyFHE multiplyPlain(double) with scalar " << scalar);
+    return makeResultCompuon(derivedA, result);
   }
-  
-  return nullptr;
+
+  throw std::runtime_error("BuiltinBackend: multiplyPlain currently supports double types only");
 }
 
 std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
+  ensureReady();
+
   if (!entity.isEncrypted_ || !entity.ciphertext_) {
-    // Return plain value if not encrypted
     auto type = entity.type();
     if (type == typeid(int)) {
-      const Compuon<int> &derivedEntity = dynamic_cast<const Compuon<int> &>(entity);
+      const auto &derivedEntity = dynamic_cast<const Compuon<int> &>(entity);
       return derivedEntity.getValue();
     } else if (type == typeid(double)) {
-      const Compuon<double> &derivedEntity = dynamic_cast<const Compuon<double> &>(entity);
+      const auto &derivedEntity = dynamic_cast<const Compuon<double> &>(entity);
       return derivedEntity.getValue();
     } else if (type == typeid(float)) {
-      const Compuon<float> &derivedEntity = dynamic_cast<const Compuon<float> &>(entity);
+      const auto &derivedEntity = dynamic_cast<const Compuon<float> &>(entity);
       return derivedEntity.getValue();
     }
-    return nullptr;
+    return {};
   }
 
   auto type = entity.type();
 
   if (type == typeid(int)) {
-    int64_t decrypted = sealBackend_->decryptInt(*entity.ciphertext_);
-    LOG_MESSAGE("BuiltinBackend: Decrypted int value " << decrypted);
-    return static_cast<int>(decrypted);
+    const auto value = engine_.decryptInt(*entity.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Decrypted int value " << value);
+    return static_cast<int>(value);
   } else if (type == typeid(double)) {
-    double decrypted = sealBackend_->decryptDouble(*entity.ciphertext_);
-    LOG_MESSAGE("BuiltinBackend: Decrypted double value " << decrypted);
-    return decrypted;
+    const auto value = engine_.decryptDouble(*entity.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Decrypted double value " << value);
+    return value;
   } else if (type == typeid(float)) {
-    double decrypted = sealBackend_->decryptDouble(*entity.ciphertext_);
-    LOG_MESSAGE("BuiltinBackend: Decrypted float value " << static_cast<float>(decrypted));
-    return static_cast<float>(decrypted);
+    const auto value = engine_.decryptDouble(*entity.ciphertext_);
+    LOG_MESSAGE("BuiltinBackend: Decrypted float value " << static_cast<float>(value));
+    return static_cast<float>(value);
   }
 
-  return nullptr;
+  return {};
 }
+
+} // namespace fhenomenon
