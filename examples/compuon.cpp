@@ -20,7 +20,7 @@ int main() {
 
     Compuon<int> c = a + 2;
     Compuon<int> d = c * b;
-    c = c + 2; 
+    c = c + 2;
     d = c * d;
     a = c + 1;
     std::cout << "Result A: " << a.getValue() << std::endl;

@@ -6,14 +6,11 @@
 
 namespace fhenomenon::toyfhe {
 
-enum class Encoding {
-  Integer,
-  FixedPoint
-};
+enum class Encoding { Integer, FixedPoint };
 
 struct Parameters {
-  int64_t q = static_cast<int64_t>(1) << 55;   // Ciphertext modulus
-  int64_t t = static_cast<int64_t>(1) << 40;   // Plaintext modulus
+  int64_t q = static_cast<int64_t>(1) << 55;     // Ciphertext modulus
+  int64_t t = static_cast<int64_t>(1) << 40;     // Plaintext modulus
   int64_t scale = static_cast<int64_t>(1) << 20; // Fixed-point scale base
   int64_t noise_bound = static_cast<int64_t>(1) << 8;
 };
@@ -28,7 +25,7 @@ struct Ciphertext {
 };
 
 class Engine {
-public:
+  public:
   Engine();
 
   void initialize(const Parameters &params);
@@ -48,7 +45,7 @@ public:
   int64_t decryptInt(const Ciphertext &cipher) const;
   double decryptDouble(const Ciphertext &cipher) const;
 
-private:
+  private:
   Ciphertext encryptEncoded(int64_t message, Encoding encoding, int scalePower) const;
   int64_t decodeRaw(const Ciphertext &cipher) const;
   Ciphertext alignScale(const Ciphertext &cipher, int targetScale) const;
@@ -67,4 +64,3 @@ private:
 };
 
 } // namespace fhenomenon::toyfhe
-

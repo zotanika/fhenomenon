@@ -18,19 +18,19 @@ int main() {
 
     Compuon<int> a = 0;
     a.belong(profile);
-    std::cout <<"a's address: "<< &a << std::endl; 
+    std::cout << "a's address: " << &a << std::endl;
 
     Compuon<int> b = 10;
     b.belong(profile);
-    std::cout <<"b's address: "<< &b << std::endl; 
+    std::cout << "b's address: " << &b << std::endl;
 
     Compuon<int> c = 0;
     c.belong(profile);
-    std::cout <<"c's address: "<< &c << std::endl; 
+    std::cout << "c's address: " << &c << std::endl;
 
     Compuon<int> d = 0;
     d.belong(profile);
-    std::cout <<"d's address: "<< &d<< std::endl; 
+    std::cout << "d's address: " << &d << std::endl;
 
     std::cout << "Input: " << a.getValue() << ", " << b.getValue() << ", " << c.getValue() << ", " << d.getValue()
               << std::endl;
@@ -45,14 +45,13 @@ int main() {
       a = a + 2;
       a = a + 2;
       c = a * b;
-      d = d + 2;    
+      d = d + 2;
       a = a + 2;
       a = a + 4;
       b = a + 2;
-      d = b * a;   
+      d = b * a;
       a = a + 2;
       a = a + 2;
-      
     });
 
     std::cout << "Result: " << a.getValue() << ", " << b.getValue() << ", " << c.getValue() << ", " << d.getValue()

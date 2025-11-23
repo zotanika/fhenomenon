@@ -4,8 +4,8 @@
 #include "Crypto/ToyFHE.h"
 #include "Utils/log.h"
 
-#include <typeindex>
 #include <memory>
+#include <typeindex>
 
 namespace fhenomenon {
 
@@ -16,7 +16,7 @@ class CompuonBase {
   public:
   virtual ~CompuonBase() = default;
   virtual std::type_index type() const = 0;
-  
+
   // Store encrypted values using the toy FHE ciphertext representation
   std::shared_ptr<toyfhe::Ciphertext> ciphertext_;
   bool isEncrypted_ = false;
@@ -31,9 +31,7 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
   public:
   // constructor
   // (TODO) explicit Compuon(const T v) : val_(v) {}
-  Compuon(const T v) : val_(v) {
-     LOG_MESSAGE("Constructor with value: " << val_);
-  }
+  Compuon(const T v) : val_(v) { LOG_MESSAGE("Constructor with value: " << val_); }
   // copy constrcutor
   Compuon(const Compuon<T> &other);
 
@@ -41,11 +39,11 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
   Compuon(Compuon<T> &&other) noexcept
     : std::enable_shared_from_this<Compuon<T>>(std::move(other)), val_(std::move(other.val_)),
       profile_(std::move(other.profile_)) {
-    LOG_MESSAGE("Move constructor with value: " << val_ << " " <<this << "other:" << &other);
+    LOG_MESSAGE("Move constructor with value: " << val_ << " " << this << "other:" << &other);
     // reset 'other'
     other.val_ = T();
     other.profile_ = nullptr;
-}
+  }
 
   Compuon<T> &operator=(const T &scalar);
   Compuon<T> &operator=(const Compuon &other);
@@ -61,7 +59,7 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
   std::shared_ptr<Profile> getProfile() const { return profile_; }
   void setProfile(std::shared_ptr<Profile> newProfile) { profile_ = newProfile; }
 
-  bool isScalar() const{ return isScalar_; }
+  bool isScalar() const { return isScalar_; }
   void setScalar() { isScalar_ = true; }
 
   T decrypt() const;
