@@ -1,7 +1,9 @@
 include(CPM)
 
 # Set C++ standard before including packages that need it
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard")
+set(CMAKE_CXX_STANDARD
+    17
+    CACHE STRING "C++ standard")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 cpmaddpackage("gh:TheLartians/PackageProject.cmake@1.8.0")

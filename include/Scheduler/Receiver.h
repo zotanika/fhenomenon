@@ -6,8 +6,7 @@
 
 namespace fhenomenon {
 
-template <typename T>
-class Receiver {
+template <typename T> class Receiver {
   private:
   std::unordered_map<void *, std::vector<Operation<T>>> operationsMap;
 

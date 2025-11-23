@@ -28,9 +28,7 @@ Backend &Backend::getInstance(std::string_view libPath, std::string_view configP
   return *backend;
 }
 
-std::unique_ptr<Backend> Backend::createBuiltinBackend() {
-  return std::make_unique<BuiltinBackend>();
-}
+std::unique_ptr<Backend> Backend::createBuiltinBackend() { return std::make_unique<BuiltinBackend>(); }
 
 std::unique_ptr<Backend> Backend::createExternalBackend(std::string_view libPath) {
   return std::make_unique<ExternalBackend>(libPath.data());
