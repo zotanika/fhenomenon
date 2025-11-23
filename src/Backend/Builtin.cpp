@@ -27,9 +27,7 @@ void BuiltinBackend::initialize() {
   initialized_ = true;
 }
 
-void BuiltinBackend::generateKeys() {
-  engine_.generateKeys();
-}
+void BuiltinBackend::generateKeys() { engine_.generateKeys(); }
 
 void BuiltinBackend::loadKeys([[maybe_unused]] const std::string &publicKeyPath,
                               [[maybe_unused]] const std::string &secretKeyPath) {

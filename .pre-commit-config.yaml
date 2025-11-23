@@ -26,4 +26,4 @@ repos:
         entry: tools/tidy -quiet
         pass_filenames: false
         language: system
-        stages: ["push"]
+        stages: ["pre-push"]

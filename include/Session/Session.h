@@ -2,16 +2,16 @@
 
 #include "Backend/Backend.h"
 #include "Compuon.h"
+#include "Parameter/CKKSParameter.h"
+#include "Parameter/Parameter.h"
+#include "Parameter/ParameterGen.h"
+#include "Profile.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Scheduler.h"
 #include "Scheduler/Strategy.h"
-#include "Parameter/Parameter.h"
-#include "Parameter/ParameterGen.h"
-#include "Parameter/CKKSParameter.h"
-#include "Profile.h"
 
-#include <unordered_map>
 #include <memory>
+#include <unordered_map>
 
 namespace fhenomenon {
 
@@ -26,7 +26,7 @@ class Session final : public std::enable_shared_from_this<Session> {
 
   ~Session() { session_ptr_ = nullptr; }
 
-  template <typename T> void setEntity(const void *key, Compuon<T> &entity){
+  template <typename T> void setEntity(const void *key, Compuon<T> &entity) {
     entity_map_[key] = std::any(std::reference_wrapper<Compuon<T>>(entity));
   }
 
@@ -55,13 +55,13 @@ class Session final : public std::enable_shared_from_this<Session> {
   }
 
   template <typename T> std::shared_ptr<Compuon<T>> trackEntity(Compuon<T> &entity) {
-    const void* key = &entity;
+    const void *key = &entity;
     auto existing_entity = getEntity<T>(key);
-    if(existing_entity != nullptr){
+    if (existing_entity != nullptr) {
       LOG_MESSAGE("Existing");
     }
-    auto entity_p = std::shared_ptr<Compuon<T>>(existing_entity, [](Compuon<T>*){}); 
-    //double delete bug if std::shared_ptr<Compuon<T>>(existing_entity);
+    auto entity_p = std::shared_ptr<Compuon<T>>(existing_entity, [](Compuon<T> *) {});
+    // double delete bug if std::shared_ptr<Compuon<T>>(existing_entity);
     auto entity_ptr = entity_p ? entity_p->weak_from_this().lock() : entity.weak_from_this().lock();
 
     if (!entity_ptr) {
@@ -81,25 +81,22 @@ class Session final : public std::enable_shared_from_this<Session> {
 
   bool isActive() { return (session_ptr_ == nullptr) ? false : active_; }
 
-  void useBackend() const {
-        (void)backend_;
-    }
+  void useBackend() const { (void)backend_; }
 
   private:
   // prevent direct instantiation
 
-  explicit Session(const Backend &backend) 
+  explicit Session(const Backend &backend)
     : active_(false), backend_(backend), scheduler_(std::make_unique<scheduler::Scheduler>(backend)) {}
 
   Session(const Session &) = delete;
   Session &operator=(const Session &) = delete;
 
-  
   void optimize();
-  
+
   bool active_;
   const Backend &backend_;
-  std::unique_ptr<scheduler::Scheduler> scheduler_;  // Scheduler with backend delegate
+  std::unique_ptr<scheduler::Scheduler> scheduler_; // Scheduler with backend delegate
   // set of operations
   std::vector<std::shared_ptr<scheduler::OperationBase>> operations_;
   std::vector<std::shared_ptr<void>> tmp_entities_;

@@ -49,8 +49,7 @@ bool isApproximatelyInteger(double scalar, long double tolerance = 1e-9L) {
 }
 } // namespace
 
-Engine::Engine()
-  : initialized_(false), keysGenerated_(false), secretKey_(0), rng_(std::random_device{}()) {}
+Engine::Engine() : initialized_(false), keysGenerated_(false), secretKey_(0), rng_(std::random_device{}()) {}
 
 void Engine::initialize(const Parameters &params) {
   if (params.q <= params.t) {
@@ -92,9 +91,7 @@ Ciphertext Engine::encryptEncoded(int64_t message, Encoding encoding, int scaleP
   return ciphertext;
 }
 
-Ciphertext Engine::encryptInt(int64_t value) const {
-  return encryptEncoded(value, Encoding::Integer, 0);
-}
+Ciphertext Engine::encryptInt(int64_t value) const { return encryptEncoded(value, Encoding::Integer, 0); }
 
 Ciphertext Engine::encryptDouble(double value) const {
   const long double scaled = static_cast<long double>(value) * scaleFactor(1);
@@ -123,9 +120,9 @@ Ciphertext Engine::add(const Ciphertext &lhs, const Ciphertext &rhs) const {
   result.c0 = mod(left.c0 + right.c0, params_.q);
   result.c1 = mod(left.c1 + right.c1, params_.q);
   result.scale_power = targetScale;
-  result.encoding =
-    (left.encoding == Encoding::FixedPoint || right.encoding == Encoding::FixedPoint) ? Encoding::FixedPoint
-                                                                                      : Encoding::Integer;
+  result.encoding = (left.encoding == Encoding::FixedPoint || right.encoding == Encoding::FixedPoint)
+                      ? Encoding::FixedPoint
+                      : Encoding::Integer;
   return result;
 }
 
@@ -145,9 +142,9 @@ Ciphertext Engine::multiply(const Ciphertext &lhs, const Ciphertext &rhs) const 
   const int64_t relin = mulMod(c2, secretKey_, params_.q);
   result.c1 = mod(cross + relin, params_.q);
   result.scale_power = lhs.scale_power + rhs.scale_power;
-  result.encoding =
-    (lhs.encoding == Encoding::FixedPoint || rhs.encoding == Encoding::FixedPoint) ? Encoding::FixedPoint
-                                                                                   : Encoding::Integer;
+  result.encoding = (lhs.encoding == Encoding::FixedPoint || rhs.encoding == Encoding::FixedPoint)
+                      ? Encoding::FixedPoint
+                      : Encoding::Integer;
   return result;
 }
 

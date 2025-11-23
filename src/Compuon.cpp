@@ -19,16 +19,17 @@ Compuon<T>::Compuon(const Compuon<T> &other)
   : std::enable_shared_from_this<Compuon<T>>(other), val_(other.val_), profile_(other.profile_) {
   LOG_MESSAGE("Copy constructor with value: " << val_ << " (" << this << ")");
   if (Session::getSession()->isActive()) {
-    Session::getSession()->setEntity<T>(this,  const_cast<Compuon<T> &>(other));
+    Session::getSession()->setEntity<T>(this, const_cast<Compuon<T> &>(other));
     Session::getSession()->saveEntity(this, const_cast<Compuon<T> &>(other));
-    //Session::getSession()->saveEntity(&other, *this);
+    // Session::getSession()->saveEntity(&other, *this);
   }
 }
 
 template <typename T> void Compuon<T>::belong(std::shared_ptr<Profile> newProfile) {
   profile_.swap(newProfile);
-  Backend::getInstance().transform(*this, *(profile_->getParam())); 
-  if(Session::getSession()) Session::getSession()->saveEntity(*this);
+  Backend::getInstance().transform(*this, *(profile_->getParam()));
+  if (Session::getSession())
+    Session::getSession()->saveEntity(*this);
 }
 
 template <typename T> Compuon<T> &Compuon<T>::operator=(const T &scalar) {
@@ -38,7 +39,7 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const T &scalar) {
 
     auto op1_ptr = Session::getSession()->trackEntity(*this);
     auto tmp = std::make_shared<Compuon<T>>(scalar);
-    tmp->belong(op1_ptr->getProfile()); 
+    tmp->belong(op1_ptr->getProfile());
 
     Session::getSession()->saveOp(
       std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Assignment, op1_ptr, tmp));
@@ -62,13 +63,12 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const Compuon<T> &other)
     return *this;
 #endif
   if (Session::getSession()->isActive()) {
-    std::cout << "other: "<<&other <<" "<< Session::getSession()->getEntity<T>(&other)<<std::endl;
+    std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
-    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T>&>(other));
-    
+    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(other));
 
     Session::getSession()->saveOp(
-    std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Assignment, op1_ptr, op2_ptr));
+      std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Assignment, op1_ptr, op2_ptr));
 
     LOG_MESSAGE("========");
 
@@ -91,10 +91,9 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(Compuon &&other) noexcep
 
   if (Session::getSession()->isActive()) {
     LOG_MESSAGE("(Move) Assignment on session");
-    std::cout << "other: "<<&other <<" "<< Session::getSession()->getEntity<T>(&other)<<std::endl;
+    std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
     auto op2_ptr = Session::getSession()->trackEntity(other);
-    
 
     Session::getSession()->saveOp(
       std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Assignment, op1_ptr, op2_ptr));
@@ -117,7 +116,6 @@ template <typename T> Compuon<T> Compuon<T>::operator+(const T &scalar) const {
   LOG_MESSAGE("=============================");
   return *this + *entity;
 }
-
 
 template <typename T> Compuon<T> Compuon<T>::operator+(const Compuon<T> &other) const {
   LOG_MESSAGE("=====Operator Add of Compuon=====");
@@ -166,7 +164,7 @@ template <typename T> Compuon<T> Compuon<T>::operator*(const Compuon<T> &other) 
   if (Session::getSession()->isActive()) {
     LOG_MESSAGE("Multiplication on session");
 
-    //Track operands and result in the Session
+    // Track operands and result in the Session
     auto op1_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(*this));
     auto op2_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(other));
     auto result_ptr = std::make_shared<Compuon<T>>(1234);
@@ -174,12 +172,11 @@ template <typename T> Compuon<T> Compuon<T>::operator*(const Compuon<T> &other) 
     Session::getSession()->trackEntity(*result_ptr);
 
     Session::getSession()->saveOp(
-      std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Multiply, op1_ptr, op2_ptr, result_ptr)
-    );
+      std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Multiply, op1_ptr, op2_ptr, result_ptr));
     result = result_ptr;
   } else {
     LOG_MESSAGE("Multiplication without session");
-    LOG_MESSAGE( this->getValue() <<" x " << other.getValue());
+    LOG_MESSAGE(this->getValue() << " x " << other.getValue());
     auto result_mul =
       Backend::getInstance().multiply(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
 

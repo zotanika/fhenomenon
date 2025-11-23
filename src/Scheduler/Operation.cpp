@@ -1,6 +1,6 @@
 #include "Scheduler/Operation.h"
-#include "Session/Session.h"
 #include "Backend/Backend.h"
+#include "Session/Session.h"
 
 namespace fhenomenon {
 namespace scheduler {
@@ -11,16 +11,16 @@ template <typename T> void Operation<T>::execute() {
   if (!backend_delegate_) {
     throw std::runtime_error("Operation::execute: Backend delegate not set");
   }
-  
-  const Backend& backend = *backend_delegate_;
-  
+
+  const Backend &backend = *backend_delegate_;
+
   if (type_ == OperationType::Assignment) {
     auto op1_ref = Session::getSession()->getEntity(*operand1_);
     LOG_MESSAGE("OperationType::Assignment start (" << operand1_->getValue() << ", " << operand2_->getValue() << ")");
-    
+
     // Copy value
     op1_ref->setValue(operand2_->getValue());
-    
+
     // Copy ciphertext if operand2 is encrypted
     if (operand2_->isEncrypted_ && operand2_->ciphertext_) {
       op1_ref->ciphertext_ = operand2_->ciphertext_->clone();
@@ -32,7 +32,7 @@ template <typename T> void Operation<T>::execute() {
         backend.transform(*op1_ref, *(operand2_->getProfile()->getParam()));
       }
     }
-    
+
     LOG_MESSAGE("OperationType::Assignment end (" << op1_ref->getValue() << ", " << operand2_->getValue() << ")");
   } else if (type_ == OperationType::Refresh) {
     // operand1.bootstrap();
@@ -42,8 +42,8 @@ template <typename T> void Operation<T>::execute() {
                                              << operand2_->getValue() << ")");
 
     // Use backend delegate to execute addition
-    auto result_add = backend.add(static_cast<const CompuonBase &>(*operand1_),
-                                 static_cast<const CompuonBase &>(*operand2_));
+    auto result_add =
+      backend.add(static_cast<const CompuonBase &>(*operand1_), static_cast<const CompuonBase &>(*operand2_));
 
     if (!result_add) {
       throw std::runtime_error("Backend::add returned nullptr");
@@ -59,7 +59,7 @@ template <typename T> void Operation<T>::execute() {
     auto result_ref = Session::getSession()->getEntity(*result_);
     if (result_ref) {
       result_ref->setValue(result->getValue());
-      
+
       // Copy ciphertext from backend result
       if (result->isEncrypted_ && result->ciphertext_) {
         result_ref->ciphertext_ = result->ciphertext_->clone();
@@ -68,22 +68,22 @@ template <typename T> void Operation<T>::execute() {
         LOG_MESSAGE("OperationType::Add: Copied encrypted ciphertext to result");
       }
     }
-    
+
     LOG_MESSAGE("OperationType::Add end (" << result_ref->getValue() << " = " << operand1_->getValue() << " + "
                                            << operand2_->getValue() << ")");
   } else if (type_ == OperationType::Multiply) {
     LOG_MESSAGE("OperationType::Multiply start (" << result_->getValue() << " = " << operand1_->getValue() << " * "
-                                             << operand2_->getValue() << ")");
-    
+                                                  << operand2_->getValue() << ")");
+
     // Use backend delegate to execute multiplication
-    auto result_multiply = backend.multiply(static_cast<const CompuonBase &>(*operand1_),
-                                           static_cast<const CompuonBase &>(*operand2_));
-    if(!result_multiply){
+    auto result_multiply =
+      backend.multiply(static_cast<const CompuonBase &>(*operand1_), static_cast<const CompuonBase &>(*operand2_));
+    if (!result_multiply) {
       throw std::runtime_error("Backend::multiply returned nullptr");
     }
 
     auto result = std::dynamic_pointer_cast<Compuon<T>>(result_multiply);
-    
+
     if (!result) {
       throw std::runtime_error("Backend::multiply returned wrong type");
     }
@@ -92,7 +92,7 @@ template <typename T> void Operation<T>::execute() {
     auto result_ref = Session::getSession()->getEntity(*result_);
     if (result_ref) {
       result_ref->setValue(result->getValue());
-      
+
       // Copy ciphertext from backend result
       if (result->isEncrypted_ && result->ciphertext_) {
         result_ref->ciphertext_ = result->ciphertext_->clone();
@@ -101,9 +101,9 @@ template <typename T> void Operation<T>::execute() {
         LOG_MESSAGE("OperationType::Multiply: Copied encrypted ciphertext to result");
       }
     }
-    
+
     LOG_MESSAGE("OperationType::Multiply end (" << result_ref->getValue() << " = " << operand1_->getValue() << " * "
-                                           << operand2_->getValue() << ")");
+                                                << operand2_->getValue() << ")");
   } else {
     throw std::runtime_error("Invalid operation");
   }

@@ -12,7 +12,6 @@ class Strategy {
   virtual void apply(Planner<int> &plan) const = 0;
 };
 
-
 class PrintOperationsStrategy final : public Strategy {
   public:
   void apply(Planner<int> &plan) const override {
@@ -28,7 +27,7 @@ class PrintOperationsStrategy final : public Strategy {
 class ConstantFoldingStrategy final: public Strategy {
   public:
   void apply(Planner<int> &plan) const override{
-    LOG_MESSAGE("Constant Folding Strategy...");  
+    LOG_MESSAGE("Constant Folding Strategy...");
     const auto& roots = plan.getRoots();
   }
 }
@@ -50,7 +49,7 @@ class FuseOperationsStrategy final : public Strategy {
             pending_operations[entity_ptr].clear();
         }
     };
-    
+
     for(std::size_t i=0;i<ops.size();i++){
       const auto& op = ops[i];
       const auto& operand1 = op.getOperand1();
@@ -71,7 +70,7 @@ class FuseOperationsStrategy final : public Strategy {
         if(operationType == OperationType::Assignment){
             continue;
         }
-        
+
         flushPending(operand1);
         fusedOps.push_back(op);
         continue;
@@ -130,14 +129,14 @@ public:
         for (std::size_t i = 1; i < ops.size(); i++) {
             if (canFuse(ops[i - 1], ops[i])) {
                 len++;
-            } 
+            }
             else {
-                if (ops[i - 1].getType() == OperationType::Add && len > 1) 
+                if (ops[i - 1].getType() == OperationType::Add && len > 1)
                   fuseOperations(len, ops[i - 1]);
-                
+
                 else
                   fusedOps.push_back(ops[i - 1]);
-                
+
                 len = 1;
             }
         }
