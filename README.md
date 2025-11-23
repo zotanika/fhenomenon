@@ -367,13 +367,13 @@ int main() {
     sess.run([&]() {
         Compuon<int> a = 10;
         Compuon<int> b = 20;
-        
+
         a.belong(rlwe::ckks::configA);  // Encrypt a
         b.belong(rlwe::ckks::configA);  // Encrypt b
-        
+
         auto c = a * b;  // Homomorphic multiplication
         auto d = c + 5;  // Homomorphic addition with scalar
-        
+
         std::cout << "Result: " << d.decrypt() << std::endl;
     });
 
@@ -386,15 +386,15 @@ int main() {
 ```cpp
 sess.run([&]() {
     Compuon<double> x = 3.14;
-    
+
     // Start with CKKS (for approximate arithmetic)
     x.belong(rlwe::ckks::configA);
     x = x * x;  // Square
-    
+
     // Switch to BGV (for exact arithmetic)
     x.belong(rlwe::bgv::configB);
     x = x + 1;  // Exact addition
-    
+
     std::cout << "Result: " << x.decrypt() << std::endl;
 });
 ```
@@ -409,11 +409,11 @@ struct Point {
 sess.run([&]() {
     Compuon<Point> p = {1.0, 2.0, 3.0};
     p.belong(rlwe::ckks::configA);  // Each field maps to a CKKS slot
-    
+
     // Operations apply to all slots simultaneously
     auto p2 = p;  // Copy
     p2 = p2 * 2.0;  // Scale all coordinates
-    
+
     Point result = p2.decrypt();
     std::cout << "Scaled: (" << result.x << ", " << result.y << ", " << result.z << ")" << std::endl;
 });
@@ -428,56 +428,56 @@ graph TB
     subgraph Application["Application Layer"]
         UserCode["User Code with Compuon&lt;T&gt;"]
     end
-    
+
     subgraph Frontend["Frontend Layer"]
         Compuon["Compuon&lt;T&gt;<br/>- Operators<br/>- belong()"]
         Session["Session<br/>- Scoped execution<br/>- Operation collection"]
     end
-    
+
     subgraph Scheduler["Scheduler Layer<br/>(Orchestrates, decoupled from computations)"]
         Receiver["Receiver<br/>(collect)"]
         GraphBuilder["Graph Builder<br/>(analyze)"]
         Strategy["Strategy Framework<br/>(optimize)"]
         Dispatcher["Dispatcher<br/>(delegate)"]
-        
+
         Receiver --> GraphBuilder
         GraphBuilder --> Strategy
         Strategy --> Dispatcher
     end
-    
+
     subgraph BackendInterface["Backend Interface"]
         BackendOps["- Encryption / Decryption<br/>- Primitive & fused homomorphic ops<br/>- Operation decomposition<br/>- Key management hooks"]
     end
-    
+
     subgraph Backends["Backend Implementations"]
     BuiltinBackend["Builtin Backend<br/>(ToyFHE reference)"]
         ExternalBackend["External Backend"]
     end
-    
+
     subgraph BackendStack["Backend Stack<br/>(Each backend owns)"]
         OpCatalog["Operation catalog<br/>Hardware utilization<br/>Primitive + fused kernels<br/>Internal decomposition"]
     end
-    
+
     subgraph KeyMgmt["Key Management Layer"]
         KeyManager["KeyManager"]
         Configuration["Configuration"]
         IOScheduler["IO Scheduler"]
     end
-    
+
     UserCode -->|uses| Frontend
     Compuon -.->|part of| Frontend
     Session -.->|part of| Frontend
-    
+
     Frontend -->|"abstract ops"| Scheduler
     Scheduler -->|"delegated workloads"| BackendInterface
-    
+
     BackendInterface --> Backends
     BuiltinBackend -.->|implements| BackendInterface
     ExternalBackend -.->|implements| BackendInterface
-    
+
     Backends --> BackendStack
     BackendStack --> KeyMgmt
-    
+
     KeyManager -.->|part of| KeyMgmt
     Configuration -.->|part of| KeyMgmt
     IOScheduler -.->|part of| KeyMgmt

@@ -14,23 +14,22 @@ int main() {
     std::shared_ptr<Profile> profile = Profile::createProfile(param);
 
     auto session = Session::create(Backend::getInstance());
-    
 
     Compuon<int> a = 0;
     a.belong(profile);
-    std::cout <<"a's address: "<< &a << std::endl; 
+    std::cout << "a's address: " << &a << std::endl;
 
     Compuon<int> b = 10;
     b.belong(profile);
-    std::cout <<"b's address: "<< &b << std::endl; 
+    std::cout << "b's address: " << &b << std::endl;
 
     Compuon<int> c = 0;
     c.belong(profile);
-    std::cout <<"c's address: "<< &c << std::endl; 
+    std::cout << "c's address: " << &c << std::endl;
 
     Compuon<int> d = 0;
     d.belong(profile);
-    std::cout <<"d's address: "<< &d<< std::endl; 
+    std::cout << "d's address: " << &d << std::endl;
 
     std::cout << "Input: " << a.getValue() << ", " << b.getValue() << ", " << c.getValue() << ", " << d.getValue()
               << std::endl;
@@ -43,7 +42,7 @@ int main() {
       c = a * b;
       d = a + 2;
       d = c * b;
-      d = d + a;      
+      d = d + a;
     });
 
     std::cout << "Result: " << a.getValue() << ", " << b.getValue() << ", " << c.getValue() << ", " << d.getValue()

@@ -12,13 +12,13 @@ class Profile {
 
   void setParam(std::shared_ptr<Parameter> newParam) { param_.swap(newParam); }
 
-  static std::shared_ptr<Profile> createProfile(std::shared_ptr<Parameter> newParam){
+  static std::shared_ptr<Profile> createProfile(std::shared_ptr<Parameter> newParam) {
     profile_ = std::make_shared<Profile>();
     profile_->setParam(newParam);
     return profile_;
   }
 
-  static std::shared_ptr<Profile> getProfile() {return profile_;}
+  static std::shared_ptr<Profile> getProfile() { return profile_; }
 
   private:
   std::shared_ptr<Parameter> param_;

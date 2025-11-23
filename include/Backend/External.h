@@ -2,9 +2,9 @@
 
 #include "Backend/Backend.h"
 
-#include <string>
-#include <memory>
 #include <any>
+#include <memory>
+#include <string>
 
 namespace fhenomenon {
 
@@ -20,14 +20,15 @@ class ExternalBackend : public Backend {
     // Transform the entity using the external backend
   }
 
-  std::shared_ptr<CompuonBase> add([[maybe_unused]] const CompuonBase &a, [[maybe_unused]] const CompuonBase &b) const override {
+  std::shared_ptr<CompuonBase> add([[maybe_unused]] const CompuonBase &a,
+                                   [[maybe_unused]] const CompuonBase &b) const override {
     // Add entities using the external backend
     // return Compuon<int>(0);  // Placeholder
     return nullptr;
   }
 
   std::shared_ptr<CompuonBase> multiply([[maybe_unused]] const CompuonBase &a,
-                                       [[maybe_unused]] const CompuonBase &b) const override {
+                                        [[maybe_unused]] const CompuonBase &b) const override {
     // Multiply entities using the external backend
     // return Compuon<int>(0);  // Placeholder
     return nullptr;
@@ -37,7 +38,6 @@ class ExternalBackend : public Backend {
     // Decrypt entity using the external backend
     return 0; // Placeholder
   }
-
 };
 
 } // namespace fhenomenon
