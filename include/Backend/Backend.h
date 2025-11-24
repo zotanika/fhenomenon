@@ -1,6 +1,5 @@
 #pragma once
 
-//#include "Compuon.h"
 #include "Configuration.h"
 #include "KeyManager.h"
 #include "Parameter/Parameter.h"
@@ -66,5 +65,3 @@ class Backend {
 };
 
 } // namespace fhenomenon
-
-//#include "Backend/Backend.tpp"
