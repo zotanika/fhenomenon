@@ -1,5 +1,6 @@
 #include "Backend/Builtin.h"
 #include "Backend/External.h"
+#include "Backend/TfheBackend.h"
 
 namespace fhenomenon {
 
@@ -31,6 +32,9 @@ Backend &Backend::getInstance(std::string_view libPath, std::string_view configP
 std::unique_ptr<Backend> Backend::createBuiltinBackend() { return std::make_unique<BuiltinBackend>(); }
 
 std::unique_ptr<Backend> Backend::createExternalBackend(std::string_view libPath) {
+  if (libPath == "tfhe") {
+    return std::make_unique<TfheBackend>();
+  }
   return std::make_unique<ExternalBackend>(libPath.data());
 }
 

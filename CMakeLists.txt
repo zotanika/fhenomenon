@@ -63,6 +63,27 @@ add_subdirectory(src)
 
 message(STATUS "SOURCES ${FHENOMENON_SOURCES}")
 
+# --- Rust Backend Integration ---
+set(RUST_BACKEND_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/Backend/rust")
+set(RUST_LIB_PATH "${RUST_BACKEND_DIR}/target/release/libtfhe_backend.a")
+
+add_custom_command(
+  OUTPUT ${RUST_LIB_PATH}
+  COMMAND cargo build --release
+  WORKING_DIRECTORY ${RUST_BACKEND_DIR}
+  COMMENT "Building Rust backend..."
+)
+
+add_custom_target(build_rust_backend DEPENDS ${RUST_LIB_PATH})
+
+add_library(tfhe_backend STATIC IMPORTED)
+set_target_properties(tfhe_backend PROPERTIES
+  IMPORTED_LOCATION ${RUST_LIB_PATH}
+  INTERFACE_LINK_LIBRARIES "dl;pthread;m"
+)
+add_dependencies(tfhe_backend build_rust_backend)
+# -------------------------------
+
 add_library(${PROJECT_LIB_NAME} STATIC ${FHENOMENON_SOURCES})
 
 target_include_directories(
@@ -71,7 +92,8 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 target_link_libraries(${PROJECT_LIB_NAME}
-                      PUBLIC $<BUILD_INTERFACE:external-libs>)
+                      PUBLIC $<BUILD_INTERFACE:external-libs>
+                      PRIVATE tfhe_backend)
 
 add_lto_if_possible(${PROJECT_LIB_NAME})
 

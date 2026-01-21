@@ -17,6 +17,8 @@ template <typename T> class Compuon;
 template <typename T>
 Compuon<T>::Compuon(const Compuon<T> &other)
   : std::enable_shared_from_this<Compuon<T>>(other), val_(other.val_), profile_(other.profile_) {
+  this->ciphertext_ = other.ciphertext_;
+  this->isEncrypted_ = other.isEncrypted_;
   LOG_MESSAGE("Copy constructor with value: " << val_ << " (" << this << ")");
   if (Session::getSession()->isActive()) {
     Session::getSession()->setEntity<T>(this, const_cast<Compuon<T> &>(other));
@@ -199,6 +201,60 @@ template <typename T> Compuon<T> Compuon<T>::operator*(const T &scalar) const {
   entity->setScalar();
   entity->belong(Profile::getProfile());
   return *this * *entity;
+}
+
+template <typename T> Compuon<T> Compuon<T>::operator&(const Compuon<T> &other) const {
+  auto result_ptr =
+    Backend::getInstance().bitAnd(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+  if (!result)
+    throw std::runtime_error("Backend::bitAnd returned invalid type");
+  return *result;
+}
+
+template <typename T> Compuon<T> Compuon<T>::operator|(const Compuon<T> &other) const {
+  auto result_ptr =
+    Backend::getInstance().bitOr(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+  if (!result)
+    throw std::runtime_error("Backend::bitOr returned invalid type");
+  return *result;
+}
+
+template <typename T> Compuon<T> Compuon<T>::operator^(const Compuon<T> &other) const {
+  auto result_ptr =
+    Backend::getInstance().bitXor(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+  if (!result)
+    throw std::runtime_error("Backend::bitXor returned invalid type");
+  return *result;
+}
+
+template <typename T> Compuon<T> Compuon<T>::operator==(const Compuon<T> &other) const {
+  auto result_ptr =
+    Backend::getInstance().compareEq(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+  if (!result)
+    throw std::runtime_error("Backend::compareEq returned invalid type");
+  return *result;
+}
+
+template <typename T> Compuon<T> Compuon<T>::operator<(const Compuon<T> &other) const {
+  auto result_ptr =
+    Backend::getInstance().compareLt(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+  if (!result)
+    throw std::runtime_error("Backend::compareLt returned invalid type");
+  return *result;
+}
+
+template <typename T> Compuon<T> Compuon<T>::operator<=(const Compuon<T> &other) const {
+  auto result_ptr =
+    Backend::getInstance().compareLe(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+  if (!result)
+    throw std::runtime_error("Backend::compareLe returned invalid type");
+  return *result;
 }
 
 template <typename T> T Compuon<T>::decrypt() const { return std::any_cast<T>(Backend::getInstance().decrypt(*this)); }

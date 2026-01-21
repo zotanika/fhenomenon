@@ -37,6 +37,25 @@ class BuiltinBackend final : public Backend {
   std::shared_ptr<CompuonBase> addPlain(const CompuonBase &a, double scalar);
   std::shared_ptr<CompuonBase> multiplyPlain(const CompuonBase &a, double scalar);
   std::any decrypt(const CompuonBase &entity) const override;
+
+  std::shared_ptr<CompuonBase> bitAnd(const CompuonBase &, const CompuonBase &) const override {
+    throw std::runtime_error("Bitwise AND not supported by BuiltinBackend");
+  }
+  std::shared_ptr<CompuonBase> bitOr(const CompuonBase &, const CompuonBase &) const override {
+    throw std::runtime_error("Bitwise OR not supported by BuiltinBackend");
+  }
+  std::shared_ptr<CompuonBase> bitXor(const CompuonBase &, const CompuonBase &) const override {
+    throw std::runtime_error("Bitwise XOR not supported by BuiltinBackend");
+  }
+  std::shared_ptr<CompuonBase> compareEq(const CompuonBase &, const CompuonBase &) const override {
+    throw std::runtime_error("Equality comparison not supported by BuiltinBackend");
+  }
+  std::shared_ptr<CompuonBase> compareLt(const CompuonBase &, const CompuonBase &) const override {
+    throw std::runtime_error("Less than comparison not supported by BuiltinBackend");
+  }
+  std::shared_ptr<CompuonBase> compareLe(const CompuonBase &, const CompuonBase &) const override {
+    throw std::runtime_error("Less equal comparison not supported by BuiltinBackend");
+  }
 };
 
 } // namespace fhenomenon

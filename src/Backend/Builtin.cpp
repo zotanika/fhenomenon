@@ -84,7 +84,7 @@ std::shared_ptr<CompuonBase> makeResultCompuon(const Compuon<T> &reference, cons
 std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const CompuonBase &b) const {
   ensureReady();
 
-  if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_ || !b.ciphertext_) {
+  if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_.has_value() || !b.ciphertext_.has_value()) {
     throw std::runtime_error("BuiltinBackend: Cannot add unencrypted Compuon values");
   }
 
@@ -93,19 +93,25 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
   if (type == typeid(int)) {
     const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
     [[maybe_unused]] const auto &derivedB = dynamic_cast<const Compuon<int> &>(b);
-    const auto result = engine_.add(*a.ciphertext_, *b.ciphertext_);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
+    const auto result = engine_.add(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (int)");
     return makeResultCompuon(derivedA, result);
   } else if (type == typeid(double)) {
     const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
     [[maybe_unused]] const auto &derivedB = dynamic_cast<const Compuon<double> &>(b);
-    const auto result = engine_.add(*a.ciphertext_, *b.ciphertext_);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
+    const auto result = engine_.add(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (double)");
     return makeResultCompuon(derivedA, result);
   } else if (type == typeid(float)) {
     const auto &derivedA = dynamic_cast<const Compuon<float> &>(a);
     [[maybe_unused]] const auto &derivedB = dynamic_cast<const Compuon<float> &>(b);
-    const auto result = engine_.add(*a.ciphertext_, *b.ciphertext_);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
+    const auto result = engine_.add(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (float)");
     return makeResultCompuon(derivedA, result);
   }
@@ -116,7 +122,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
 std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, const CompuonBase &b) const {
   ensureReady();
 
-  if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_ || !b.ciphertext_) {
+  if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_.has_value() || !b.ciphertext_.has_value()) {
     throw std::runtime_error("BuiltinBackend: Cannot multiply unencrypted Compuon values");
   }
 
@@ -128,17 +134,23 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
 
   if (type == typeid(int)) {
     const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    const auto result = engine_.multiply(*a.ciphertext_, *b.ciphertext_);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
+    const auto result = engine_.multiply(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (int)");
     return makeResultCompuon(derivedA, result);
   } else if (type == typeid(double)) {
     const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    const auto result = engine_.multiply(*a.ciphertext_, *b.ciphertext_);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
+    const auto result = engine_.multiply(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (double)");
     return makeResultCompuon(derivedA, result);
   } else if (type == typeid(float)) {
     const auto &derivedA = dynamic_cast<const Compuon<float> &>(a);
-    const auto result = engine_.multiply(*a.ciphertext_, *b.ciphertext_);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
+    const auto result = engine_.multiply(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (float)");
     return makeResultCompuon(derivedA, result);
   }
@@ -149,7 +161,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
 std::shared_ptr<CompuonBase> BuiltinBackend::addPlain(const CompuonBase &a, double scalar) {
   ensureReady();
 
-  if (!a.isEncrypted_ || !a.ciphertext_) {
+  if (!a.isEncrypted_ || !a.ciphertext_.has_value()) {
     throw std::runtime_error("BuiltinBackend: Cannot add plain to unencrypted Compuon value");
   }
 
@@ -157,7 +169,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::addPlain(const CompuonBase &a, doub
 
   if (type == typeid(double)) {
     const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    const auto result = engine_.addPlain(*a.ciphertext_, scalar);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    const auto result = engine_.addPlain(*ctA, scalar);
     LOG_MESSAGE("BuiltinBackend: ToyFHE addPlain(double) with scalar " << scalar);
     return makeResultCompuon(derivedA, result);
   }
@@ -168,7 +181,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::addPlain(const CompuonBase &a, doub
 std::shared_ptr<CompuonBase> BuiltinBackend::multiplyPlain(const CompuonBase &a, double scalar) {
   ensureReady();
 
-  if (!a.isEncrypted_ || !a.ciphertext_) {
+  if (!a.isEncrypted_ || !a.ciphertext_.has_value()) {
     throw std::runtime_error("BuiltinBackend: Cannot multiply plain with unencrypted Compuon value");
   }
 
@@ -176,7 +189,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiplyPlain(const CompuonBase &a,
 
   if (type == typeid(double)) {
     const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
-    const auto result = engine_.multiplyPlain(*a.ciphertext_, scalar);
+    auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
+    const auto result = engine_.multiplyPlain(*ctA, scalar);
     LOG_MESSAGE("BuiltinBackend: ToyFHE multiplyPlain(double) with scalar " << scalar);
     return makeResultCompuon(derivedA, result);
   }
@@ -187,7 +201,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiplyPlain(const CompuonBase &a,
 std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
   ensureReady();
 
-  if (!entity.isEncrypted_ || !entity.ciphertext_) {
+  if (!entity.isEncrypted_ || !entity.ciphertext_.has_value()) {
     auto type = entity.type();
     if (type == typeid(int)) {
       const auto &derivedEntity = dynamic_cast<const Compuon<int> &>(entity);
@@ -205,15 +219,18 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
   auto type = entity.type();
 
   if (type == typeid(int)) {
-    const auto value = engine_.decryptInt(*entity.ciphertext_);
+    auto ct = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(entity.ciphertext_);
+    const auto value = engine_.decryptInt(*ct);
     LOG_MESSAGE("BuiltinBackend: Decrypted int value " << value);
     return static_cast<int>(value);
   } else if (type == typeid(double)) {
-    const auto value = engine_.decryptDouble(*entity.ciphertext_);
+    auto ct = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(entity.ciphertext_);
+    const auto value = engine_.decryptDouble(*ct);
     LOG_MESSAGE("BuiltinBackend: Decrypted double value " << value);
     return value;
   } else if (type == typeid(float)) {
-    const auto value = engine_.decryptDouble(*entity.ciphertext_);
+    auto ct = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(entity.ciphertext_);
+    const auto value = engine_.decryptDouble(*ct);
     LOG_MESSAGE("BuiltinBackend: Decrypted float value " << static_cast<float>(value));
     return static_cast<float>(value);
   }

@@ -4,6 +4,7 @@
 #include "Crypto/ToyFHE.h"
 #include "Utils/log.h"
 
+#include <any>
 #include <memory>
 #include <typeindex>
 
@@ -17,8 +18,8 @@ class CompuonBase {
   virtual ~CompuonBase() = default;
   virtual std::type_index type() const = 0;
 
-  // Store encrypted values using the toy FHE ciphertext representation
-  std::shared_ptr<toyfhe::Ciphertext> ciphertext_;
+  // Store encrypted values using backend-specific representation
+  std::any ciphertext_;
   bool isEncrypted_ = false;
 };
 
@@ -52,6 +53,13 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
   Compuon<T> operator+(const Compuon<T> &other) const;
   Compuon<T> operator*(const T &scalar) const;
   Compuon<T> operator*(const Compuon<T> &other) const;
+
+  Compuon<T> operator&(const Compuon<T> &other) const;
+  Compuon<T> operator|(const Compuon<T> &other) const;
+  Compuon<T> operator^(const Compuon<T> &other) const;
+  Compuon<T> operator==(const Compuon<T> &other) const;
+  Compuon<T> operator<(const Compuon<T> &other) const;
+  Compuon<T> operator<=(const Compuon<T> &other) const;
 
   std::type_index type() const override { return typeid(T); }
 
