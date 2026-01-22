@@ -1,7 +1,12 @@
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 
-if(lto_supported)
+option(DISABLE_LTO "Disable Link Time Optimization" OFF)
+
+if(DISABLE_LTO)
+  set(lto_supported FALSE)
+  message(STATUS "LTO disabled by user")
+elseif(lto_supported)
   message(STATUS "LTO enabled")
 else()
   message(STATUS "LTO not supported: <${error}>")

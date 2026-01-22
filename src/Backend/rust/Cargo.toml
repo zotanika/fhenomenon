@@ -8,5 +8,12 @@ crate-type = ["staticlib"]
 
 [dependencies]
 # Using a specific version for stability, but recent 0.5+ or 0.6+ is recommended.
-# Features: integer (for FheInt), x86_64-unix (standard optimization for linux)
+# Features: integer (for FheInt), architecture-specific optimizations
+
+# x86_64 Unix (Linux, macOS)
+[target.'cfg(all(target_arch = "x86_64", target_family = "unix"))'.dependencies]
 tfhe = { version = "0.6.0", features = ["integer", "boolean", "x86_64-unix"] }
+
+# aarch64 Unix (Linux, macOS on Apple Silicon)
+[target.'cfg(all(target_arch = "aarch64", target_family = "unix"))'.dependencies]
+tfhe = { version = "0.6.0", features = ["integer", "boolean", "aarch64-unix"] }
