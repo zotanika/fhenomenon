@@ -10,8 +10,4 @@ target_link_libraries(session1-basic PUBLIC Fhenomenon)
 add_executable(session2-basic session2.cpp)
 target_link_libraries(session2-basic PUBLIC Fhenomenon)
 
-add_executable(tfhe_demo tfhe_demo.cpp)
-target_link_libraries(tfhe_demo PUBLIC Fhenomenon)
 
-add_executable(tfhe_logic_demo tfhe_logic_demo.cpp)
-target_link_libraries(tfhe_logic_demo PUBLIC Fhenomenon)
