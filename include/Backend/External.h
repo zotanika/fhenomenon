@@ -38,6 +38,13 @@ class ExternalBackend : public Backend {
     // Decrypt entity using the external backend
     return 0; // Placeholder
   }
+
+  std::shared_ptr<CompuonBase> bitAnd(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
+  std::shared_ptr<CompuonBase> bitOr(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
+  std::shared_ptr<CompuonBase> bitXor(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
+  std::shared_ptr<CompuonBase> compareEq(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
+  std::shared_ptr<CompuonBase> compareLt(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
+  std::shared_ptr<CompuonBase> compareLe(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
 };
 
 } // namespace fhenomenon

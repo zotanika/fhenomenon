@@ -22,8 +22,8 @@ template <typename T> void Operation<T>::execute() {
     op1_ref->setValue(operand2_->getValue());
 
     // Copy ciphertext if operand2 is encrypted
-    if (operand2_->isEncrypted_ && operand2_->ciphertext_) {
-      op1_ref->ciphertext_ = operand2_->ciphertext_->clone();
+    if (operand2_->isEncrypted_ && operand2_->ciphertext_.has_value()) {
+      op1_ref->ciphertext_ = operand2_->ciphertext_;
       op1_ref->isEncrypted_ = true;
       LOG_MESSAGE("OperationType::Assignment: Copied encrypted ciphertext");
     } else if (operand2_->isEncrypted_) {
@@ -61,8 +61,8 @@ template <typename T> void Operation<T>::execute() {
       result_ref->setValue(result->getValue());
 
       // Copy ciphertext from backend result
-      if (result->isEncrypted_ && result->ciphertext_) {
-        result_ref->ciphertext_ = result->ciphertext_->clone();
+      if (result->isEncrypted_ && result->ciphertext_.has_value()) {
+        result_ref->ciphertext_ = result->ciphertext_;
         result_ref->isEncrypted_ = true;
         result_ref->setProfile(result->getProfile());
         LOG_MESSAGE("OperationType::Add: Copied encrypted ciphertext to result");
@@ -94,8 +94,8 @@ template <typename T> void Operation<T>::execute() {
       result_ref->setValue(result->getValue());
 
       // Copy ciphertext from backend result
-      if (result->isEncrypted_ && result->ciphertext_) {
-        result_ref->ciphertext_ = result->ciphertext_->clone();
+      if (result->isEncrypted_ && result->ciphertext_.has_value()) {
+        result_ref->ciphertext_ = result->ciphertext_;
         result_ref->isEncrypted_ = true;
         result_ref->setProfile(result->getProfile());
         LOG_MESSAGE("OperationType::Multiply: Copied encrypted ciphertext to result");

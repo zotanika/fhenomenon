@@ -1,0 +1,12 @@
+[package]
+name = "tfhe_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# Using a specific version for stability, but recent 0.5+ or 0.6+ is recommended.
+# Features: integer (for FheInt), x86_64-unix (standard optimization for linux)
+tfhe = { version = "0.6.0", features = ["integer", "boolean", "x86_64-unix"] }

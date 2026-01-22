@@ -63,6 +63,38 @@ add_subdirectory(src)
 
 message(STATUS "SOURCES ${FHENOMENON_SOURCES}")
 
+# --- Backend Selection ---
+set(BUILTIN_BACKEND "TOY" CACHE STRING "Select builtin backend implementation (TOY, TFHE)")
+set_property(CACHE BUILTIN_BACKEND PROPERTY STRINGS "TOY" "TFHE")
+
+if(BUILTIN_BACKEND STREQUAL "TFHE")
+  message(STATUS "Using TFHE-rs backend for BuiltinBackend")
+  add_compile_definitions(FHENOMENON_USE_TFHE)
+
+  set(RUST_BACKEND_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/Backend/rust")
+  set(RUST_LIB_PATH "${RUST_BACKEND_DIR}/target/release/libtfhe_backend.a")
+
+  add_custom_command(
+    OUTPUT ${RUST_LIB_PATH}
+    COMMAND cargo build --release
+    WORKING_DIRECTORY ${RUST_BACKEND_DIR}
+    COMMENT "Building Rust backend..."
+  )
+
+  add_custom_target(build_rust_backend DEPENDS ${RUST_LIB_PATH})
+
+  add_library(tfhe_backend STATIC IMPORTED)
+  set_target_properties(tfhe_backend PROPERTIES
+    IMPORTED_LOCATION ${RUST_LIB_PATH}
+    INTERFACE_LINK_LIBRARIES "dl;pthread;m"
+  )
+  add_dependencies(tfhe_backend build_rust_backend)
+else()
+  message(STATUS "Using default ToyFHE backend for BuiltinBackend")
+  # No extra libraries needed for ToyFHE (it's part of the source)
+endif()
+# -------------------------------
+
 add_library(${PROJECT_LIB_NAME} STATIC ${FHENOMENON_SOURCES})
 
 target_include_directories(
@@ -72,6 +104,10 @@ target_include_directories(
 
 target_link_libraries(${PROJECT_LIB_NAME}
                       PUBLIC $<BUILD_INTERFACE:external-libs>)
+
+if(BUILTIN_BACKEND STREQUAL "TFHE")
+  target_link_libraries(${PROJECT_LIB_NAME} PRIVATE tfhe_backend)
+endif()
 
 add_lto_if_possible(${PROJECT_LIB_NAME})
 

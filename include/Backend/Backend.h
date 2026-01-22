@@ -41,6 +41,13 @@ class Backend {
   virtual std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) const = 0;
   virtual std::any decrypt(const CompuonBase &entity) const = 0;
 
+  virtual std::shared_ptr<CompuonBase> bitAnd(const CompuonBase &a, const CompuonBase &b) const = 0;
+  virtual std::shared_ptr<CompuonBase> bitOr(const CompuonBase &a, const CompuonBase &b) const = 0;
+  virtual std::shared_ptr<CompuonBase> bitXor(const CompuonBase &a, const CompuonBase &b) const = 0;
+  virtual std::shared_ptr<CompuonBase> compareEq(const CompuonBase &a, const CompuonBase &b) const = 0;
+  virtual std::shared_ptr<CompuonBase> compareLt(const CompuonBase &a, const CompuonBase &b) const = 0;
+  virtual std::shared_ptr<CompuonBase> compareLe(const CompuonBase &a, const CompuonBase &b) const = 0;
+
   /*
   template<typename T>
   void transform(Compuon<T>& entity, const Parameter& params);
