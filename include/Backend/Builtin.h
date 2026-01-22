@@ -5,8 +5,18 @@
 #include "Crypto/ToyFHE.h"
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
+
+// Forward declarations for TFHE FFI types (at global scope for C linkage)
+#ifdef FHENOMENON_USE_TFHE
+extern "C" {
+struct TfheContext;
+struct CiphertextHandle;
+}
+using TfheBinaryOp = CiphertextHandle *(*)(TfheContext *, CiphertextHandle *, CiphertextHandle *);
+#endif
 
 namespace fhenomenon {
 
@@ -16,8 +26,15 @@ class BuiltinBackend final : public Backend {
   private:
   mutable toyfhe::Engine engine_;
   toyfhe::Parameters params_;
-  mutable bool initialized_;
-  void *context_ = nullptr; // For TFHE backend
+  mutable std::once_flag initFlag_;
+  mutable std::once_flag keyGenFlag_;
+#ifdef FHENOMENON_USE_TFHE
+  TfheContext *context_ = nullptr;
+
+  // Helper for binary TFHE operations to reduce code duplication
+  std::shared_ptr<CompuonBase> executeBinaryTfheOp(const CompuonBase &a, const CompuonBase &b, TfheBinaryOp op,
+                                                    const char *opName) const;
+#endif
 
   void ensureReady() const;
 

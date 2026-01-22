@@ -3,14 +3,12 @@
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 
-// --- TFHE-rs FFI Declarations ---
+// --- TFHE-rs FFI Function Declarations ---
 #ifdef FHENOMENON_USE_TFHE
 extern "C" {
-struct TfheContext;
-struct CiphertextHandle;
-
 TfheContext *tfhe_context_create();
 void tfhe_context_destroy(TfheContext *ctx);
 void tfhe_ciphertext_destroy(CiphertextHandle *handle);
@@ -28,19 +26,31 @@ CiphertextHandle *tfhe_lt_int32(TfheContext *ctx, CiphertextHandle *a, Ciphertex
 CiphertextHandle *tfhe_le_int32(TfheContext *ctx, CiphertextHandle *a, CiphertextHandle *b);
 }
 #endif
-// ------------------------------
+// -----------------------------------------
 
 namespace fhenomenon {
 
 #ifdef FHENOMENON_USE_TFHE
 // Custom deleter for CiphertextHandle shared_ptr
 struct CiphertextHandleDeleter {
-  void operator()(CiphertextHandle *handle) const { tfhe_ciphertext_destroy(handle); }
+  void operator()(CiphertextHandle *handle) const {
+    if (handle) {
+      tfhe_ciphertext_destroy(handle);
+    }
+  }
 };
 using SharedCiphertextHandle = std::shared_ptr<CiphertextHandle>;
+
+// Helper to check FFI result and throw if null
+inline SharedCiphertextHandle checkAndWrap(CiphertextHandle *raw, const char *opName) {
+  if (!raw) {
+    throw std::runtime_error(std::string("TFHE FFI operation failed: ") + opName);
+  }
+  return SharedCiphertextHandle(raw, CiphertextHandleDeleter());
+}
 #endif
 
-BuiltinBackend::BuiltinBackend() : initialized_(false) {
+BuiltinBackend::BuiltinBackend() {
 #ifndef FHENOMENON_USE_TFHE
   engine_.initialize(params_);
   engine_.generateKeys();
@@ -54,20 +64,22 @@ BuiltinBackend::BuiltinBackend() : initialized_(false) {
 BuiltinBackend::~BuiltinBackend() {
 #ifdef FHENOMENON_USE_TFHE
   if (context_) {
-    tfhe_context_destroy(static_cast<TfheContext *>(context_));
+    tfhe_context_destroy(context_);
     context_ = nullptr;
   }
 #endif
 }
 
 void BuiltinBackend::ensureReady() const {
-  if (!initialized_) {
-    const_cast<BuiltinBackend *>(this)->initialize();
-  }
-#ifndef FHENOMENON_USE_TFHE
-  if (!engine_.areKeysGenerated()) {
-    const_cast<BuiltinBackend *>(this)->generateKeys();
-  }
+#ifdef FHENOMENON_USE_TFHE
+  std::call_once(initFlag_, [this]() { const_cast<BuiltinBackend *>(this)->initialize(); });
+#else
+  std::call_once(initFlag_, [this]() { const_cast<BuiltinBackend *>(this)->initialize(); });
+  std::call_once(keyGenFlag_, [this]() {
+    if (!engine_.areKeysGenerated()) {
+      const_cast<BuiltinBackend *>(this)->generateKeys();
+    }
+  });
 #endif
 }
 
@@ -75,20 +87,19 @@ void BuiltinBackend::initialize() {
 #ifdef FHENOMENON_USE_TFHE
   if (!context_) {
     context_ = tfhe_context_create();
+    if (!context_) {
+      throw std::runtime_error("Failed to create TFHE context");
+    }
     LOG_MESSAGE("BuiltinBackend: Initialized TFHE context.");
   }
 #else
   engine_.initialize(params_);
 #endif
-  initialized_ = true;
 }
 
 void BuiltinBackend::generateKeys() {
 #ifndef FHENOMENON_USE_TFHE
   engine_.generateKeys();
-#else
-  // TFHE keys are managed internally by the context/Rust side for now in this bindings setup
-  // or generated lazily.
 #endif
 }
 
@@ -111,8 +122,7 @@ void BuiltinBackend::transform(CompuonBase &entity, [[maybe_unused]] const Param
     auto &derivedEntity = dynamic_cast<Compuon<int> &>(entity);
     int32_t value = derivedEntity.getValue();
 
-    CiphertextHandle *raw_handle = tfhe_encrypt_int32(static_cast<TfheContext *>(context_), value);
-    SharedCiphertextHandle handle(raw_handle, CiphertextHandleDeleter());
+    auto handle = checkAndWrap(tfhe_encrypt_int32(context_, value), "encrypt_int32");
 
     entity.ciphertext_ = handle;
     entity.isEncrypted_ = true;
@@ -182,8 +192,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const Com
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
 
-    CiphertextHandle *result_raw = tfhe_add_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
+    auto result = checkAndWrap(tfhe_add_int32(context_, ctA.get(), ctB.get()), "add_int32");
 
     LOG_MESSAGE("BuiltinBackend: Performed addition (TFHE)");
     return makeResultCompuon(derivedA, result);
@@ -229,8 +238,7 @@ std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, cons
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
 
-    CiphertextHandle *result_raw = tfhe_mul_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
+    auto result = checkAndWrap(tfhe_mul_int32(context_, ctA.get(), ctB.get()), "mul_int32");
 
     LOG_MESSAGE("BuiltinBackend: Performed multiplication (TFHE)");
     return makeResultCompuon(derivedA, result);
@@ -316,21 +324,28 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
 
 #ifdef FHENOMENON_USE_TFHE
   if (!entity.isEncrypted_ || !entity.ciphertext_.has_value()) {
-    // fallback
+    // Fallback for unencrypted values
     auto type = entity.type();
-    if (type == typeid(int))
+    if (type == typeid(int)) {
       return dynamic_cast<const Compuon<int> &>(entity).getValue();
+    }
     return {};
   }
+
   auto type = entity.type();
   if (type == typeid(int)) {
     try {
       auto handle = std::any_cast<SharedCiphertextHandle>(entity.ciphertext_);
-      int32_t value = tfhe_decrypt_int32(static_cast<TfheContext *>(context_), handle.get());
+      if (!handle || !handle.get()) {
+        throw std::runtime_error("BuiltinBackend: Ciphertext handle is null");
+      }
+      int32_t value = tfhe_decrypt_int32(context_, handle.get());
       LOG_MESSAGE("BuiltinBackend: Decrypted int value " << value << " (TFHE)");
       return value;
-    } catch (const std::bad_any_cast &) {
-      throw std::runtime_error("BuiltinBackend: Failed to cast ciphertext handle");
+    } catch (const std::bad_any_cast &e) {
+      throw std::runtime_error(std::string("BuiltinBackend: Failed to cast ciphertext handle: ") + e.what());
+    } catch (const std::exception &e) {
+      throw std::runtime_error(std::string("BuiltinBackend: Decryption failed: ") + e.what());
     }
   }
   throw std::runtime_error("BuiltinBackend: Unsupported type for decryption (TFHE only supports int)");
@@ -371,100 +386,73 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::bitAnd([[maybe_unused]] const CompuonBase &a,
-                                                    [[maybe_unused]] const CompuonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
+std::shared_ptr<CompuonBase> BuiltinBackend::executeBinaryTfheOp(const CompuonBase &a, const CompuonBase &b,
+                                                                  TfheBinaryOp op, const char *opName) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
     const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
-    CiphertextHandle *result_raw = tfhe_bitand_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
+    auto result = checkAndWrap(op(context_, ctA.get(), ctB.get()), opName);
     return makeResultCompuon(derivedA, result);
   }
+  throw std::runtime_error(std::string(opName) + " only supports int type with TFHE backend");
+}
 #endif
+
+std::shared_ptr<CompuonBase> BuiltinBackend::bitAnd([[maybe_unused]] const CompuonBase &a,
+                                                    [[maybe_unused]] const CompuonBase &b) const {
+#ifdef FHENOMENON_USE_TFHE
+  return executeBinaryTfheOp(a, b, tfhe_bitand_int32, "bitwise_and");
+#else
   throw std::runtime_error("Bitwise AND not supported by BuiltinBackend");
+#endif
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::bitOr([[maybe_unused]] const CompuonBase &a,
                                                    [[maybe_unused]] const CompuonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
-  ensureReady();
-  if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
-    auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
-    CiphertextHandle *result_raw = tfhe_bitor_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
-  }
-#endif
+  return executeBinaryTfheOp(a, b, tfhe_bitor_int32, "bitwise_or");
+#else
   throw std::runtime_error("Bitwise OR not supported by BuiltinBackend");
+#endif
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::bitXor([[maybe_unused]] const CompuonBase &a,
                                                     [[maybe_unused]] const CompuonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
-  ensureReady();
-  if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
-    auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
-    CiphertextHandle *result_raw = tfhe_bitxor_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
-  }
-#endif
+  return executeBinaryTfheOp(a, b, tfhe_bitxor_int32, "bitwise_xor");
+#else
   throw std::runtime_error("Bitwise XOR not supported by BuiltinBackend");
+#endif
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::compareEq([[maybe_unused]] const CompuonBase &a,
                                                        [[maybe_unused]] const CompuonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
-  ensureReady();
-  if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
-    auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
-    CiphertextHandle *result_raw = tfhe_eq_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
-  }
-#endif
+  return executeBinaryTfheOp(a, b, tfhe_eq_int32, "compare_eq");
+#else
   throw std::runtime_error("Equality comparison not supported by BuiltinBackend");
+#endif
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::compareLt([[maybe_unused]] const CompuonBase &a,
                                                        [[maybe_unused]] const CompuonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
-  ensureReady();
-  if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
-    auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
-    CiphertextHandle *result_raw = tfhe_lt_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
-  }
-#endif
+  return executeBinaryTfheOp(a, b, tfhe_lt_int32, "compare_lt");
+#else
   throw std::runtime_error("Less than comparison not supported by BuiltinBackend");
+#endif
 }
 
 std::shared_ptr<CompuonBase> BuiltinBackend::compareLe([[maybe_unused]] const CompuonBase &a,
                                                        [[maybe_unused]] const CompuonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
-  ensureReady();
-  if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
-    auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
-    auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
-    CiphertextHandle *result_raw = tfhe_le_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
-    SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
-  }
-#endif
+  return executeBinaryTfheOp(a, b, tfhe_le_int32, "compare_le");
+#else
   throw std::runtime_error("Less equal comparison not supported by BuiltinBackend");
+#endif
 }
 
 } // namespace fhenomenon
