@@ -114,7 +114,7 @@ template <typename T> Compuon<T> Compuon<T>::operator+(const T &scalar) const {
   LOG_MESSAGE("=====Operator Add of Compuon with scalar=====");
   auto entity = std::make_shared<Compuon<T>>(scalar);
   entity->setScalar();
-  entity->belong(Profile::getProfile());
+  entity->belong(this->getProfile());
   LOG_MESSAGE("=============================");
   return *this + *entity;
 }
@@ -199,7 +199,7 @@ template <typename T> Compuon<T> Compuon<T>::operator*(const Compuon<T> &other) 
 template <typename T> Compuon<T> Compuon<T>::operator*(const T &scalar) const {
   auto entity = std::make_shared<Compuon<T>>(scalar);
   entity->setScalar();
-  entity->belong(Profile::getProfile());
+  entity->belong(this->getProfile());
   return *this * *entity;
 }
 
