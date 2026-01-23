@@ -70,6 +70,11 @@ set_property(CACHE BUILTIN_BACKEND PROPERTY STRINGS "TOY" "TFHE")
 if(BUILTIN_BACKEND STREQUAL "TFHE")
   message(STATUS "Using TFHE-rs backend for BuiltinBackend")
   add_compile_definitions(FHENOMENON_USE_TFHE)
+  # Use -O1 to avoid aggressive optimizations that cause issues with FFI calls
+  # The compiler's optimizer incorrectly detects UB when FFI function definitions
+  # are not visible at compile time
+  string(REPLACE "-O3" "-O1" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+  string(REPLACE "-O2" "-O1" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
   set(RUST_BACKEND_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/Backend/rust")
   set(RUST_LIB_PATH "${RUST_BACKEND_DIR}/target/release/libtfhe_backend.a")
@@ -84,10 +89,17 @@ if(BUILTIN_BACKEND STREQUAL "TFHE")
   add_custom_target(build_rust_backend DEPENDS ${RUST_LIB_PATH})
 
   add_library(tfhe_backend STATIC IMPORTED)
-  set_target_properties(tfhe_backend PROPERTIES
-    IMPORTED_LOCATION ${RUST_LIB_PATH}
-    INTERFACE_LINK_LIBRARIES "dl;pthread;m"
-  )
+  if(APPLE)
+    set_target_properties(tfhe_backend PROPERTIES
+      IMPORTED_LOCATION ${RUST_LIB_PATH}
+      INTERFACE_LINK_LIBRARIES "dl;pthread;m;-framework Security"
+    )
+  else()
+    set_target_properties(tfhe_backend PROPERTIES
+      IMPORTED_LOCATION ${RUST_LIB_PATH}
+      INTERFACE_LINK_LIBRARIES "dl;pthread;m"
+    )
+  endif()
   add_dependencies(tfhe_backend build_rust_backend)
 else()
   message(STATUS "Using default ToyFHE backend for BuiltinBackend")
@@ -106,7 +118,7 @@ target_link_libraries(${PROJECT_LIB_NAME}
                       PUBLIC $<BUILD_INTERFACE:external-libs>)
 
 if(BUILTIN_BACKEND STREQUAL "TFHE")
-  target_link_libraries(${PROJECT_LIB_NAME} PRIVATE tfhe_backend)
+  target_link_libraries(${PROJECT_LIB_NAME} PUBLIC tfhe_backend)
 endif()
 
 add_lto_if_possible(${PROJECT_LIB_NAME})
