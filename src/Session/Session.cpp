@@ -1,4 +1,5 @@
 #include "Session/Session.h"
+#include "Scheduler/MatMulRecognitionPass.h"
 
 using namespace fhenomenon;
 
@@ -11,12 +12,15 @@ void Session::optimize() {
     throw std::runtime_error("Session: Scheduler not initialized");
   }
 
+  // Register pre-AST passes
+  scheduler_->addPreASTPass(std::make_shared<scheduler::MatMulRecognitionPass>());
+
   // Scheduler uses backend as delegate - it's decoupled from actual computation
-  scheduler_->addStrategy(std::make_shared<scheduler::PrintOperationsStrategy>());
-  // scheduler_->addStrategy(std::make_shared<scheduler::FuseOperationsStrategy>());
-  // scheduler_->addStrategy(std::make_shared<scheduler::PrintOperationsStrategy>());
-  // scheduler_->addStrategy(std::make_shared<scheduler::AdditionToMultiplicationStrategy>());
-  // scheduler_->addStrategy(std::make_shared<scheduler::PrintOperationsStrategy>());
+  scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
+  // scheduler_->addASTPass(std::make_shared<scheduler::FuseOperationsASTPass>());
+  // scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
+  // scheduler_->addASTPass(std::make_shared<scheduler::AdditionToMultiplicationASTPass>());
+  // scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
 
   scheduler::Planner<int> planner;
   planner = scheduler_->buildGraph<int>(operations_, planner);

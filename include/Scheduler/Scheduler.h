@@ -2,13 +2,16 @@
 
 #include "Common.h"
 #include "Scheduler/ASTNode.h"
+#include "Scheduler/FusedOperation.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Planner.h"
-#include "Scheduler/Strategy.h"
+#include "Scheduler/PreASTPass.h"
+#include "Scheduler/ASTPass.h"
 
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace fhenomenon {
@@ -20,8 +23,23 @@ namespace scheduler {
 
 class Scheduler {
   private:
-  std::vector<std::shared_ptr<Strategy>> strategies;
+  std::vector<std::shared_ptr<ASTPass>> astPasses_;
+  std::vector<std::shared_ptr<PreASTPass>> preASTPasses_;
   const Backend *backend_delegate_; // Backend delegate for executing operations
+  std::unordered_set<std::string> registeredPreASTPasses_;
+  std::unordered_set<std::string> registeredASTPasses_;
+
+  void validateDependencies(const std::string &passName,
+                            const std::vector<std::string> &deps,
+                            const std::unordered_set<std::string> &registered) {
+    for (const auto &dep : deps) {
+      if (!registered.count(dep)) {
+        throw std::runtime_error(
+          "Pass '" + passName + "' requires '" + dep +
+          "' to be registered first");
+      }
+    }
+  }
 
   public:
   // Constructor - takes backend as delegate
@@ -41,6 +59,37 @@ class Scheduler {
     std::unordered_map<std::shared_ptr<Compuon<T>>, std::shared_ptr<ASTNode>> entityToNodeMap;
     std::vector<std::shared_ptr<ASTNode>> roots;
     for (const auto &op : operations) {
+      // Handle FusedOperation (from pre-AST passes like MatMul recognition)
+      auto fusedOp = std::dynamic_pointer_cast<FusedOperation<T>>(op);
+      if (fusedOp) {
+        fusedOp->setBackendDelegate(&getBackendDelegate());
+
+        // Create dependency nodes for all inputs
+        std::vector<std::shared_ptr<ASTNode>> deps;
+        for (const auto &input : fusedOp->getInputs()) {
+          if (entityToNodeMap.count(input)) {
+            deps.push_back(entityToNodeMap[input]);
+          } else {
+            auto node = std::make_shared<OperandNode<T>>(input);
+            entityToNodeMap[input] = node;
+            deps.push_back(node);
+          }
+        }
+
+        // Create FusedKernelNode
+        auto fusedNode = std::make_shared<FusedKernelNode<T>>(
+          fusedOp, std::move(deps),
+          std::vector<std::shared_ptr<Compuon<T>>>(fusedOp->getOutputs()));
+
+        // Map all outputs to this node
+        for (const auto &output : fusedOp->getOutputs()) {
+          entityToNodeMap[output] = fusedNode;
+        }
+
+        plan.addRoot(fusedNode);
+        continue;
+      }
+
       auto operation = std::dynamic_pointer_cast<scheduler::Operation<T>>(op);
       if (!operation) {
         throw std::runtime_error("Invalid operation cast.");
@@ -90,6 +139,10 @@ class Scheduler {
   template <typename T>
   Planner<T> &buildGraph(std::vector<std::shared_ptr<OperationBase>> &operationsMap, Planner<T> &plan) {
     LOG_MESSAGE("Build Graph");
+    // Run pre-AST passes before building the AST
+    for (auto &pass : preASTPasses_) {
+      pass->apply(operationsMap, getBackendDelegate());
+    }
     this->buildAST(operationsMap, plan);
     return plan;
   }
@@ -97,8 +150,8 @@ class Scheduler {
   template <typename T> void optimizeGraph(Planner<T> &plan) {
     LOG_MESSAGE("Optimize");
     // Apply custom scheduling strategies
-    for (auto &strategy : strategies) {
-      strategy->apply(plan);
+    for (auto &pass : astPasses_) {
+      pass->apply(plan);
     }
     // Further optimizations can be added here
   }
@@ -115,7 +168,16 @@ class Scheduler {
     }
   }
 
-  void addStrategy(const std::shared_ptr<Strategy> &strategy) { strategies.push_back(strategy); }
+  void addASTPass(std::shared_ptr<ASTPass> pass) {
+    validateDependencies(pass->name(), pass->dependencies(), registeredASTPasses_);
+    registeredASTPasses_.insert(pass->name());
+    astPasses_.push_back(std::move(pass));
+  }
+  void addPreASTPass(std::shared_ptr<PreASTPass> pass) {
+    validateDependencies(pass->name(), pass->dependencies(), registeredPreASTPasses_);
+    registeredPreASTPasses_.insert(pass->name());
+    preASTPasses_.push_back(std::move(pass));
+  }
 };
 
 } // namespace scheduler

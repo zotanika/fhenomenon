@@ -8,7 +8,7 @@
 #include "Profile.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Scheduler.h"
-#include "Scheduler/Strategy.h"
+#include "Scheduler/ASTPass.h"
 
 #include <memory>
 #include <unordered_map>
@@ -24,7 +24,10 @@ class Session final : public std::enable_shared_from_this<Session> {
 
   static std::shared_ptr<Session> getSession() { return session_ptr_; }
 
-  ~Session() { session_ptr_ = nullptr; }
+  ~Session() {
+    if (session_ptr_.get() == this)
+      session_ptr_ = nullptr;
+  }
 
   template <typename T> void setEntity(const void *key, Compuon<T> &entity) {
     entity_map_[key] = std::any(std::reference_wrapper<Compuon<T>>(entity));

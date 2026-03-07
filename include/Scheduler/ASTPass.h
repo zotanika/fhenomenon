@@ -1,18 +1,23 @@
 #pragma once
 
 #include "Operation.h"
+
+#include <string>
 #include <vector>
 
 namespace fhenomenon {
 namespace scheduler {
 
-class Strategy {
+class ASTPass {
   public:
-  virtual ~Strategy() = default;
+  virtual ~ASTPass() = default;
   virtual void apply(Planner<int> &plan) const = 0;
+
+  virtual std::string name() const = 0;
+  virtual std::vector<std::string> dependencies() const { return {}; }
 };
 
-class PrintOperationsStrategy final : public Strategy {
+class PrintASTPass final : public ASTPass {
   public:
   void apply(Planner<int> &plan) const override {
     LOG_MESSAGE("Tree Structure of Operations");
@@ -21,11 +26,14 @@ class PrintOperationsStrategy final : public Strategy {
       root->print(0);
     }
   }
+
+  std::string name() const override { return "PrintAST"; }
 };
 
 /*
-class ConstantFoldingStrategy final: public Strategy {
+class ConstantFoldingASTPass final: public ASTPass {
   public:
+  std::string name() const override { return "ConstantFolding"; }
   void apply(Planner<int> &plan) const override{
     LOG_MESSAGE("Constant Folding Strategy...");
     const auto& roots = plan.getRoots();
@@ -33,11 +41,11 @@ class ConstantFoldingStrategy final: public Strategy {
 }
 */
 /*
-class FuseOperationsStrategy final : public Strategy {
+class FuseOperationsASTPass final : public ASTPass {
   public:
+  std::string name() const override { return "FuseOperations"; }
   void apply(std::vector<Operation<int>> &ops) const override  {
     LOG_MESSAGE("Constant Folding Strategy...");
-    // Example strategy: Fusing consecutive additions
     std::vector<Operation<int>> fusedOps;
     std::unordered_map<std::shared_ptr<Compuon<int>>, std::vector<Operation<int>>> pending_operations;
 
@@ -57,7 +65,6 @@ class FuseOperationsStrategy final : public Strategy {
       const auto& result = op.getResult();
       const auto& operationType = op.getType();
 
-      // if(a = b + 2 -> res = b+2 , a = res)
       if(i<ops.size()-1 && operand1 != ops[i+1].getOperand1() && operand2->isScalar()){
         if(ops[i+1].getType() == OperationType::Assignment){
           flushPending(operand1);
@@ -76,7 +83,6 @@ class FuseOperationsStrategy final : public Strategy {
         continue;
       }
 
-      //if(a = b + c)
       if(!operand2->isScalar()){
         flushPending(operand1);
         flushPending(operand2);
@@ -85,7 +91,6 @@ class FuseOperationsStrategy final : public Strategy {
         pending_operations[operand2].clear();
       }
 
-      //if(a = a + 2)
       else if((pending_operations.find(operand1) == pending_operations.end()) && operand2->isScalar()){
         pending_operations[operand1] = {op};
       }
@@ -95,7 +100,6 @@ class FuseOperationsStrategy final : public Strategy {
       else fusedOps.push_back(op);
     }
 
-    // Flush all remainder
     for(auto const &pair:pending_operations){
       flushPending(pair.first);
     }
@@ -104,8 +108,9 @@ class FuseOperationsStrategy final : public Strategy {
   }
 };
 
-class AdditionToMultiplicationStrategy : public Strategy {
+class AdditionToMultiplicationASTPass : public ASTPass {
 public:
+    std::string name() const override { return "AdditionToMultiplication"; }
     void apply(std::vector<Operation<int>> &ops) const override {
         LOG_MESSAGE("Addition To Multiplication for same constant...");
         std::vector<Operation<int>> fusedOps;
@@ -141,7 +146,6 @@ public:
             }
         }
 
-        // last operation
         const auto &lastOp = ops.back();
         if (lastOp.getType() == OperationType::Add && len > 1) {
             fuseOperations(len, lastOp);
