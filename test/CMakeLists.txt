@@ -18,3 +18,7 @@ cpmaddpackage(
 add_executable(FooTest Foo.cpp FooTest.cpp)
 target_link_libraries(FooTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(FooTest)
+
+add_executable(FhnProgramTest FhnProgramTest.cpp)
+target_link_libraries(FhnProgramTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
+add_gtest_target_to_ctest(FhnProgramTest)
