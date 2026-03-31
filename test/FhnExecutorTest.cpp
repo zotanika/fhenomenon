@@ -40,6 +40,11 @@ int test_negate(FhnBackendCtx *, FhnBuffer *result,
     return 0;
 }
 
+int test_noop(FhnBackendCtx *, FhnBuffer *,
+              const FhnBuffer *const *, const int64_t *, const double *) {
+    return 0;
+}
+
 } // namespace
 
 TEST(FhnExecutor, SupportsRegisteredOpcodes) {
@@ -170,6 +175,121 @@ TEST(FhnExecutor, UnsupportedOpcodeReturnsError) {
         reinterpret_cast<FhnBuffer *>(&bufs[0]),
         reinterpret_cast<FhnBuffer *>(&bufs[1]),
         reinterpret_cast<FhnBuffer *>(&bufs[2]),
+    };
+
+    int rc = executor.execute(nullptr, prog, ptrs);
+    EXPECT_NE(rc, 0);
+
+    fhn_program_free(prog);
+}
+
+TEST(FhnExecutor, DecomposeHMult) {
+    // Register MULT_CC, RELINEARIZE, RESCALE but NOT HMULT.
+    FhnKernelEntry entries[3] = {
+        {FHN_MULT_CC, test_mult_cc, "mult_cc"},
+        {FHN_RELINEARIZE, test_noop, "relin"},
+        {FHN_RESCALE, test_noop, "rescale"},
+    };
+    FhnKernelTable table = {3, entries};
+
+    fhenomenon::FhnDefaultExecutor executor(&table);
+
+    // Program: r3 = HMULT(r1, r2)
+    FhnProgram *prog = fhn_program_alloc(1, 2, 1);
+    ASSERT_NE(prog, nullptr);
+
+    prog->input_ids[0] = 1;
+    prog->input_ids[1] = 2;
+    prog->output_ids[0] = 3;
+
+    FhnInstruction &inst = prog->instructions[0];
+    inst.opcode = FHN_HMULT;
+    inst.result_id = 3;
+    inst.operands[0] = 1;
+    inst.operands[1] = 2;
+
+    TestBuffer bufs[4] = {{0}, {7}, {6}, {0}};
+    FhnBuffer *ptrs[4] = {
+        reinterpret_cast<FhnBuffer *>(&bufs[0]),
+        reinterpret_cast<FhnBuffer *>(&bufs[1]),
+        reinterpret_cast<FhnBuffer *>(&bufs[2]),
+        reinterpret_cast<FhnBuffer *>(&bufs[3]),
+    };
+
+    int rc = executor.execute(nullptr, prog, ptrs);
+    EXPECT_EQ(rc, 0);
+    EXPECT_EQ(bufs[3].value, 42); // 7 * 6
+
+    fhn_program_free(prog);
+}
+
+TEST(FhnExecutor, DecomposeHMultMinimal) {
+    // Register only MULT_CC (no RELIN, no RESCALE).
+    FhnKernelEntry entries[1] = {
+        {FHN_MULT_CC, test_mult_cc, "mult_cc"},
+    };
+    FhnKernelTable table = {1, entries};
+
+    fhenomenon::FhnDefaultExecutor executor(&table);
+
+    // Program: r3 = HMULT(r1, r2)
+    FhnProgram *prog = fhn_program_alloc(1, 2, 1);
+    ASSERT_NE(prog, nullptr);
+
+    prog->input_ids[0] = 1;
+    prog->input_ids[1] = 2;
+    prog->output_ids[0] = 3;
+
+    FhnInstruction &inst = prog->instructions[0];
+    inst.opcode = FHN_HMULT;
+    inst.result_id = 3;
+    inst.operands[0] = 1;
+    inst.operands[1] = 2;
+
+    TestBuffer bufs[4] = {{0}, {5}, {9}, {0}};
+    FhnBuffer *ptrs[4] = {
+        reinterpret_cast<FhnBuffer *>(&bufs[0]),
+        reinterpret_cast<FhnBuffer *>(&bufs[1]),
+        reinterpret_cast<FhnBuffer *>(&bufs[2]),
+        reinterpret_cast<FhnBuffer *>(&bufs[3]),
+    };
+
+    int rc = executor.execute(nullptr, prog, ptrs);
+    EXPECT_EQ(rc, 0);
+    EXPECT_EQ(bufs[3].value, 45); // 5 * 9
+
+    fhn_program_free(prog);
+}
+
+TEST(FhnExecutor, DecomposeFailsWhenPrimitiveMissing) {
+    // Register only RELINEARIZE (no MULT_CC).
+    FhnKernelEntry entries[1] = {
+        {FHN_RELINEARIZE, test_noop, "relin"},
+    };
+    FhnKernelTable table = {1, entries};
+
+    fhenomenon::FhnDefaultExecutor executor(&table);
+
+    // Program: r3 = HMULT(r1, r2) — should fail because MULT_CC is missing.
+    FhnProgram *prog = fhn_program_alloc(1, 2, 1);
+    ASSERT_NE(prog, nullptr);
+
+    prog->input_ids[0] = 1;
+    prog->input_ids[1] = 2;
+    prog->output_ids[0] = 3;
+
+    FhnInstruction &inst = prog->instructions[0];
+    inst.opcode = FHN_HMULT;
+    inst.result_id = 3;
+    inst.operands[0] = 1;
+    inst.operands[1] = 2;
+
+    TestBuffer bufs[4] = {{0}, {7}, {6}, {0}};
+    FhnBuffer *ptrs[4] = {
+        reinterpret_cast<FhnBuffer *>(&bufs[0]),
+        reinterpret_cast<FhnBuffer *>(&bufs[1]),
+        reinterpret_cast<FhnBuffer *>(&bufs[2]),
+        reinterpret_cast<FhnBuffer *>(&bufs[3]),
     };
 
     int rc = executor.execute(nullptr, prog, ptrs);
