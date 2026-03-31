@@ -3,6 +3,8 @@
 #include "Backend/Backend.h"
 #include "Compuon.h"
 #include "Crypto/ToyFHE.h"
+#include "FHN/FhnDefaultExecutor.h"
+#include "FHN/ToyFheKernels.h"
 
 #include <memory>
 #include <mutex>
@@ -38,11 +40,19 @@ class BuiltinBackend final : public Backend {
 
   void ensureReady() const;
 
+  // FHN executor infrastructure
+  FhnBackendCtx *fhn_ctx_ = nullptr;
+  FhnKernelTable *fhn_table_ = nullptr;
+  std::unique_ptr<FhnDefaultExecutor> fhn_executor_;
+
   public:
   BuiltinBackend();
   ~BuiltinBackend();
 
   BackendType getBackendType() const override { return BackendType::BuiltinBackend; }
+
+  FhnDefaultExecutor *getFhnExecutor() const { return fhn_executor_.get(); }
+  FhnBackendCtx *getFhnCtx() const { return fhn_ctx_; }
 
   // Initialize backend (ToyFHE or TFHE)
   void initialize();

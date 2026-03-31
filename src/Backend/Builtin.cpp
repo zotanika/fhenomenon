@@ -59,9 +59,19 @@ BuiltinBackend::BuiltinBackend() {
 #ifndef FHENOMENON_USE_TFHE
   generateKeys();
 #endif
+
+  // Initialize FHN executor
+  fhn_ctx_ = toyfhe_fhn_create(nullptr);
+  fhn_table_ = toyfhe_fhn_get_kernels(fhn_ctx_);
+  fhn_executor_ = std::make_unique<FhnDefaultExecutor>(fhn_table_);
 }
 
 BuiltinBackend::~BuiltinBackend() {
+  fhn_executor_.reset();
+  if (fhn_ctx_) {
+    toyfhe_fhn_destroy(fhn_ctx_);
+    fhn_ctx_ = nullptr;
+  }
 #ifdef FHENOMENON_USE_TFHE
   if (context_) {
     tfhe_context_destroy(context_);
