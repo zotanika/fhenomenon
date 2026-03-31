@@ -1,0 +1,3 @@
+[submodule "refs/cheddar-fhe"]
+	path = refs/cheddar-fhe
+	url = https://github.com/scale-snu/cheddar-fhe
