@@ -26,3 +26,7 @@ add_gtest_target_to_ctest(FhnProgramTest)
 add_executable(FhnBackendApiTest FhnBackendApiTest.cpp)
 target_link_libraries(FhnBackendApiTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(FhnBackendApiTest)
+
+add_executable(FhnExecutorTest FhnExecutorTest.cpp)
+target_link_libraries(FhnExecutorTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
+add_gtest_target_to_ctest(FhnExecutorTest)
