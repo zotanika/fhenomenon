@@ -38,3 +38,7 @@ add_gtest_target_to_ctest(FhnToyFheTest)
 add_executable(LowerToFhnProgramTest LowerToFhnProgramTest.cpp)
 target_link_libraries(LowerToFhnProgramTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(LowerToFhnProgramTest)
+
+add_executable(FhnIntegrationTest FhnIntegrationTest.cpp)
+target_link_libraries(FhnIntegrationTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
+add_gtest_target_to_ctest(FhnIntegrationTest)

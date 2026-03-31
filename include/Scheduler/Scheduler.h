@@ -3,10 +3,13 @@
 #include "Common.h"
 #include "Scheduler/ASTNode.h"
 #include "Scheduler/FusedOperation.h"
+#include "Scheduler/LowerToFhnProgram.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Planner.h"
 #include "Scheduler/PreASTPass.h"
 #include "Scheduler/ASTPass.h"
+#include "FHN/FhnDefaultExecutor.h"
+#include "FHN/ToyFheKernels.h"
 
 #include <functional>
 #include <memory>
@@ -166,6 +169,16 @@ class Scheduler {
     for (const auto &root : roots) {
       root->evaluate();
     }
+  }
+
+  /// Evaluate graph using FHN pipeline: lower AST to FhnProgram, dispatch via executor.
+  /// This is the new execution path alongside the old evaluateGraph().
+  /// buffers_out is populated with FhnBuffer pointers indexed by result_id.
+  /// The caller is responsible for managing buffer lifecycle.
+  template <typename T>
+  FhnProgram *lowerGraph(Planner<T> &plan) {
+    LowerToFhnProgram lowering;
+    return lowering.lower(plan);
   }
 
   void addASTPass(std::shared_ptr<ASTPass> pass) {
