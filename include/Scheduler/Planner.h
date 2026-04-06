@@ -2,6 +2,7 @@
 
 #include "Scheduler/ASTNode.h"
 #include "Scheduler/Operation.h"
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 

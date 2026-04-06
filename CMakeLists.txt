@@ -61,6 +61,12 @@ endmacro()
 set(FHENOMENON_SOURCES)
 add_subdirectory(src)
 
+if(NOT BUILTIN_BACKEND STREQUAL "TFHE")
+  list(FILTER FHENOMENON_SOURCES EXCLUDE REGEX "TfheBackend\\.cpp$")
+endif()
+# CheddarFhnBackend is built separately as a shared library
+list(FILTER FHENOMENON_SOURCES EXCLUDE REGEX "CheddarFhnBackend\\.cpp$")
+
 message(STATUS "SOURCES ${FHENOMENON_SOURCES}")
 
 # --- Backend Selection ---
