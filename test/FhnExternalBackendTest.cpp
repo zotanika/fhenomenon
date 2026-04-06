@@ -11,8 +11,11 @@
 using namespace fhenomenon;
 
 static std::string getTestLibPath() {
-  // The test CMakeLists builds libtoyfhe_fhn.so alongside test binaries
+#ifdef __APPLE__
+  return std::string(TEST_LIB_DIR) + "/libtoyfhe_fhn.dylib";
+#else
   return std::string(TEST_LIB_DIR) + "/libtoyfhe_fhn.so";
+#endif
 }
 
 TEST(FhnExternalBackend, LoadAndQueryInfo) {
