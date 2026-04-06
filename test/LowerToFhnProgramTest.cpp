@@ -59,7 +59,7 @@ TEST(LowerToFhnProgram, ChainedAddMult) {
   FhnProgram *prog = lowering.lower(plan);
 
   ASSERT_NE(prog, nullptr);
-  EXPECT_EQ(prog->num_inputs, 3u);      // a, b, c
+  EXPECT_EQ(prog->num_inputs, 3u);       // a, b, c
   EXPECT_EQ(prog->num_instructions, 2u); // add then mult
   EXPECT_EQ(prog->instructions[0].opcode, FHN_ADD_CC);
   EXPECT_EQ(prog->instructions[1].opcode, FHN_HMULT);
@@ -87,7 +87,7 @@ TEST(LowerToFhnProgram, SharedOperand) {
   FhnProgram *prog = lowering.lower(plan);
 
   ASSERT_NE(prog, nullptr);
-  EXPECT_EQ(prog->num_inputs, 1u);      // just 'a' once
+  EXPECT_EQ(prog->num_inputs, 1u); // just 'a' once
   EXPECT_EQ(prog->num_instructions, 1u);
   // Both operands reference the same input id
   EXPECT_EQ(prog->instructions[0].operands[0], prog->instructions[0].operands[1]);

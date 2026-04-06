@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Operation.h"
+#include "Planner.h"
 
 #include <string>
 #include <vector>

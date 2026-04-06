@@ -95,13 +95,12 @@ static FhnBackendCtx *createFromJson(const char *config_json) {
 
   std::pair<int, int> additional_base = {0, 0};
   if (j.contains("additional_base")) {
-    additional_base = {j["additional_base"][0].get<int>(),
-                       j["additional_base"][1].get<int>()};
+    additional_base = {j["additional_base"][0].get<int>(), j["additional_base"][1].get<int>()};
   }
 
-  ctx->param = std::make_unique<cheddar::Parameter<word>>(
-      ctx->log_degree, ctx->default_scale, ctx->default_encryption_level,
-      level_config, main_primes, aux_primes, ter_primes, additional_base);
+  ctx->param =
+    std::make_unique<cheddar::Parameter<word>>(ctx->log_degree, ctx->default_scale, ctx->default_encryption_level,
+                                               level_config, main_primes, aux_primes, ter_primes, additional_base);
 
   if (j.contains("dense_hamming_weight"))
     ctx->param->SetDenseHammingWeight(j["dense_hamming_weight"].get<int>());
@@ -116,12 +115,10 @@ static FhnBackendCtx *createFromJson(const char *config_json) {
 
 // --- Kernel implementations ------------------------------------------------
 
-static int cheddar_encode(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
+static int cheddar_encode(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                           const int64_t *params, const double *fparams) {
   // params[0] = level, fparams[0] = scale (0 = use default)
-  int level =
-      params[0] > 0 ? static_cast<int>(params[0]) : ctx->default_encryption_level;
+  int level = params[0] > 0 ? static_cast<int>(params[0]) : ctx->default_encryption_level;
   double scale = fparams[0] > 0.0 ? fparams[0] : ctx->param->GetScale(level);
 
   // operands[0] should contain the message
@@ -133,10 +130,8 @@ static int cheddar_encode(FhnBackendCtx *ctx, FhnBuffer *result,
   return 0;
 }
 
-static int cheddar_encrypt(FhnBackendCtx *ctx, FhnBuffer *result,
-                           const FhnBuffer *const *operands,
-                           const int64_t * /*params*/,
-                           const double * /*fparams*/) {
+static int cheddar_encrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
+                           const int64_t * /*params*/, const double * /*fparams*/) {
   // operands[0] should contain plaintext
   if (!operands[0] || operands[0]->kind != CheddarBufKind::Plaintext)
     return -1;
@@ -146,10 +141,8 @@ static int cheddar_encrypt(FhnBackendCtx *ctx, FhnBuffer *result,
   return 0;
 }
 
-static int cheddar_decrypt(FhnBackendCtx *ctx, FhnBuffer *result,
-                           const FhnBuffer *const *operands,
-                           const int64_t * /*params*/,
-                           const double * /*fparams*/) {
+static int cheddar_decrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
+                           const int64_t * /*params*/, const double * /*fparams*/) {
   if (!operands[0] || operands[0]->kind != CheddarBufKind::Ciphertext)
     return -1;
 
@@ -158,10 +151,8 @@ static int cheddar_decrypt(FhnBackendCtx *ctx, FhnBuffer *result,
   return 0;
 }
 
-static int cheddar_decode(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t * /*params*/,
-                          const double * /*fparams*/) {
+static int cheddar_decode(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
+                          const int64_t * /*params*/, const double * /*fparams*/) {
   if (!operands[0] || operands[0]->kind != CheddarBufKind::Plaintext)
     return -1;
 
@@ -172,57 +163,50 @@ static int cheddar_decode(FhnBackendCtx *ctx, FhnBuffer *result,
 
 // --- Arithmetic kernels ---
 
-static int cheddar_add_cc(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *) {
+static int cheddar_add_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *) {
   ctx->context->Add(result->ct, operands[0]->ct, operands[1]->ct);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_add_cp(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *) {
+static int cheddar_add_cp(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *) {
   ctx->context->Add(result->ct, operands[0]->ct, operands[1]->pt);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_sub_cc(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *) {
+static int cheddar_sub_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *) {
   ctx->context->Sub(result->ct, operands[0]->ct, operands[1]->ct);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_sub_cp(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *) {
+static int cheddar_sub_cp(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *) {
   ctx->context->Sub(result->ct, operands[0]->ct, operands[1]->pt);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_negate(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *) {
+static int cheddar_negate(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *) {
   ctx->context->Neg(result->ct, operands[0]->ct);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_mult_cc(FhnBackendCtx *ctx, FhnBuffer *result,
-                           const FhnBuffer *const *operands,
-                           const int64_t *, const double *) {
+static int cheddar_mult_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                           const double *) {
   ctx->context->Mult(result->ct, operands[0]->ct, operands[1]->ct);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_mult_cp(FhnBackendCtx *ctx, FhnBuffer *result,
-                           const FhnBuffer *const *operands,
-                           const int64_t *, const double *) {
+static int cheddar_mult_cp(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                           const double *) {
   ctx->context->Mult(result->ct, operands[0]->ct, operands[1]->pt);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
@@ -232,25 +216,22 @@ static int cheddar_mult_cp(FhnBackendCtx *ctx, FhnBuffer *result,
 // These use the convenience helpers from ScalarOps.h.
 // fparams[0] = the scalar value.
 
-static int cheddar_add_cs(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *fparams) {
+static int cheddar_add_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *fparams) {
   cheddar::AddScalar(*ctx->context, result->ct, operands[0]->ct, fparams[0]);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_mult_cs(FhnBackendCtx *ctx, FhnBuffer *result,
-                           const FhnBuffer *const *operands,
-                           const int64_t *, const double *fparams) {
+static int cheddar_mult_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                           const double *fparams) {
   cheddar::MultScalar(*ctx->context, result->ct, operands[0]->ct, fparams[0]);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_sub_sc(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
-                          const int64_t *, const double *fparams) {
+static int cheddar_sub_sc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *fparams) {
   // FHN_SUB_SC: scalar - ciphertext → negate + add_scalar
   cheddar::Ciphertext<word> neg;
   ctx->context->Neg(neg, operands[0]->ct);
@@ -261,49 +242,40 @@ static int cheddar_sub_sc(FhnBackendCtx *ctx, FhnBuffer *result,
 
 // --- Key-switching kernels ---
 
-static int cheddar_relinearize(FhnBackendCtx *ctx, FhnBuffer *result,
-                               const FhnBuffer *const *operands,
-                               const int64_t *, const double *) {
-  ctx->context->Relinearize(result->ct, operands[0]->ct,
-                            ctx->ui->GetMultiplicationKey());
+static int cheddar_relinearize(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                               const double *) {
+  ctx->context->Relinearize(result->ct, operands[0]->ct, ctx->ui->GetMultiplicationKey());
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_rescale(FhnBackendCtx *ctx, FhnBuffer *result,
-                           const FhnBuffer *const *operands,
-                           const int64_t *, const double *) {
+static int cheddar_rescale(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                           const double *) {
   ctx->context->Rescale(result->ct, operands[0]->ct);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_rotate(FhnBackendCtx *ctx, FhnBuffer *result,
-                          const FhnBuffer *const *operands,
+static int cheddar_rotate(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                           const int64_t *params, const double *) {
   int dist = static_cast<int>(params[0]);
-  ctx->context->HRot(result->ct, operands[0]->ct,
-                     ctx->ui->GetRotationKey(dist), dist);
+  ctx->context->HRot(result->ct, operands[0]->ct, ctx->ui->GetRotationKey(dist), dist);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_conjugate(FhnBackendCtx *ctx, FhnBuffer *result,
-                             const FhnBuffer *const *operands,
-                             const int64_t *, const double *) {
-  ctx->context->HConj(result->ct, operands[0]->ct,
-                      ctx->ui->GetConjugationKey());
+static int cheddar_conjugate(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                             const double *) {
+  ctx->context->HConj(result->ct, operands[0]->ct, ctx->ui->GetConjugationKey());
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_mult_key(FhnBackendCtx *ctx, FhnBuffer *result,
-                            const FhnBuffer *const *operands,
+static int cheddar_mult_key(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                             const int64_t *params, const double *) {
   // params[0] = rotation index for key lookup (0 = mult key)
   int key_idx = static_cast<int>(params[0]);
-  const auto &key = (key_idx == 0) ? ctx->ui->GetMultiplicationKey()
-                                   : ctx->ui->GetRotationKey(key_idx);
+  const auto &key = (key_idx == 0) ? ctx->ui->GetMultiplicationKey() : ctx->ui->GetRotationKey(key_idx);
   ctx->context->MultKey(result->ct, operands[0]->ct, key);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
@@ -311,46 +283,37 @@ static int cheddar_mult_key(FhnBackendCtx *ctx, FhnBuffer *result,
 
 // --- Fused composite kernels ---
 
-static int cheddar_hmult(FhnBackendCtx *ctx, FhnBuffer *result,
-                         const FhnBuffer *const *operands,
-                         const int64_t *, const double *) {
-  ctx->context->HMult(result->ct, operands[0]->ct, operands[1]->ct,
-                      ctx->ui->GetMultiplicationKey(), /*rescale=*/true);
+static int cheddar_hmult(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                         const double *) {
+  ctx->context->HMult(result->ct, operands[0]->ct, operands[1]->ct, ctx->ui->GetMultiplicationKey(), /*rescale=*/true);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_hrot(FhnBackendCtx *ctx, FhnBuffer *result,
-                        const FhnBuffer *const *operands,
-                        const int64_t *params, const double *) {
+static int cheddar_hrot(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *params,
+                        const double *) {
   int dist = static_cast<int>(params[0]);
-  ctx->context->HRot(result->ct, operands[0]->ct,
-                     ctx->ui->GetRotationKey(dist), dist);
+  ctx->context->HRot(result->ct, operands[0]->ct, ctx->ui->GetRotationKey(dist), dist);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_hrot_add(FhnBackendCtx *ctx, FhnBuffer *result,
-                            const FhnBuffer *const *operands,
+static int cheddar_hrot_add(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                             const int64_t *params, const double *) {
   int dist = static_cast<int>(params[0]);
-  ctx->context->HRotAdd(result->ct, operands[0]->ct, operands[1]->ct,
-                        ctx->ui->GetRotationKey(dist), dist);
+  ctx->context->HRotAdd(result->ct, operands[0]->ct, operands[1]->ct, ctx->ui->GetRotationKey(dist), dist);
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_hconj_add(FhnBackendCtx *ctx, FhnBuffer *result,
-                             const FhnBuffer *const *operands,
-                             const int64_t *, const double *) {
-  ctx->context->HConjAdd(result->ct, operands[0]->ct, operands[1]->ct,
-                         ctx->ui->GetConjugationKey());
+static int cheddar_hconj_add(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                             const double *) {
+  ctx->context->HConjAdd(result->ct, operands[0]->ct, operands[1]->ct, ctx->ui->GetConjugationKey());
   result->kind = CheddarBufKind::Ciphertext;
   return 0;
 }
 
-static int cheddar_level_down(FhnBackendCtx *ctx, FhnBuffer *result,
-                              const FhnBuffer *const *operands,
+static int cheddar_level_down(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                               const int64_t *params, const double *) {
   int target_level = static_cast<int>(params[0]);
   ctx->context->LevelDown(result->ct, operands[0]->ct, target_level);
@@ -361,35 +324,35 @@ static int cheddar_level_down(FhnBackendCtx *ctx, FhnBuffer *result,
 // --- Kernel table ----------------------------------------------------------
 
 static FhnKernelEntry cheddar_kernels[] = {
-    {FHN_ENCODE, cheddar_encode, "encode"},
-    {FHN_ENCRYPT, cheddar_encrypt, "encrypt"},
-    {FHN_DECRYPT, cheddar_decrypt, "decrypt"},
-    {FHN_DECODE, cheddar_decode, "decode"},
-    {FHN_ADD_CC, cheddar_add_cc, "add_cc"},
-    {FHN_ADD_CP, cheddar_add_cp, "add_cp"},
-    {FHN_ADD_CS, cheddar_add_cs, "add_cs"},
-    {FHN_SUB_CC, cheddar_sub_cc, "sub_cc"},
-    {FHN_SUB_CP, cheddar_sub_cp, "sub_cp"},
-    {FHN_SUB_SC, cheddar_sub_sc, "sub_sc"},
-    {FHN_NEGATE, cheddar_negate, "negate"},
-    {FHN_MULT_CC, cheddar_mult_cc, "mult_cc"},
-    {FHN_MULT_CP, cheddar_mult_cp, "mult_cp"},
-    {FHN_MULT_CS, cheddar_mult_cs, "mult_cs"},
-    {FHN_RELINEARIZE, cheddar_relinearize, "relinearize"},
-    {FHN_RESCALE, cheddar_rescale, "rescale"},
-    {FHN_ROTATE, cheddar_rotate, "rotate"},
-    {FHN_CONJUGATE, cheddar_conjugate, "conjugate"},
-    {FHN_MULT_KEY, cheddar_mult_key, "mult_key"},
-    {FHN_HMULT, cheddar_hmult, "hmult"},
-    {FHN_HROT, cheddar_hrot, "hrot"},
-    {FHN_HROT_ADD, cheddar_hrot_add, "hrot_add"},
-    {FHN_HCONJ_ADD, cheddar_hconj_add, "hconj_add"},
-    {FHN_LEVEL_DOWN, cheddar_level_down, "level_down"},
+  {FHN_ENCODE, cheddar_encode, "encode"},
+  {FHN_ENCRYPT, cheddar_encrypt, "encrypt"},
+  {FHN_DECRYPT, cheddar_decrypt, "decrypt"},
+  {FHN_DECODE, cheddar_decode, "decode"},
+  {FHN_ADD_CC, cheddar_add_cc, "add_cc"},
+  {FHN_ADD_CP, cheddar_add_cp, "add_cp"},
+  {FHN_ADD_CS, cheddar_add_cs, "add_cs"},
+  {FHN_SUB_CC, cheddar_sub_cc, "sub_cc"},
+  {FHN_SUB_CP, cheddar_sub_cp, "sub_cp"},
+  {FHN_SUB_SC, cheddar_sub_sc, "sub_sc"},
+  {FHN_NEGATE, cheddar_negate, "negate"},
+  {FHN_MULT_CC, cheddar_mult_cc, "mult_cc"},
+  {FHN_MULT_CP, cheddar_mult_cp, "mult_cp"},
+  {FHN_MULT_CS, cheddar_mult_cs, "mult_cs"},
+  {FHN_RELINEARIZE, cheddar_relinearize, "relinearize"},
+  {FHN_RESCALE, cheddar_rescale, "rescale"},
+  {FHN_ROTATE, cheddar_rotate, "rotate"},
+  {FHN_CONJUGATE, cheddar_conjugate, "conjugate"},
+  {FHN_MULT_KEY, cheddar_mult_key, "mult_key"},
+  {FHN_HMULT, cheddar_hmult, "hmult"},
+  {FHN_HROT, cheddar_hrot, "hrot"},
+  {FHN_HROT_ADD, cheddar_hrot_add, "hrot_add"},
+  {FHN_HCONJ_ADD, cheddar_hconj_add, "hconj_add"},
+  {FHN_LEVEL_DOWN, cheddar_level_down, "level_down"},
 };
 
 static FhnKernelTable cheddar_kernel_table = {
-    sizeof(cheddar_kernels) / sizeof(cheddar_kernels[0]),
-    cheddar_kernels,
+  sizeof(cheddar_kernels) / sizeof(cheddar_kernels[0]),
+  cheddar_kernels,
 };
 
 // --- Backend exports -------------------------------------------------------
@@ -398,10 +361,10 @@ extern "C" {
 
 FhnBackendInfo *fhn_get_info(void) {
   static FhnBackendInfo info = {
-      "cheddar-ckks",
-      "1.0",
-      FHN_DEVICE_GPU,
-      0, // detected at runtime
+    "cheddar-ckks",
+    "1.0",
+    FHN_DEVICE_GPU,
+    0, // detected at runtime
   };
   return &info;
 }
@@ -417,22 +380,15 @@ FhnBackendCtx *fhn_create(const char *config_json) {
 
 void fhn_destroy(FhnBackendCtx *ctx) { delete ctx; }
 
-FhnKernelTable *fhn_get_kernels(FhnBackendCtx * /*ctx*/) {
-  return &cheddar_kernel_table;
-}
+FhnKernelTable *fhn_get_kernels(FhnBackendCtx * /*ctx*/) { return &cheddar_kernel_table; }
 
 // --- Buffer helpers --------------------------------------------------------
 
-FhnBuffer *cheddar_fhn_buffer_alloc(FhnBackendCtx * /*ctx*/) {
-  return new FhnBuffer{};
-}
+FhnBuffer *cheddar_fhn_buffer_alloc(FhnBackendCtx * /*ctx*/) { return new FhnBuffer{}; }
 
-void cheddar_fhn_buffer_free(FhnBackendCtx * /*ctx*/, FhnBuffer *buf) {
-  delete buf;
-}
+void cheddar_fhn_buffer_free(FhnBackendCtx * /*ctx*/, FhnBuffer *buf) { delete buf; }
 
-void cheddar_fhn_buffer_read_complex(FhnBackendCtx * /*ctx*/, FhnBuffer *buf,
-                                     double *real_out, double *imag_out,
+void cheddar_fhn_buffer_read_complex(FhnBackendCtx * /*ctx*/, FhnBuffer *buf, double *real_out, double *imag_out,
                                      int max_slots) {
   if (buf->kind != CheddarBufKind::Message)
     return;

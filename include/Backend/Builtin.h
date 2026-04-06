@@ -35,7 +35,7 @@ class BuiltinBackend final : public Backend {
 
   // Helper for binary TFHE operations to reduce code duplication
   std::shared_ptr<CompuonBase> executeBinaryTfheOp(const CompuonBase &a, const CompuonBase &b, TfheBinaryOp op,
-                                                    const char *opName) const;
+                                                   const char *opName) const;
 #endif
 
   void ensureReady() const;

@@ -398,7 +398,7 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
 
 #ifdef FHENOMENON_USE_TFHE
 std::shared_ptr<CompuonBase> BuiltinBackend::executeBinaryTfheOp(const CompuonBase &a, const CompuonBase &b,
-                                                                  TfheBinaryOp op, const char *opName) const {
+                                                                 TfheBinaryOp op, const char *opName) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
     const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);

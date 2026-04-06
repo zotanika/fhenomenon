@@ -32,15 +32,14 @@ using word = uint32_t;
 // Buffer helper function pointers (resolved once from the .so)
 using BufAllocFn = FhnBuffer *(*)(FhnBackendCtx *);
 using BufFreeFn = void (*)(FhnBackendCtx *, FhnBuffer *);
-using BufReadComplexFn = void (*)(FhnBackendCtx *, FhnBuffer *, double *,
-                                  double *, int);
+using BufReadComplexFn = void (*)(FhnBackendCtx *, FhnBuffer *, double *, double *, int);
 
 // ---------------------------------------------------------------------------
 // Shared fixture: cheddar context created ONCE for all tests.
 // This is the main speedup — GPU init + key gen happens only once.
 // ---------------------------------------------------------------------------
 class CheddarGpuTest : public ::testing::Test {
-protected:
+  protected:
   // Created once, shared by all tests
   static std::unique_ptr<ExternalBackend> backend_;
   static void *dl_;
@@ -56,21 +55,18 @@ protected:
     backend_ = std::make_unique<ExternalBackend>(lib, param.c_str());
     auto t1 = std::chrono::high_resolution_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-    std::cout << "\n[  SETUP  ] Context + keys: " << ms
-              << " ms (one-time cost)\n" << std::endl;
+    std::cout << "\n[  SETUP  ] Context + keys: " << ms << " ms (one-time cost)\n" << std::endl;
 
     dl_ = dlopen(lib.c_str(), RTLD_LAZY | RTLD_NOLOAD);
-    buf_alloc_ =
-        reinterpret_cast<BufAllocFn>(dlsym(dl_, "cheddar_fhn_buffer_alloc"));
-    buf_free_ =
-        reinterpret_cast<BufFreeFn>(dlsym(dl_, "cheddar_fhn_buffer_free"));
-    buf_read_ = reinterpret_cast<BufReadComplexFn>(
-        dlsym(dl_, "cheddar_fhn_buffer_read_complex"));
+    buf_alloc_ = reinterpret_cast<BufAllocFn>(dlsym(dl_, "cheddar_fhn_buffer_alloc"));
+    buf_free_ = reinterpret_cast<BufFreeFn>(dlsym(dl_, "cheddar_fhn_buffer_free"));
+    buf_read_ = reinterpret_cast<BufReadComplexFn>(dlsym(dl_, "cheddar_fhn_buffer_read_complex"));
   }
 
   static void TearDownTestSuite() {
     backend_.reset();
-    if (dl_) dlclose(dl_);
+    if (dl_)
+      dlclose(dl_);
     dl_ = nullptr;
   }
 
@@ -100,8 +96,7 @@ protected:
     BufAllocFn alloc_fn;
     BufFreeFn free_fn;
 
-    Buffers(int count, FhnBackendCtx *ctx, BufAllocFn af, BufFreeFn ff)
-        : n(count), c(ctx), alloc_fn(af), free_fn(ff) {
+    Buffers(int count, FhnBackendCtx *ctx, BufAllocFn af, BufFreeFn ff) : n(count), c(ctx), alloc_fn(af), free_fn(ff) {
       ptrs = new FhnBuffer *[count];
       for (int i = 0; i < count; i++)
         ptrs[i] = alloc_fn(ctx);
@@ -115,12 +110,9 @@ protected:
     FhnBuffer **data() { return ptrs; }
   };
 
-  Buffers allocBuffers(int n) {
-    return Buffers(n, ctx(), buf_alloc_, buf_free_);
-  }
+  Buffers allocBuffers(int n) { return Buffers(n, ctx(), buf_alloc_, buf_free_); }
 
-  void readResult(FhnBuffer *buf, std::vector<double> &real,
-                  std::vector<double> &imag, int slots) {
+  void readResult(FhnBuffer *buf, std::vector<double> &real, std::vector<double> &imag, int slots) {
     real.resize(slots);
     imag.resize(slots);
     buf_read_(ctx(), buf, real.data(), imag.data(), slots);
@@ -180,13 +172,13 @@ TEST_F(CheddarGpuTest, EncodeEncryptAddDecryptDecode) {
 
   auto *prog = fhn_program_alloc(7, 0, 1);
   prog->output_ids[0] = 9;
-  prog->instructions[0] = {FHN_ENCODE,  2, {1,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[1] = {FHN_ENCRYPT, 3, {2,0,0,0}, {}, {}};
-  prog->instructions[2] = {FHN_ENCODE,  5, {4,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[3] = {FHN_ENCRYPT, 6, {5,0,0,0}, {}, {}};
-  prog->instructions[4] = {FHN_ADD_CC,  7, {3,6,0,0}, {}, {}};
-  prog->instructions[5] = {FHN_DECRYPT, 8, {7,0,0,0}, {}, {}};
-  prog->instructions[6] = {FHN_DECODE,  9, {8,0,0,0}, {}, {}};
+  prog->instructions[0] = {FHN_ENCODE, 2, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[1] = {FHN_ENCRYPT, 3, {2, 0, 0, 0}, {}, {}};
+  prog->instructions[2] = {FHN_ENCODE, 5, {4, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[3] = {FHN_ENCRYPT, 6, {5, 0, 0, 0}, {}, {}};
+  prog->instructions[4] = {FHN_ADD_CC, 7, {3, 6, 0, 0}, {}, {}};
+  prog->instructions[5] = {FHN_DECRYPT, 8, {7, 0, 0, 0}, {}, {}};
+  prog->instructions[6] = {FHN_DECODE, 9, {8, 0, 0, 0}, {}, {}};
 
   auto t0 = std::chrono::high_resolution_clock::now();
   EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
@@ -213,13 +205,13 @@ TEST_F(CheddarGpuTest, HMultGpu) {
 
   auto *prog = fhn_program_alloc(7, 0, 1);
   prog->output_ids[0] = 9;
-  prog->instructions[0] = {FHN_ENCODE,  2, {1,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[1] = {FHN_ENCRYPT, 3, {2,0,0,0}, {}, {}};
-  prog->instructions[2] = {FHN_ENCODE,  5, {4,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[3] = {FHN_ENCRYPT, 6, {5,0,0,0}, {}, {}};
-  prog->instructions[4] = {FHN_HMULT,   7, {3,6,0,0}, {}, {}};
-  prog->instructions[5] = {FHN_DECRYPT, 8, {7,0,0,0}, {}, {}};
-  prog->instructions[6] = {FHN_DECODE,  9, {8,0,0,0}, {}, {}};
+  prog->instructions[0] = {FHN_ENCODE, 2, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[1] = {FHN_ENCRYPT, 3, {2, 0, 0, 0}, {}, {}};
+  prog->instructions[2] = {FHN_ENCODE, 5, {4, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[3] = {FHN_ENCRYPT, 6, {5, 0, 0, 0}, {}, {}};
+  prog->instructions[4] = {FHN_HMULT, 7, {3, 6, 0, 0}, {}, {}};
+  prog->instructions[5] = {FHN_DECRYPT, 8, {7, 0, 0, 0}, {}, {}};
+  prog->instructions[6] = {FHN_DECODE, 9, {8, 0, 0, 0}, {}, {}};
 
   auto t0 = std::chrono::high_resolution_clock::now();
   EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
@@ -258,11 +250,11 @@ TEST_F(CheddarGpuTest, AddScalar) {
   // encode -> encrypt -> add_cs(scalar=100.0) -> decrypt -> decode
   auto *prog = fhn_program_alloc(5, 0, 1);
   prog->output_ids[0] = 6;
-  prog->instructions[0] = {FHN_ENCODE,  2, {1,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[1] = {FHN_ENCRYPT, 3, {2,0,0,0}, {}, {}};
-  prog->instructions[2] = {FHN_ADD_CS,  4, {3,0,0,0}, {}, {100.0, 0}};
-  prog->instructions[3] = {FHN_DECRYPT, 5, {4,0,0,0}, {}, {}};
-  prog->instructions[4] = {FHN_DECODE,  6, {5,0,0,0}, {}, {}};
+  prog->instructions[0] = {FHN_ENCODE, 2, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[1] = {FHN_ENCRYPT, 3, {2, 0, 0, 0}, {}, {}};
+  prog->instructions[2] = {FHN_ADD_CS, 4, {3, 0, 0, 0}, {}, {100.0, 0}};
+  prog->instructions[3] = {FHN_DECRYPT, 5, {4, 0, 0, 0}, {}, {}};
+  prog->instructions[4] = {FHN_DECODE, 6, {5, 0, 0, 0}, {}, {}};
 
   auto t0 = std::chrono::high_resolution_clock::now();
   EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
@@ -288,11 +280,11 @@ TEST_F(CheddarGpuTest, MultScalar) {
 
   auto *prog = fhn_program_alloc(5, 0, 1);
   prog->output_ids[0] = 6;
-  prog->instructions[0] = {FHN_ENCODE,  2, {1,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[1] = {FHN_ENCRYPT, 3, {2,0,0,0}, {}, {}};
-  prog->instructions[2] = {FHN_MULT_CS, 4, {3,0,0,0}, {}, {0.5, 0}};
-  prog->instructions[3] = {FHN_DECRYPT, 5, {4,0,0,0}, {}, {}};
-  prog->instructions[4] = {FHN_DECODE,  6, {5,0,0,0}, {}, {}};
+  prog->instructions[0] = {FHN_ENCODE, 2, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[1] = {FHN_ENCRYPT, 3, {2, 0, 0, 0}, {}, {}};
+  prog->instructions[2] = {FHN_MULT_CS, 4, {3, 0, 0, 0}, {}, {0.5, 0}};
+  prog->instructions[3] = {FHN_DECRYPT, 5, {4, 0, 0, 0}, {}, {}};
+  prog->instructions[4] = {FHN_DECODE, 6, {5, 0, 0, 0}, {}, {}};
 
   auto t0 = std::chrono::high_resolution_clock::now();
   EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
@@ -320,12 +312,12 @@ TEST_F(CheddarGpuTest, ChainedScalarOps) {
   // encode -> encrypt -> add_cs(10) -> mult_cs(2) -> decrypt -> decode
   auto *prog = fhn_program_alloc(6, 0, 1);
   prog->output_ids[0] = 7;
-  prog->instructions[0] = {FHN_ENCODE,  2, {1,0,0,0}, {0,0,0,0}, {0,0}};
-  prog->instructions[1] = {FHN_ENCRYPT, 3, {2,0,0,0}, {}, {}};
-  prog->instructions[2] = {FHN_ADD_CS,  4, {3,0,0,0}, {}, {10.0, 0}};
-  prog->instructions[3] = {FHN_MULT_CS, 5, {4,0,0,0}, {}, {2.0, 0}};
-  prog->instructions[4] = {FHN_DECRYPT, 6, {5,0,0,0}, {}, {}};
-  prog->instructions[5] = {FHN_DECODE,  7, {6,0,0,0}, {}, {}};
+  prog->instructions[0] = {FHN_ENCODE, 2, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0}};
+  prog->instructions[1] = {FHN_ENCRYPT, 3, {2, 0, 0, 0}, {}, {}};
+  prog->instructions[2] = {FHN_ADD_CS, 4, {3, 0, 0, 0}, {}, {10.0, 0}};
+  prog->instructions[3] = {FHN_MULT_CS, 5, {4, 0, 0, 0}, {}, {2.0, 0}};
+  prog->instructions[4] = {FHN_DECRYPT, 6, {5, 0, 0, 0}, {}, {}};
+  prog->instructions[5] = {FHN_DECODE, 7, {6, 0, 0, 0}, {}, {}};
 
   auto t0 = std::chrono::high_resolution_clock::now();
   EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);

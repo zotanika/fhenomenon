@@ -1,15 +1,15 @@
 #pragma once
 
 #include "Common.h"
+#include "FHN/FhnDefaultExecutor.h"
+#include "FHN/ToyFheKernels.h"
 #include "Scheduler/ASTNode.h"
+#include "Scheduler/ASTPass.h"
 #include "Scheduler/FusedOperation.h"
 #include "Scheduler/LowerToFhnProgram.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Planner.h"
 #include "Scheduler/PreASTPass.h"
-#include "Scheduler/ASTPass.h"
-#include "FHN/FhnDefaultExecutor.h"
-#include "FHN/ToyFheKernels.h"
 
 #include <functional>
 #include <memory>
@@ -32,14 +32,11 @@ class Scheduler {
   std::unordered_set<std::string> registeredPreASTPasses_;
   std::unordered_set<std::string> registeredASTPasses_;
 
-  void validateDependencies(const std::string &passName,
-                            const std::vector<std::string> &deps,
+  void validateDependencies(const std::string &passName, const std::vector<std::string> &deps,
                             const std::unordered_set<std::string> &registered) {
     for (const auto &dep : deps) {
       if (!registered.count(dep)) {
-        throw std::runtime_error(
-          "Pass '" + passName + "' requires '" + dep +
-          "' to be registered first");
+        throw std::runtime_error("Pass '" + passName + "' requires '" + dep + "' to be registered first");
       }
     }
   }
@@ -81,8 +78,7 @@ class Scheduler {
 
         // Create FusedKernelNode
         auto fusedNode = std::make_shared<FusedKernelNode<T>>(
-          fusedOp, std::move(deps),
-          std::vector<std::shared_ptr<Compuon<T>>>(fusedOp->getOutputs()));
+          fusedOp, std::move(deps), std::vector<std::shared_ptr<Compuon<T>>>(fusedOp->getOutputs()));
 
         // Map all outputs to this node
         for (const auto &output : fusedOp->getOutputs()) {
@@ -175,8 +171,7 @@ class Scheduler {
   /// This is the new execution path alongside the old evaluateGraph().
   /// buffers_out is populated with FhnBuffer pointers indexed by result_id.
   /// The caller is responsible for managing buffer lifecycle.
-  template <typename T>
-  FhnProgram *lowerGraph(Planner<T> &plan) {
+  template <typename T> FhnProgram *lowerGraph(Planner<T> &plan) {
     LowerToFhnProgram lowering;
     return lowering.lower(plan);
   }

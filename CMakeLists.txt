@@ -114,6 +114,7 @@ endif()
 # -------------------------------
 
 add_library(${PROJECT_LIB_NAME} STATIC ${FHENOMENON_SOURCES})
+set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(
   ${PROJECT_LIB_NAME}

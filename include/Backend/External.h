@@ -11,13 +11,12 @@
 namespace fhenomenon {
 
 class ExternalBackend : public Backend {
-public:
+  public:
   BackendType getBackendType() const override { return BackendType::ExternalBackend; }
 
   // symbolPrefix: override for symbol names (e.g., "toyfhe_" -> "toyfhe_fhn_get_info")
   // Default "" expects standard "fhn_get_info", "fhn_create", etc.
-  explicit ExternalBackend(const std::string &libraryPath,
-                           const char *config_json = nullptr,
+  explicit ExternalBackend(const std::string &libraryPath, const char *config_json = nullptr,
                            const std::string &symbolPrefix = "");
   ~ExternalBackend() override;
 
@@ -44,7 +43,7 @@ public:
   std::shared_ptr<CompuonBase> compareLt(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
   std::shared_ptr<CompuonBase> compareLe(const CompuonBase &, const CompuonBase &) const override { return nullptr; }
 
-private:
+  private:
   void *dl_handle_ = nullptr;
   FhnBackendVTable vtable_{};
   FhnBackendInfo *info_ = nullptr;

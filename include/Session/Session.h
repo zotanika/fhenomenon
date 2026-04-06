@@ -6,9 +6,9 @@
 #include "Parameter/Parameter.h"
 #include "Parameter/ParameterGen.h"
 #include "Profile.h"
+#include "Scheduler/ASTPass.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Scheduler.h"
-#include "Scheduler/ASTPass.h"
 
 #include <memory>
 #include <unordered_map>

@@ -360,7 +360,7 @@ TEST(PassDependencyTest, NoDependenciesRegisters) {
 
 namespace {
 class DummyPreASTPass : public scheduler::PreASTPass {
-public:
+  public:
   void apply(std::vector<std::shared_ptr<scheduler::OperationBase>> &, const Backend &) override {}
   std::string name() const override { return "DummyPass"; }
   std::vector<std::string> dependencies() const override { return {"NonExistentPass"}; }
@@ -376,7 +376,7 @@ TEST(PassDependencyTest, MissingDependencyThrows) {
 
 namespace {
 class DependentPreASTPass : public scheduler::PreASTPass {
-public:
+  public:
   void apply(std::vector<std::shared_ptr<scheduler::OperationBase>> &, const Backend &) override {}
   std::string name() const override { return "DependentPass"; }
   std::vector<std::string> dependencies() const override { return {"MatMulRecognition"}; }

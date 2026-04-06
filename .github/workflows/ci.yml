@@ -18,6 +18,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: false  # cheddar-fhe requires CUDA, skip on CI
 
     - name: Install dependencies (Ubuntu)
       if: runner.os == 'Linux'
