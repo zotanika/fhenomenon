@@ -1,3 +1,3 @@
 [submodule "refs/cheddar-fhe"]
 	path = refs/cheddar-fhe
-	url = https://github.com/scale-snu/cheddar-fhe
+	url = git@github.zotanika:zotanika/cheddar-fhe.git
