@@ -9,3 +9,6 @@ cmake/launch-cuda
 *.whl
 .cache/
 .compdb/
+docs/plan/
+docs/plans/
+docs/pitch/
