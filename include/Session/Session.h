@@ -58,25 +58,31 @@ class Session final : public std::enable_shared_from_this<Session> {
   }
 
   template <typename T> std::shared_ptr<Compuon<T>> trackEntity(Compuon<T> &entity) {
+    // Resolve to the canonical object for this address: caller-owned
+    // variables map to themselves, copies of operation results map to the
+    // shared result they were copied from (registered by the copy
+    // constructor).
     const void *key = &entity;
-    auto existing_entity = getEntity<T>(key);
-    if (existing_entity != nullptr) {
-      LOG_MESSAGE("Existing");
-    }
-    auto entity_p = std::shared_ptr<Compuon<T>>(existing_entity, [](Compuon<T> *) {});
-    // double delete bug if std::shared_ptr<Compuon<T>>(existing_entity);
-    auto entity_ptr = entity_p ? entity_p->weak_from_this().lock() : entity.weak_from_this().lock();
-
-    if (!entity_ptr) {
-      LOG_MESSAGE("No Ptr");
-      entity_ptr = std::make_shared<Compuon<T>>(entity);
-      tmp_entities_.emplace_back(entity_ptr);
-      saveEntity(&entity, *entity_ptr);
+    Compuon<T> *canonical = getEntity<T>(key);
+    if (!canonical) {
+      saveEntity(key, entity);
+      canonical = &entity;
     }
 
-    LOG_MESSAGE("Tracking entity: " << entity_ptr.get() << ", " << entity_ptr->getValue());
+    // Operation temporaries are shared-owned; share their ownership so they
+    // outlive the recording expression.
+    if (auto owned = canonical->weak_from_this().lock()) {
+      LOG_MESSAGE("Tracking shared entity: " << owned.get() << ", " << owned->getValue());
+      return owned;
+    }
 
-    return entity_ptr;
+    // Caller-owned variables are aliased in place, never copied: every
+    // recorded operation must observe earlier writes to the same variable
+    // (read-after-write), and the final result must land in the caller's
+    // object. The alias cannot outlive the variable because execution
+    // completes inside run(), while the caller's scope is still alive.
+    LOG_MESSAGE("Tracking caller entity: " << canonical << ", " << canonical->getValue());
+    return std::shared_ptr<Compuon<T>>(canonical, [](Compuon<T> *) {});
   }
 
   template <typename T> void saveOp(std::shared_ptr<scheduler::Operation<T>> op);
@@ -97,12 +103,22 @@ class Session final : public std::enable_shared_from_this<Session> {
 
   void optimize();
 
+  // Drop all recording state so a later run() starts fresh: recorded
+  // operations hold aliases to caller-owned variables, and entity_map_ holds
+  // address-keyed entries that would otherwise resurrect dead expression
+  // temporaries when the stack reuses their addresses.
+  void endRun() {
+    operations_.clear();
+    entity_map_.clear();
+    active_ = false;
+  }
+
   bool active_;
+  bool passes_registered_ = false;
   const Backend &backend_;
   std::unique_ptr<scheduler::Scheduler> scheduler_; // Scheduler with backend delegate
   // set of operations
   std::vector<std::shared_ptr<scheduler::OperationBase>> operations_;
-  std::vector<std::shared_ptr<void>> tmp_entities_;
   // Map for reference of Compuon
   std::unordered_map<const void *, std::any> entity_map_;
 

@@ -4,24 +4,27 @@
 
 namespace fhenomenon {
 
+// Contract: Compuon variables used inside `ops` must be declared in a scope
+// enclosing this call (and belong() to a profile) — recorded operations alias
+// them in place, and evaluation happens after the lambda body returns.
 template <typename Op> void Session::run(Op &&ops) {
   LOG_MESSAGE("Session: begin");
   if (session_ptr_ == nullptr)
     session_ptr_ = shared_from_this();
   active_ = true;
 
-  // Run lambda to capture operations
-  ops();
+  try {
+    // Run lambda to capture operations
+    ops();
 
-  // Apply runtime optimization
-  optimize();
+    // Build, optimize, and evaluate the recorded graph.
+    optimize();
+  } catch (...) {
+    endRun();
+    throw;
+  }
 
-  // Execute operations in optimized order
-  active_ = false;
-  // for (const auto& op : operations_) {
-  //   LOG_MESSAGE("Session: execute operation");
-  //    op->execute();
-  //}
+  endRun();
   LOG_MESSAGE("Session: end");
 }
 

@@ -21,9 +21,10 @@ Compuon<T>::Compuon(const Compuon<T> &other)
   this->isEncrypted_ = other.isEncrypted_;
   LOG_MESSAGE("Copy constructor with value: " << val_ << " (" << this << ")");
   if (Session::getSession()->isActive()) {
-    Session::getSession()->setEntity<T>(this, const_cast<Compuon<T> &>(other));
-    Session::getSession()->saveEntity(this, const_cast<Compuon<T> &>(other));
-    // Session::getSession()->saveEntity(&other, *this);
+    // Map this copy to the canonical object it was copied from, collapsing
+    // copy chains so trackEntity() resolves any copy in one hop.
+    auto *canonical = Session::getSession()->getEntity<T>(&other);
+    Session::getSession()->setEntity<T>(this, canonical ? *canonical : const_cast<Compuon<T> &>(other));
   }
 }
 
@@ -49,6 +50,19 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const T &scalar) {
     return *op1_ptr;
   } else {
     this->setValue(scalar);
+    // An encrypted entity must keep its ciphertext in sync with the new
+    // value, or later homomorphic ops and decrypt() use the stale one.
+    if (this->isEncrypted_) {
+      if (this->getProfile()) {
+        Backend::getInstance().transform(*this, *(this->getProfile()->getParam()));
+      } else {
+        // No profile to re-encrypt with: drop the stale ciphertext so
+        // decrypt() falls back to the plaintext value instead of silently
+        // returning the old encrypted one.
+        this->ciphertext_.reset();
+        this->isEncrypted_ = false;
+      }
+    }
     return *this;
   }
 }
@@ -75,11 +89,14 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const Compuon<T> &other)
     LOG_MESSAGE("========");
 
     return *this;
-
-    return *this;
   } else {
     this->setValue(other.getValue());
-
+    // Assignment copies the encrypted state, not just the plaintext mirror.
+    this->ciphertext_ = other.ciphertext_;
+    this->isEncrypted_ = other.isEncrypted_;
+    if (other.getProfile()) {
+      this->setProfile(other.getProfile());
+    }
     return *this;
   }
 }
@@ -106,6 +123,12 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(Compuon &&other) noexcep
   } else {
     LOG_MESSAGE("(Move) Assignment without session");
     this->setValue(std::move(other.getValue()));
+    // Assignment copies the encrypted state, not just the plaintext mirror.
+    this->ciphertext_ = other.ciphertext_;
+    this->isEncrypted_ = other.isEncrypted_;
+    if (other.getProfile()) {
+      this->setProfile(other.getProfile());
+    }
     return *this;
   }
 }

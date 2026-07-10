@@ -12,11 +12,20 @@ void Session::optimize() {
     throw std::runtime_error("Session: Scheduler not initialized");
   }
 
-  // Register pre-AST passes
-  scheduler_->addPreASTPass(std::make_shared<scheduler::MatMulRecognitionPass>());
+  // An empty recording is a valid no-op run.
+  if (operations_.empty()) {
+    return;
+  }
 
-  // Scheduler uses backend as delegate - it's decoupled from actual computation
-  scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
+  // Register passes once; the scheduler persists across run() calls.
+  if (!passes_registered_) {
+    // Register pre-AST passes
+    scheduler_->addPreASTPass(std::make_shared<scheduler::MatMulRecognitionPass>());
+
+    // Scheduler uses backend as delegate - it's decoupled from actual computation
+    scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
+    passes_registered_ = true;
+  }
   // scheduler_->addASTPass(std::make_shared<scheduler::FuseOperationsASTPass>());
   // scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
   // scheduler_->addASTPass(std::make_shared<scheduler::AdditionToMultiplicationASTPass>());
