@@ -31,7 +31,7 @@ typedef enum FhnOpCode {
   /* Key-switching operations */
   FHN_RELINEARIZE,
   FHN_RESCALE,
-  FHN_ROTATE, /* params[0] = rotation distance */
+  FHN_ROTATE, /* params[0] = signed rotation distance (positive = left) */
   FHN_CONJUGATE,
   FHN_MULT_KEY,
 

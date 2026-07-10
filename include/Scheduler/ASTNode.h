@@ -21,6 +21,7 @@ template <typename T> class OperatorNode : public ASTNode {
   std::shared_ptr<ASTNode> getRight() const { return right_; }
   std::shared_ptr<ASTNode> getLeft() const { return left_; }
   std::shared_ptr<Compuon<T>> getResult() const { return result_; }
+  std::shared_ptr<Operation<T>> getOperation() const { return operation_; }
 
   void evaluate() override {
     if (evaluated_)

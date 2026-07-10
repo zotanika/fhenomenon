@@ -94,6 +94,16 @@ void LowerToFhnProgram::lowerNode(ASTNode *node, std::vector<FhnInstruction> &in
     inst.opcode = mapOpType(op_node->getType());
     inst.result_id = next_id++;
 
+    // Operation-specific parameters. FHN_ROTATE encodes a signed rotation
+    // distance in params[0] (positive = left); RightRotate negates.
+    if (op_node->getType() == OperationType::LeftRotate || op_node->getType() == OperationType::RightRotate) {
+      int64_t distance = 0;
+      if (auto operation = op_node->getOperation()) {
+        distance = operation->getParam();
+      }
+      inst.params[0] = (op_node->getType() == OperationType::RightRotate) ? -distance : distance;
+    }
+
     if (op_node->getLeft()) {
       auto it = node_ids.find(op_node->getLeft().get());
       if (it != node_ids.end())

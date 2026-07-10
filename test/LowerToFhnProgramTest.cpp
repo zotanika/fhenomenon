@@ -70,6 +70,51 @@ TEST(LowerToFhnProgram, ChainedAddMult) {
   fhn_program_free(prog);
 }
 
+TEST(LowerToFhnProgram, RotationDistanceIsEncoded) {
+  auto a = std::make_shared<Compuon<int>>(5);
+  auto result = std::make_shared<Compuon<int>>(0);
+
+  auto op = std::make_shared<Operation<int>>(OperationType::LeftRotate, a, nullptr, result, nullptr, 3);
+  auto leaf = std::make_shared<OperandNode<int>>(a);
+  auto root = std::make_shared<OperatorNode<int>>(op, OperationType::LeftRotate, leaf, nullptr, result);
+
+  Planner<int> plan;
+  plan.addRoot(root);
+
+  LowerToFhnProgram lowering;
+  FhnProgram *prog = lowering.lower(plan);
+
+  ASSERT_NE(prog, nullptr);
+  ASSERT_EQ(prog->num_instructions, 1u);
+  EXPECT_EQ(prog->instructions[0].opcode, FHN_ROTATE);
+  EXPECT_EQ(prog->instructions[0].params[0], 3);
+  EXPECT_EQ(prog->instructions[0].operands[1], 0u);
+
+  fhn_program_free(prog);
+}
+
+TEST(LowerToFhnProgram, RightRotationEncodesNegativeDistance) {
+  auto a = std::make_shared<Compuon<int>>(5);
+  auto result = std::make_shared<Compuon<int>>(0);
+
+  auto op = std::make_shared<Operation<int>>(OperationType::RightRotate, a, nullptr, result, nullptr, 2);
+  auto leaf = std::make_shared<OperandNode<int>>(a);
+  auto root = std::make_shared<OperatorNode<int>>(op, OperationType::RightRotate, leaf, nullptr, result);
+
+  Planner<int> plan;
+  plan.addRoot(root);
+
+  LowerToFhnProgram lowering;
+  FhnProgram *prog = lowering.lower(plan);
+
+  ASSERT_NE(prog, nullptr);
+  ASSERT_EQ(prog->num_instructions, 1u);
+  EXPECT_EQ(prog->instructions[0].opcode, FHN_ROTATE);
+  EXPECT_EQ(prog->instructions[0].params[0], -2);
+
+  fhn_program_free(prog);
+}
+
 TEST(LowerToFhnProgram, SharedOperand) {
   // AST: r1 = a + a (same operand node used twice)
   auto a = std::make_shared<Compuon<int>>(5);
