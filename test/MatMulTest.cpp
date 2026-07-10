@@ -340,11 +340,9 @@ TEST(MatMulEndToEndTest, FusedMatchesDirect1x1) {
 
   int actual = c.decrypt();
 
-  // Both should give valid (non-zero) results
-  // Note: ToyFHE multiply doesn't preserve exact integer arithmetic,
-  // but both paths should produce consistent results (same operations on same ciphertext values)
-  EXPECT_NE(actual, 0); // The computation actually happened
-  // Note: exact match not guaranteed due to different noise in add(0, prod) vs direct prod
+  // ToyFHE multiply now rescales, so both paths compute the exact product.
+  EXPECT_EQ(expected, 42);
+  EXPECT_EQ(actual, expected);
 }
 
 // ============================

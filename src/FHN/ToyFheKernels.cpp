@@ -1,6 +1,8 @@
 #include "FHN/ToyFheKernels.h"
 #include "Crypto/ToyFHE.h"
 
+#include <cmath>
+
 // ---------------------------------------------------------------------------
 // ToyFHE reference backend for the FHN kernel API.
 // This file is intentionally kept simple — it is the template that FHE
@@ -36,8 +38,15 @@ static int toyfhe_encrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer
 static int toyfhe_decrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                           const int64_t * /*params*/, const double * /*fparams*/) {
   const auto *src = operands[0];
-  result->int_val = ctx->engine.decryptInt(src->ct);
-  result->kind = BufKind::IntValue;
+  // Fixed-point ciphertexts carry a scaled mantissa; decode through the
+  // scale-aware path so the buffer holds the actual value.
+  if (src->ct.encoding == fhenomenon::toyfhe::Encoding::FixedPoint) {
+    result->double_val = ctx->engine.decryptDouble(src->ct);
+    result->kind = BufKind::DoubleValue;
+  } else {
+    result->int_val = ctx->engine.decryptInt(src->ct);
+    result->kind = BufKind::IntValue;
+  }
   return 0;
 }
 
@@ -89,7 +98,8 @@ static int toyfhe_mult_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer
   return 0;
 }
 
-// ToyFHE multiply does implicit relinearization, so HMULT == MULT_CC.
+// ToyFHE multiply performs relinearization and rescale internally, so the
+// fused HMULT (mult + relin + rescale) is exactly MULT_CC.
 static int toyfhe_hmult(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *params,
                         const double *fparams) {
   return toyfhe_mult_cc(ctx, result, operands, params, fparams);
@@ -143,6 +153,8 @@ void toyfhe_fhn_buffer_free(FhnBackendCtx * /*ctx*/, FhnBuffer *buf) { delete bu
 int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf) {
   if (buf->kind == BufKind::IntValue)
     return buf->int_val;
+  if (buf->kind == BufKind::DoubleValue)
+    return static_cast<int64_t>(std::llround(buf->double_val));
   if (buf->kind == BufKind::Ciphertext)
     return ctx->engine.decryptInt(buf->ct);
   return 0;
@@ -151,6 +163,8 @@ int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf) {
 double toyfhe_fhn_buffer_read_double(FhnBackendCtx *ctx, FhnBuffer *buf) {
   if (buf->kind == BufKind::DoubleValue)
     return buf->double_val;
+  if (buf->kind == BufKind::IntValue)
+    return static_cast<double>(buf->int_val);
   if (buf->kind == BufKind::Ciphertext)
     return ctx->engine.decryptDouble(buf->ct);
   return 0.0;

@@ -9,10 +9,16 @@ namespace fhenomenon::toyfhe {
 enum class Encoding { Integer, FixedPoint };
 
 struct Parameters {
-  int64_t q = static_cast<int64_t>(1) << 55;     // Ciphertext modulus
-  int64_t t = static_cast<int64_t>(1) << 40;     // Plaintext modulus
-  int64_t scale = static_cast<int64_t>(1) << 20; // Fixed-point scale base
-  int64_t noise_bound = static_cast<int64_t>(1) << 8;
+  int64_t q = static_cast<int64_t>(1) << 58;     // Ciphertext modulus (must be a multiple of t)
+  int64_t t = static_cast<int64_t>(1) << 32;     // Plaintext modulus
+  int64_t scale = static_cast<int64_t>(1) << 16; // Fixed-point scale base
+  // Fresh-encryption noise bound. Multiplication noise grows with message
+  // magnitude (|m1|*e2 + |m2|*e1 must stay below delta/2 = q/(2t) for exact
+  // integer decryption). With these defaults the budget covers chained
+  // products of three-digit integers even in the worst case; larger messages
+  // degrade gracefully into off-by-small errors, as in a real leveled scheme
+  // without modulus switching.
+  int64_t noise_bound = static_cast<int64_t>(1) << 3;
 };
 
 struct Ciphertext {
@@ -24,6 +30,10 @@ struct Ciphertext {
   std::shared_ptr<Ciphertext> clone() const { return std::make_shared<Ciphertext>(*this); }
 };
 
+// ToyFHE is a deliberately insecure single-slot toy scheme. Relinearization
+// and rescaling decode with the secret key, which the Engine holds. It exists
+// to make FHN semantics observable from a fresh clone — scale/level
+// bookkeeping, HMULT = mult + relin + rescale — not to provide security.
 class Engine {
   public:
   Engine();
@@ -47,6 +57,9 @@ class Engine {
 
   private:
   Ciphertext encryptEncoded(int64_t message, Encoding encoding, int scalePower) const;
+  Ciphertext encodeRaw(int64_t value, Encoding encoding, int scalePower) const;
+  Ciphertext multiplyDecoded(const Ciphertext &cipher, int64_t factor, int64_t divisor, Encoding encoding,
+                             int scalePower) const;
   int64_t decodeRaw(const Ciphertext &cipher) const;
   Ciphertext alignScale(const Ciphertext &cipher, int targetScale) const;
   Ciphertext multiplyPlainInternal(const Ciphertext &cipher, int64_t scalar, int scalePowerIncrease) const;

@@ -55,6 +55,11 @@ void Engine::initialize(const Parameters &params) {
   if (params.q <= params.t) {
     throw std::runtime_error("ToyFHE: ciphertext modulus q must be larger than plaintext modulus t");
   }
+  if (params.q % params.t != 0) {
+    // Rescaling and decryption rely on delta*(m + k*t) == delta*m + k*q,
+    // which requires q to be an exact multiple of t.
+    throw std::runtime_error("ToyFHE: ciphertext modulus q must be a multiple of plaintext modulus t");
+  }
   if (params.scale <= 1) {
     throw std::runtime_error("ToyFHE: scale must be greater than 1");
   }
@@ -72,23 +77,27 @@ void Engine::generateKeys() {
   LOG_MESSAGE("ToyFHE: Generated secret key " << secretKey_);
 }
 
-Ciphertext Engine::encryptEncoded(int64_t message, Encoding encoding, int scalePower) const {
-  if (!keysGenerated_) {
-    throw std::runtime_error("ToyFHE: keys not generated");
-  }
-
-  const int64_t plain = mod(message, params_.t);
-  const int64_t scaled = mulMod(delta(), plain, params_.q);
+// Wrap an already delta-scaled value (in [0, q)) into a fresh ciphertext.
+Ciphertext Engine::encodeRaw(int64_t value, Encoding encoding, int scalePower) const {
   const int64_t a = sampleUniform();
   const int64_t e = sampleNoise();
 
   Ciphertext ciphertext;
   ciphertext.c1 = a;
   const int64_t secretProd = mulMod(a, secretKey_, params_.q);
-  ciphertext.c0 = mod(scaled - secretProd + e, params_.q);
+  ciphertext.c0 = mod(value - secretProd + e, params_.q);
   ciphertext.scale_power = scalePower;
   ciphertext.encoding = encoding;
   return ciphertext;
+}
+
+Ciphertext Engine::encryptEncoded(int64_t message, Encoding encoding, int scalePower) const {
+  if (!keysGenerated_) {
+    throw std::runtime_error("ToyFHE: keys not generated");
+  }
+
+  const int64_t plain = mod(message, params_.t);
+  return encodeRaw(mulMod(delta(), plain, params_.q), encoding, scalePower);
 }
 
 Ciphertext Engine::encryptInt(int64_t value) const { return encryptEncoded(value, Encoding::Integer, 0); }
@@ -126,26 +135,67 @@ Ciphertext Engine::add(const Ciphertext &lhs, const Ciphertext &rhs) const {
   return result;
 }
 
+// Core of ciphertext-ciphertext and ciphertext-scalar multiplication: decode
+// the ciphertext, multiply by `factor`, divide by `divisor` rounding to
+// nearest, and re-encode with a fresh mask. The 128-bit intermediate never
+// wraps, so plaintext range constraints apply only to the final product.
+// Decoding uses the secret key — the same toy-level cheat as the implicit
+// relinearization this replaces; see the Engine comment in ToyFHE.h.
+Ciphertext Engine::multiplyDecoded(const Ciphertext &cipher, int64_t factor, int64_t divisor, Encoding encoding,
+                                   int scalePower) const {
+  const int64_t p = centeredMod(decodeRaw(cipher), params_.q);
+
+#if defined(__SIZEOF_INT128__)
+  __extension__ using wide_int = __int128;
+  const wide_int product = static_cast<wide_int>(p) * factor;
+  wide_int scaled = product / divisor;
+  const wide_int remainder = product % divisor;
+  if (2 * remainder >= divisor) {
+    ++scaled;
+  } else if (2 * remainder <= -divisor) {
+    --scaled;
+  }
+  // Reducing mod q after the division also folds the plaintext product back
+  // into [0, t): delta * (m + k*t) = delta*m + k*q.
+  const wide_int q_wide = params_.q;
+  const int64_t value = static_cast<int64_t>(((scaled % q_wide) + q_wide) % q_wide);
+#else
+  // Without 128-bit integers, approximate with long double. Rounding error
+  // grows with the product magnitude; small toy messages still decrypt
+  // correctly.
+  const long double approx =
+    static_cast<long double>(p) * static_cast<long double>(factor) / static_cast<long double>(divisor);
+  const long double reduced = std::fmod(approx, static_cast<long double>(params_.q));
+  const int64_t value = mod(static_cast<int64_t>(std::llround(reduced)), params_.q);
+#endif
+
+  return encodeRaw(value, encoding, scalePower);
+}
+
 Ciphertext Engine::multiply(const Ciphertext &lhs, const Ciphertext &rhs) const {
   if (!keysGenerated_) {
     throw std::runtime_error("ToyFHE: keys not generated");
   }
 
-  const int64_t c0 = mulMod(lhs.c0, rhs.c0, params_.q);
-  const int64_t term1 = mulMod(lhs.c0, rhs.c1, params_.q);
-  const int64_t term2 = mulMod(lhs.c1, rhs.c0, params_.q);
-  const int64_t cross = mod(term1 + term2, params_.q);
-  const int64_t c2 = mulMod(lhs.c1, rhs.c1, params_.q);
+  // Tensor product of the decoded values (delta*m + e each), divided once by
+  // delta — the BFV rescale that keeps the result at delta*m — and, for
+  // fixed-point operands, by `scale` until the mantissa is back at a single
+  // scale level (the rescale-after-multiply discipline of CKKS). Every public
+  // path keeps scale_power <= 1, so the divisor fits in 64 bits.
+  const int64_t p2 = centeredMod(decodeRaw(rhs), params_.q);
 
-  Ciphertext result;
-  result.c0 = c0;
-  const int64_t relin = mulMod(c2, secretKey_, params_.q);
-  result.c1 = mod(cross + relin, params_.q);
-  result.scale_power = lhs.scale_power + rhs.scale_power;
-  result.encoding = (lhs.encoding == Encoding::FixedPoint || rhs.encoding == Encoding::FixedPoint)
-                      ? Encoding::FixedPoint
-                      : Encoding::Integer;
-  return result;
+  const Encoding encoding = (lhs.encoding == Encoding::FixedPoint || rhs.encoding == Encoding::FixedPoint)
+                              ? Encoding::FixedPoint
+                              : Encoding::Integer;
+
+  int scalePower = lhs.scale_power + rhs.scale_power;
+  int64_t divisor = delta();
+  while (encoding == Encoding::FixedPoint && scalePower > 1) {
+    divisor *= params_.scale;
+    --scalePower;
+  }
+
+  return multiplyDecoded(lhs, p2, divisor, encoding, scalePower);
 }
 
 Ciphertext Engine::multiplyPlainInternal(const Ciphertext &cipher, int64_t scalar, int scalePowerIncrease) const {
@@ -163,15 +213,19 @@ Ciphertext Engine::addPlain(const Ciphertext &cipher, double scalar) const {
     throw std::runtime_error("ToyFHE: keys not generated");
   }
 
+  // An integer-encoded ciphertext cannot absorb a fractional scalar at
+  // scale_power 0 (the scalar would round to an integer); raise the
+  // ciphertext to one scale level first.
   Ciphertext result = cipher;
-  const long double factor = scaleFactor(cipher.scale_power);
+  if (cipher.encoding == Encoding::Integer && !isApproximatelyInteger(scalar)) {
+    result = alignScale(cipher, 1);
+  }
+
+  const long double factor = scaleFactor(result.scale_power);
   const int64_t encodedScalar = static_cast<int64_t>(std::llround(static_cast<long double>(scalar) * factor));
   const int64_t plain = mod(encodedScalar, params_.t);
   const int64_t scaled = mulMod(delta(), plain, params_.q);
   result.c0 = mod(result.c0 + scaled, params_.q);
-  if (cipher.encoding == Encoding::Integer && !isApproximatelyInteger(scalar)) {
-    result.encoding = Encoding::FixedPoint;
-  }
   return result;
 }
 
@@ -180,16 +234,24 @@ Ciphertext Engine::multiplyPlain(const Ciphertext &cipher, double scalar) const 
     throw std::runtime_error("ToyFHE: keys not generated");
   }
 
-  const bool scalarIsInteger = isApproximatelyInteger(scalar);
-
-  if (scalarIsInteger && cipher.encoding == Encoding::Integer) {
+  // Integral scalars never consume a scale level, regardless of the
+  // ciphertext encoding: the encoded mantissa is simply multiplied.
+  if (isApproximatelyInteger(scalar)) {
     const int64_t factor = static_cast<int64_t>(std::llround(scalar));
     return multiplyPlainInternal(cipher, factor, 0);
   }
 
+  // Fractional scalar: multiply the mantissa by the scale-encoded scalar and
+  // rescale in the same exact step, so the scale^2 intermediate never
+  // materializes (it would wrap mod t for any |value * scalar| >= 0.5).
+  // Fixed-point inputs keep their scale level; integer inputs move to
+  // fixed-point at one scale level.
   const long double scaledScalar = static_cast<long double>(scalar) * scaleFactor(1);
   const int64_t encoded = static_cast<int64_t>(std::llround(scaledScalar));
-  return multiplyPlainInternal(cipher, encoded, 1);
+  if (cipher.scale_power >= 1) {
+    return multiplyDecoded(cipher, encoded, params_.scale, Encoding::FixedPoint, cipher.scale_power);
+  }
+  return multiplyDecoded(cipher, encoded, 1, Encoding::FixedPoint, cipher.scale_power + 1);
 }
 
 int64_t Engine::decodeRaw(const Ciphertext &cipher) const {

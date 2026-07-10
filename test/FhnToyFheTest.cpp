@@ -96,8 +96,7 @@ TEST_F(FhnToyFheTest, EncryptAddDecrypt) {
 }
 
 TEST_F(FhnToyFheTest, EncryptMultiplyDecrypt) {
-  // Use MULT_CS (ciphertext * scalar) because ToyFHE's ciphertext-ciphertext
-  // multiply doesn't preserve exact integer arithmetic (delta^2 scaling).
+  // MULT_CS: ciphertext * scalar with an integral scalar stays scale-free.
   // Program:
   //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=7
   //   inst[1]: FHN_MULT_CS result_id=2, operands={1}, fparams[0]=6.0
@@ -136,6 +135,109 @@ TEST_F(FhnToyFheTest, EncryptMultiplyDecrypt) {
 
   int64_t result = toyfhe_fhn_buffer_read_int(ctx_, bufs[3]);
   EXPECT_EQ(result, 42);
+
+  for (int i = 0; i < 4; ++i) {
+    toyfhe_fhn_buffer_free(ctx_, bufs[i]);
+  }
+  fhn_program_free(prog);
+}
+
+TEST_F(FhnToyFheTest, EncryptCtCtMultiplyDecrypt) {
+  // Ciphertext * ciphertext through the fused HMULT kernel must decrypt to
+  // the exact integer product (mult + relin + rescale).
+  // Program:
+  //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=13
+  //   inst[1]: FHN_ENCRYPT result_id=2, params[0]=20
+  //   inst[2]: FHN_HMULT   result_id=3, operands={1,2}
+  //   inst[3]: FHN_DECRYPT result_id=4, operands={3}
+  FhnProgram *prog = fhn_program_alloc(4, 0, 1);
+  ASSERT_NE(prog, nullptr);
+
+  prog->output_ids[0] = 4;
+
+  auto &enc1 = prog->instructions[0];
+  std::memset(&enc1, 0, sizeof(enc1));
+  enc1.opcode = FHN_ENCRYPT;
+  enc1.result_id = 1;
+  enc1.params[0] = 13;
+
+  auto &enc2 = prog->instructions[1];
+  std::memset(&enc2, 0, sizeof(enc2));
+  enc2.opcode = FHN_ENCRYPT;
+  enc2.result_id = 2;
+  enc2.params[0] = 20;
+
+  auto &mult = prog->instructions[2];
+  std::memset(&mult, 0, sizeof(mult));
+  mult.opcode = FHN_HMULT;
+  mult.result_id = 3;
+  mult.operands[0] = 1;
+  mult.operands[1] = 2;
+
+  auto &dec = prog->instructions[3];
+  std::memset(&dec, 0, sizeof(dec));
+  dec.opcode = FHN_DECRYPT;
+  dec.result_id = 4;
+  dec.operands[0] = 3;
+
+  FhnBuffer *bufs[5];
+  for (int i = 0; i < 5; ++i) {
+    bufs[i] = toyfhe_fhn_buffer_alloc(ctx_);
+  }
+
+  int rc = executor_->execute(ctx_, prog, bufs);
+  EXPECT_EQ(rc, 0);
+
+  int64_t result = toyfhe_fhn_buffer_read_int(ctx_, bufs[4]);
+  EXPECT_EQ(result, 260);
+
+  for (int i = 0; i < 5; ++i) {
+    toyfhe_fhn_buffer_free(ctx_, bufs[i]);
+  }
+  fhn_program_free(prog);
+}
+
+TEST_F(FhnToyFheTest, FixedPointDecryptReturnsScaledValue) {
+  // A fractional scalar moves the ciphertext to fixed-point encoding; the
+  // DECRYPT kernel must decode through the scale-aware path.
+  // Program:
+  //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=10
+  //   inst[1]: FHN_MULT_CS result_id=2, operands={1}, fparams[0]=0.5
+  //   inst[2]: FHN_DECRYPT result_id=3, operands={2}
+  FhnProgram *prog = fhn_program_alloc(3, 0, 1);
+  ASSERT_NE(prog, nullptr);
+
+  prog->output_ids[0] = 3;
+
+  auto &enc1 = prog->instructions[0];
+  std::memset(&enc1, 0, sizeof(enc1));
+  enc1.opcode = FHN_ENCRYPT;
+  enc1.result_id = 1;
+  enc1.params[0] = 10;
+
+  auto &mult = prog->instructions[1];
+  std::memset(&mult, 0, sizeof(mult));
+  mult.opcode = FHN_MULT_CS;
+  mult.result_id = 2;
+  mult.operands[0] = 1;
+  mult.fparams[0] = 0.5;
+
+  auto &dec = prog->instructions[2];
+  std::memset(&dec, 0, sizeof(dec));
+  dec.opcode = FHN_DECRYPT;
+  dec.result_id = 3;
+  dec.operands[0] = 2;
+
+  FhnBuffer *bufs[4];
+  for (int i = 0; i < 4; ++i) {
+    bufs[i] = toyfhe_fhn_buffer_alloc(ctx_);
+  }
+
+  int rc = executor_->execute(ctx_, prog, bufs);
+  EXPECT_EQ(rc, 0);
+
+  EXPECT_NEAR(toyfhe_fhn_buffer_read_double(ctx_, bufs[3]), 5.0, 1e-3);
+  EXPECT_EQ(toyfhe_fhn_buffer_read_int(ctx_, bufs[3]), 5);
 
   for (int i = 0; i < 4; ++i) {
     toyfhe_fhn_buffer_free(ctx_, bufs[i]);
