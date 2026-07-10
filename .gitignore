@@ -12,3 +12,6 @@ cmake/launch-cuda
 docs/plan/
 docs/plans/
 docs/pitch/
+
+# Rust build artifacts
+src/Backend/rust/target/
