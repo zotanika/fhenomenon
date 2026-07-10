@@ -1,5 +1,5 @@
 #include "Backend/TfheBackend.h"
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "Utils/log.h"
 
 #include <iostream>
@@ -60,12 +60,12 @@ void TfheBackend::ensureReady() const {
   }
 }
 
-void TfheBackend::transform(CompuonBase &entity, [[maybe_unused]] const Parameter &params) const {
+void TfheBackend::transform(FhenonBase &entity, [[maybe_unused]] const Parameter &params) const {
   ensureReady();
   auto type = entity.type();
 
   if (type == typeid(int)) {
-    auto &derivedEntity = dynamic_cast<Compuon<int> &>(entity);
+    auto &derivedEntity = dynamic_cast<Fhenon<int> &>(entity);
     int32_t value = derivedEntity.getValue();
 
     CiphertextHandle *raw_handle = tfhe_encrypt_int32(static_cast<TfheContext *>(context_), value);
@@ -81,7 +81,7 @@ void TfheBackend::transform(CompuonBase &entity, [[maybe_unused]] const Paramete
   }
 }
 
-std::any TfheBackend::decrypt(const CompuonBase &entity) const {
+std::any TfheBackend::decrypt(const FhenonBase &entity) const {
   ensureReady();
 
   if (!entity.isEncrypted_ || !entity.ciphertext_.has_value()) {
@@ -89,7 +89,7 @@ std::any TfheBackend::decrypt(const CompuonBase &entity) const {
     // Logic duplicated from BuiltinBackend, maybe refactor later
     auto type = entity.type();
     if (type == typeid(int)) {
-      return dynamic_cast<const Compuon<int> &>(entity).getValue();
+      return dynamic_cast<const Fhenon<int> &>(entity).getValue();
     }
     return {};
   }
@@ -97,7 +97,7 @@ std::any TfheBackend::decrypt(const CompuonBase &entity) const {
   auto type = entity.type();
   if (type == typeid(int)) {
     // Safe because we only put SharedCiphertextHandle in ciphertext_ for this backend
-    // TODO: ideally check backend type stored in Compuon if we mix backends
+    // TODO: ideally check backend type stored in Fhenon if we mix backends
     try {
       auto handle = std::any_cast<SharedCiphertextHandle>(entity.ciphertext_);
       int32_t value = tfhe_decrypt_int32(static_cast<TfheContext *>(context_), handle.get());
@@ -113,21 +113,21 @@ std::any TfheBackend::decrypt(const CompuonBase &entity) const {
 
 namespace {
 template <typename T>
-std::shared_ptr<CompuonBase> makeResultCompuon(const Compuon<T> &reference, SharedCiphertextHandle ciphertext) {
-  auto resultCompuon = std::make_shared<Compuon<T>>(0);
-  resultCompuon->ciphertext_ = ciphertext;
-  resultCompuon->isEncrypted_ = true;
-  resultCompuon->setProfile(reference.getProfile());
-  return resultCompuon;
+std::shared_ptr<FhenonBase> makeResultFhenon(const Fhenon<T> &reference, SharedCiphertextHandle ciphertext) {
+  auto resultFhenon = std::make_shared<Fhenon<T>>(0);
+  resultFhenon->ciphertext_ = ciphertext;
+  resultFhenon->isEncrypted_ = true;
+  resultFhenon->setProfile(reference.getProfile());
+  return resultFhenon;
 }
 } // namespace
 
-std::shared_ptr<CompuonBase> TfheBackend::add(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::add(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
 
   // Simplification: only supporting int + int
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
 
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
@@ -136,17 +136,17 @@ std::shared_ptr<CompuonBase> TfheBackend::add(const CompuonBase &a, const Compuo
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
 
     LOG_MESSAGE("TfheBackend: Performed addition");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
 
   throw std::runtime_error("TfheBackend: Unsupported types for add");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::multiply(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::multiply(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
 
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
 
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
@@ -155,86 +155,86 @@ std::shared_ptr<CompuonBase> TfheBackend::multiply(const CompuonBase &a, const C
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
 
     LOG_MESSAGE("TfheBackend: Performed multiplication");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
 
   throw std::runtime_error("TfheBackend: Unsupported types for multiply");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::bitAnd(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::bitAnd(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     CiphertextHandle *result_raw = tfhe_bitand_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("TfheBackend: Unsupported types for bitAnd");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::bitOr(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::bitOr(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     CiphertextHandle *result_raw = tfhe_bitor_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("TfheBackend: Unsupported types for bitOr");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::bitXor(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::bitXor(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     CiphertextHandle *result_raw = tfhe_bitxor_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("TfheBackend: Unsupported types for bitXor");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::compareEq(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::compareEq(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     CiphertextHandle *result_raw = tfhe_eq_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("TfheBackend: Unsupported types for compareEq");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::compareLt(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::compareLt(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     CiphertextHandle *result_raw = tfhe_lt_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("TfheBackend: Unsupported types for compareLt");
 }
 
-std::shared_ptr<CompuonBase> TfheBackend::compareLe(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> TfheBackend::compareLe(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     CiphertextHandle *result_raw = tfhe_le_int32(static_cast<TfheContext *>(context_), ctA.get(), ctB.get());
     SharedCiphertextHandle result(result_raw, CiphertextHandleDeleter());
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("TfheBackend: Unsupported types for compareLe");
 }

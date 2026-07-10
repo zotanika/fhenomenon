@@ -19,7 +19,7 @@ TEST(SessionTest, ReadAfterWriteInsideRun) {
   auto profile = makeProfile();
   auto session = Session::create(Backend::getInstance());
 
-  Compuon<int> a = 0;
+  Fhenon<int> a = 0;
   a.belong(profile);
 
   session->run([&]() {
@@ -34,7 +34,7 @@ TEST(SessionTest, ChainedIncrementsAccumulate) {
   auto profile = makeProfile();
   auto session = Session::create(Backend::getInstance());
 
-  Compuon<int> a = 0;
+  Fhenon<int> a = 0;
   a.belong(profile);
 
   session->run([&]() {
@@ -51,9 +51,9 @@ TEST(SessionTest, ProductsUseUpdatedOperands) {
   auto profile = makeProfile();
   auto session = Session::create(Backend::getInstance());
 
-  Compuon<int> a = 0;
-  Compuon<int> b = 10;
-  Compuon<int> c = 0;
+  Fhenon<int> a = 0;
+  Fhenon<int> b = 10;
+  Fhenon<int> c = 0;
   a.belong(profile);
   b.belong(profile);
   c.belong(profile);
@@ -75,7 +75,7 @@ TEST(SessionTest, ScalarMultiplyChain) {
   auto profile = makeProfile();
   auto session = Session::create(Backend::getInstance());
 
-  Compuon<int> d = 3;
+  Fhenon<int> d = 3;
   d.belong(profile);
 
   session->run([&]() {
@@ -93,7 +93,7 @@ TEST(SessionTest, SecondRunStartsFresh) {
   auto profile = makeProfile();
   auto session = Session::create(Backend::getInstance());
 
-  Compuon<int> a = 0;
+  Fhenon<int> a = 0;
   a.belong(profile);
 
   session->run([&]() {
@@ -110,7 +110,7 @@ TEST(SessionTest, EmptyRunIsANoOp) {
   auto profile = makeProfile();
   auto session = Session::create(Backend::getInstance());
 
-  Compuon<int> a = 4;
+  Fhenon<int> a = 4;
   a.belong(profile);
 
   EXPECT_NO_THROW(session->run([&]() {}));
@@ -128,9 +128,9 @@ TEST(SessionTest, SessionlessAssignmentCarriesCiphertext) {
   auto session = Session::create(Backend::getInstance());
   (void)session; // inactive: exercises the eager (sessionless) paths
 
-  Compuon<int> a = 10;
+  Fhenon<int> a = 10;
   a.belong(profile);
-  Compuon<int> b = 0;
+  Fhenon<int> b = 0;
   b.belong(profile);
 
   b = a + 5; // eager add, then copy-assignment of the result
@@ -139,6 +139,6 @@ TEST(SessionTest, SessionlessAssignmentCarriesCiphertext) {
   b = 3; // scalar assignment must re-encrypt
   EXPECT_EQ(b.decrypt(), 3);
 
-  Compuon<int> c = a * b; // eager ct*ct multiply, copy-initialization
+  Fhenon<int> c = a * b; // eager ct*ct multiply, copy-initialization
   EXPECT_EQ(c.decrypt(), 30);
 }

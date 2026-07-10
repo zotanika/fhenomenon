@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Backend/Backend.h"
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "Crypto/ToyFHE.h"
 #include "FHN/FhnDefaultExecutor.h"
 #include "FHN/ToyFheKernels.h"
@@ -22,7 +22,7 @@ using TfheBinaryOp = CiphertextHandle *(*)(TfheContext *, CiphertextHandle *, Ci
 
 namespace fhenomenon {
 
-extern template class Compuon<int>;
+extern template class Fhenon<int>;
 
 class BuiltinBackend final : public Backend {
   private:
@@ -34,7 +34,7 @@ class BuiltinBackend final : public Backend {
   TfheContext *context_ = nullptr;
 
   // Helper for binary TFHE operations to reduce code duplication
-  std::shared_ptr<CompuonBase> executeBinaryTfheOp(const CompuonBase &a, const CompuonBase &b, TfheBinaryOp op,
+  std::shared_ptr<FhenonBase> executeBinaryTfheOp(const FhenonBase &a, const FhenonBase &b, TfheBinaryOp op,
                                                    const char *opName) const;
 #endif
 
@@ -63,19 +63,19 @@ class BuiltinBackend final : public Backend {
   void saveKeys(const std::string &publicKeyPath, const std::string &secretKeyPath);
 
   // Backend interface implementation
-  void transform(CompuonBase &entity, const Parameter &params) const override;
-  std::shared_ptr<CompuonBase> add(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> addPlain(const CompuonBase &a, double scalar);
-  std::shared_ptr<CompuonBase> multiplyPlain(const CompuonBase &a, double scalar);
-  std::any decrypt(const CompuonBase &entity) const override;
+  void transform(FhenonBase &entity, const Parameter &params) const override;
+  std::shared_ptr<FhenonBase> add(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> multiply(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> addPlain(const FhenonBase &a, double scalar);
+  std::shared_ptr<FhenonBase> multiplyPlain(const FhenonBase &a, double scalar);
+  std::any decrypt(const FhenonBase &entity) const override;
 
-  std::shared_ptr<CompuonBase> bitAnd(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> bitOr(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> bitXor(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> compareEq(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> compareLt(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> compareLe(const CompuonBase &a, const CompuonBase &b) const override;
+  std::shared_ptr<FhenonBase> bitAnd(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> bitOr(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> bitXor(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> compareEq(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> compareLt(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> compareLe(const FhenonBase &a, const FhenonBase &b) const override;
 };
 
 } // namespace fhenomenon

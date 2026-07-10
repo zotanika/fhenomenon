@@ -48,9 +48,9 @@ class FuseOperationsASTPass final : public ASTPass {
   void apply(std::vector<Operation<int>> &ops) const override  {
     LOG_MESSAGE("Constant Folding Strategy...");
     std::vector<Operation<int>> fusedOps;
-    std::unordered_map<std::shared_ptr<Compuon<int>>, std::vector<Operation<int>>> pending_operations;
+    std::unordered_map<std::shared_ptr<Fhenon<int>>, std::vector<Operation<int>>> pending_operations;
 
-    auto flushPending = [&](const std::shared_ptr<Compuon<int>> &entity_ptr) {
+    auto flushPending = [&](const std::shared_ptr<Fhenon<int>> &entity_ptr) {
         if (pending_operations.find(entity_ptr) != pending_operations.end()) {
             for (const auto &tmp : pending_operations[entity_ptr]) {
                 fusedOps.push_back(Operation<int>(tmp.getType(), entity_ptr, tmp.getOperand2(), entity_ptr));
@@ -124,8 +124,8 @@ public:
         };
 
         auto fuseOperations = [&](std::size_t len, const Operation<int> &op) {
-            auto size = std::make_shared<Compuon<int>>(len);
-            auto entity = std::make_shared<Compuon<int>>(1234);
+            auto size = std::make_shared<Fhenon<int>>(len);
+            auto entity = std::make_shared<Fhenon<int>>(1234);
             size->belong(op.getOperand1()->getProfile());
             entity->belong(op.getOperand1()->getProfile());
             fusedOps.push_back(Operation<int>(OperationType::Multiply, op.getOperand2(), size, entity));

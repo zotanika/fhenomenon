@@ -1,6 +1,6 @@
 #include "Backend/Backend.h"
 #include "Backend/Builtin.h"
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "FHN/FhnDefaultExecutor.h"
 #include "FHN/ToyFheKernels.h"
 #include "FHN/fhn_program.h"
@@ -30,9 +30,9 @@ class FhnIntegrationTest : public ::testing::Test {
 
 TEST_F(FhnIntegrationTest, OperationsToASTToFhnProgramToExecution) {
   // 1. Build operations: result = a + b
-  auto a = std::make_shared<Compuon<int>>(10);
-  auto b = std::make_shared<Compuon<int>>(20);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(10);
+  auto b = std::make_shared<Fhenon<int>>(20);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto add_op = std::make_shared<Operation<int>>(OperationType::Add, a, b, result);
 
@@ -74,7 +74,7 @@ TEST_F(FhnIntegrationTest, OperationsToASTToFhnProgramToExecution) {
     enc_prog->output_ids[0] = id;
     enc_prog->instructions[0].opcode = FHN_ENCRYPT;
     enc_prog->instructions[0].result_id = id;
-    // Determine which Compuon this input corresponds to:
+    // Determine which Fhenon this input corresponds to:
     // input 0 = a (value 10), input 1 = b (value 20)
     enc_prog->instructions[0].params[0] = (i == 0) ? 10 : 20;
     int err = executor_->execute(ctx_, enc_prog, buffers.data());
@@ -112,10 +112,10 @@ TEST_F(FhnIntegrationTest, OperationsToASTToFhnProgramToExecution) {
 TEST_F(FhnIntegrationTest, ChainedOperations) {
   // Build: t = a + b; result = t + a
   // Values: a=5, b=3 -> t=8 -> result=13
-  auto a = std::make_shared<Compuon<int>>(5);
-  auto b = std::make_shared<Compuon<int>>(3);
-  auto t = std::make_shared<Compuon<int>>(0);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(5);
+  auto b = std::make_shared<Fhenon<int>>(3);
+  auto t = std::make_shared<Fhenon<int>>(0);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto add1 = std::make_shared<Operation<int>>(OperationType::Add, a, b, t);
   auto add2 = std::make_shared<Operation<int>>(OperationType::Add, t, a, result);

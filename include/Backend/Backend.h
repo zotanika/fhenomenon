@@ -8,9 +8,9 @@
 
 namespace fhenomenon {
 
-class CompuonBase;
+class FhenonBase;
 
-template <typename T> class Compuon;
+template <typename T> class Fhenon;
 
 enum class BackendType {
   BuiltinBackend,
@@ -36,27 +36,27 @@ class Backend {
   virtual ~Backend() = default;
 
   virtual BackendType getBackendType() const = 0;
-  virtual void transform(CompuonBase &entity, const Parameter &params) const = 0;
-  virtual std::shared_ptr<CompuonBase> add(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::any decrypt(const CompuonBase &entity) const = 0;
+  virtual void transform(FhenonBase &entity, const Parameter &params) const = 0;
+  virtual std::shared_ptr<FhenonBase> add(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> multiply(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::any decrypt(const FhenonBase &entity) const = 0;
 
-  virtual std::shared_ptr<CompuonBase> bitAnd(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::shared_ptr<CompuonBase> bitOr(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::shared_ptr<CompuonBase> bitXor(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::shared_ptr<CompuonBase> compareEq(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::shared_ptr<CompuonBase> compareLt(const CompuonBase &a, const CompuonBase &b) const = 0;
-  virtual std::shared_ptr<CompuonBase> compareLe(const CompuonBase &a, const CompuonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> bitAnd(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> bitOr(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> bitXor(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> compareEq(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> compareLt(const FhenonBase &a, const FhenonBase &b) const = 0;
+  virtual std::shared_ptr<FhenonBase> compareLe(const FhenonBase &a, const FhenonBase &b) const = 0;
 
   /*
   template<typename T>
-  void transform(Compuon<T>& entity, const Parameter& params);
+  void transform(Fhenon<T>& entity, const Parameter& params);
   template<typename T>
-  Compuon<T> add(const Compuon<T>& a, const Compuon<T>& b);
+  Fhenon<T> add(const Fhenon<T>& a, const Fhenon<T>& b);
   template<typename T>
-  Compuon<T> multiply(const Compuon<T>& a, const Compuon<T>& b);
+  Fhenon<T> multiply(const Fhenon<T>& a, const Fhenon<T>& b);
   template<typename T>
-  T decrypt(const Compuon<T>& entity) const;
+  T decrypt(const Fhenon<T>& entity) const;
   */
 
   // static Backend& getBackend() {

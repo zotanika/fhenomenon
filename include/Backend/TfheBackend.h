@@ -26,17 +26,17 @@ class TfheBackend final : public Backend {
   void initialize();
 
   // Backend interface implementation
-  void transform(CompuonBase &entity, const Parameter &params) const override;
-  std::shared_ptr<CompuonBase> add(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) const override;
-  std::any decrypt(const CompuonBase &entity) const override;
+  void transform(FhenonBase &entity, const Parameter &params) const override;
+  std::shared_ptr<FhenonBase> add(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> multiply(const FhenonBase &a, const FhenonBase &b) const override;
+  std::any decrypt(const FhenonBase &entity) const override;
 
-  std::shared_ptr<CompuonBase> bitAnd(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> bitOr(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> bitXor(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> compareEq(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> compareLt(const CompuonBase &a, const CompuonBase &b) const override;
-  std::shared_ptr<CompuonBase> compareLe(const CompuonBase &a, const CompuonBase &b) const override;
+  std::shared_ptr<FhenonBase> bitAnd(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> bitOr(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> bitXor(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> compareEq(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> compareLt(const FhenonBase &a, const FhenonBase &b) const override;
+  std::shared_ptr<FhenonBase> compareLe(const FhenonBase &a, const FhenonBase &b) const override;
 };
 
 } // namespace fhenomenon

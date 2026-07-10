@@ -1,4 +1,4 @@
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "Backend/Builtin.h"
 #include "Profile.h"
 #include "Session/Session.h"
@@ -12,11 +12,11 @@ template <typename T> class Operation;
 
 } // namespace scheduler
 
-template <typename T> class Compuon;
+template <typename T> class Fhenon;
 
 template <typename T>
-Compuon<T>::Compuon(const Compuon<T> &other)
-  : std::enable_shared_from_this<Compuon<T>>(other), val_(other.val_), profile_(other.profile_) {
+Fhenon<T>::Fhenon(const Fhenon<T> &other)
+  : std::enable_shared_from_this<Fhenon<T>>(other), val_(other.val_), profile_(other.profile_) {
   this->ciphertext_ = other.ciphertext_;
   this->isEncrypted_ = other.isEncrypted_;
   LOG_MESSAGE("Copy constructor with value: " << val_ << " (" << this << ")");
@@ -24,24 +24,24 @@ Compuon<T>::Compuon(const Compuon<T> &other)
     // Map this copy to the canonical object it was copied from, collapsing
     // copy chains so trackEntity() resolves any copy in one hop.
     auto *canonical = Session::getSession()->getEntity<T>(&other);
-    Session::getSession()->setEntity<T>(this, canonical ? *canonical : const_cast<Compuon<T> &>(other));
+    Session::getSession()->setEntity<T>(this, canonical ? *canonical : const_cast<Fhenon<T> &>(other));
   }
 }
 
-template <typename T> void Compuon<T>::belong(std::shared_ptr<Profile> newProfile) {
+template <typename T> void Fhenon<T>::belong(std::shared_ptr<Profile> newProfile) {
   profile_.swap(newProfile);
   Backend::getInstance().transform(*this, *(profile_->getParam()));
   if (Session::getSession())
     Session::getSession()->saveEntity(*this);
 }
 
-template <typename T> Compuon<T> &Compuon<T>::operator=(const T &scalar) {
+template <typename T> Fhenon<T> &Fhenon<T>::operator=(const T &scalar) {
   LOG_MESSAGE("Assignment of scalar");
   if (Session::getSession()->isActive()) {
     Session::getSession()->saveEntity(*this);
 
     auto op1_ptr = Session::getSession()->trackEntity(*this);
-    auto tmp = std::make_shared<Compuon<T>>(scalar);
+    auto tmp = std::make_shared<Fhenon<T>>(scalar);
     tmp->belong(op1_ptr->getProfile());
 
     Session::getSession()->saveOp(
@@ -67,7 +67,7 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const T &scalar) {
   }
 }
 
-template <typename T> Compuon<T> &Compuon<T>::operator=(const Compuon<T> &other) {
+template <typename T> Fhenon<T> &Fhenon<T>::operator=(const Fhenon<T> &other) {
   LOG_MESSAGE("(TODO) Copy Assignment (" << this->getValue() << ", " << other.getValue() << ")");
 #if 0
     if (this == &other)
@@ -81,7 +81,7 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const Compuon<T> &other)
   if (Session::getSession()->isActive()) {
     std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
-    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(other));
+    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
 
     Session::getSession()->saveOp(
       std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Assignment, op1_ptr, op2_ptr));
@@ -101,7 +101,7 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(const Compuon<T> &other)
   }
 }
 
-template <typename T> Compuon<T> &Compuon<T>::operator=(Compuon &&other) noexcept {
+template <typename T> Fhenon<T> &Fhenon<T>::operator=(Fhenon &&other) noexcept {
   LOG_MESSAGE("Move Assignment (" << this->getValue() << ", " << other.getValue() << ")");
 
   // self assignment
@@ -133,27 +133,27 @@ template <typename T> Compuon<T> &Compuon<T>::operator=(Compuon &&other) noexcep
   }
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator+(const T &scalar) const {
-  LOG_MESSAGE("=====Operator Add of Compuon with scalar=====");
-  auto entity = std::make_shared<Compuon<T>>(scalar);
+template <typename T> Fhenon<T> Fhenon<T>::operator+(const T &scalar) const {
+  LOG_MESSAGE("=====Operator Add of Fhenon with scalar=====");
+  auto entity = std::make_shared<Fhenon<T>>(scalar);
   entity->setScalar();
   entity->belong(this->getProfile());
   LOG_MESSAGE("=============================");
   return *this + *entity;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator+(const Compuon<T> &other) const {
-  LOG_MESSAGE("=====Operator Add of Compuon=====");
+template <typename T> Fhenon<T> Fhenon<T>::operator+(const Fhenon<T> &other) const {
+  LOG_MESSAGE("=====Operator Add of Fhenon=====");
 
-  std::shared_ptr<Compuon<T>> result = nullptr;
+  std::shared_ptr<Fhenon<T>> result = nullptr;
 
   if (Session::getSession()->isActive()) {
     LOG_MESSAGE("Add on session (" << this->getValue() << ", " << other.getValue() << ")");
 
     // Track operands and result in the Session
-    auto op1_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(*this));
-    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(other));
-    auto result_ptr = std::make_shared<Compuon<T>>(1234);
+    auto op1_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(*this));
+    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
+    auto result_ptr = std::make_shared<Fhenon<T>>(1234);
     Session::getSession()->saveEntity(*result_ptr);
     Session::getSession()->trackEntity(*result_ptr);
 
@@ -165,13 +165,13 @@ template <typename T> Compuon<T> Compuon<T>::operator+(const Compuon<T> &other) 
   } else {
     LOG_MESSAGE("Add without session");
     auto result_add =
-      Backend::getInstance().add(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+      Backend::getInstance().add(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
 
     if (!result_add) {
       throw std::runtime_error("Backend::add returned nullptr");
     }
 
-    result = std::dynamic_pointer_cast<Compuon<T>>(result_add);
+    result = std::dynamic_pointer_cast<Fhenon<T>>(result_add);
 
     if (!result) {
       throw std::runtime_error("Backend::add returned nullptr");
@@ -182,17 +182,17 @@ template <typename T> Compuon<T> Compuon<T>::operator+(const Compuon<T> &other) 
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator*(const Compuon<T> &other) const {
-  LOG_MESSAGE("=====Operator Multiply of Compuon=====");
-  std::shared_ptr<Compuon<T>> result = nullptr;
+template <typename T> Fhenon<T> Fhenon<T>::operator*(const Fhenon<T> &other) const {
+  LOG_MESSAGE("=====Operator Multiply of Fhenon=====");
+  std::shared_ptr<Fhenon<T>> result = nullptr;
 
   if (Session::getSession()->isActive()) {
     LOG_MESSAGE("Multiplication on session");
 
     // Track operands and result in the Session
-    auto op1_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(*this));
-    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Compuon<T> &>(other));
-    auto result_ptr = std::make_shared<Compuon<T>>(1234);
+    auto op1_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(*this));
+    auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
+    auto result_ptr = std::make_shared<Fhenon<T>>(1234);
     Session::getSession()->saveEntity(*result_ptr);
     Session::getSession()->trackEntity(*result_ptr);
 
@@ -203,13 +203,13 @@ template <typename T> Compuon<T> Compuon<T>::operator*(const Compuon<T> &other) 
     LOG_MESSAGE("Multiplication without session");
     LOG_MESSAGE(this->getValue() << " x " << other.getValue());
     auto result_mul =
-      Backend::getInstance().multiply(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
+      Backend::getInstance().multiply(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
 
     if (!result_mul) {
       throw std::runtime_error("Backend::add returned nullptr");
     }
 
-    result = std::dynamic_pointer_cast<Compuon<T>>(result_mul);
+    result = std::dynamic_pointer_cast<Fhenon<T>>(result_mul);
 
     if (!result) {
       throw std::runtime_error("Backend::add returned nullptr");
@@ -219,69 +219,69 @@ template <typename T> Compuon<T> Compuon<T>::operator*(const Compuon<T> &other) 
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator*(const T &scalar) const {
-  auto entity = std::make_shared<Compuon<T>>(scalar);
+template <typename T> Fhenon<T> Fhenon<T>::operator*(const T &scalar) const {
+  auto entity = std::make_shared<Fhenon<T>>(scalar);
   entity->setScalar();
   entity->belong(this->getProfile());
   return *this * *entity;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator&(const Compuon<T> &other) const {
+template <typename T> Fhenon<T> Fhenon<T>::operator&(const Fhenon<T> &other) const {
   auto result_ptr =
-    Backend::getInstance().bitAnd(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
-  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+    Backend::getInstance().bitAnd(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_ptr);
   if (!result)
     throw std::runtime_error("Backend::bitAnd returned invalid type");
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator|(const Compuon<T> &other) const {
+template <typename T> Fhenon<T> Fhenon<T>::operator|(const Fhenon<T> &other) const {
   auto result_ptr =
-    Backend::getInstance().bitOr(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
-  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+    Backend::getInstance().bitOr(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_ptr);
   if (!result)
     throw std::runtime_error("Backend::bitOr returned invalid type");
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator^(const Compuon<T> &other) const {
+template <typename T> Fhenon<T> Fhenon<T>::operator^(const Fhenon<T> &other) const {
   auto result_ptr =
-    Backend::getInstance().bitXor(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
-  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+    Backend::getInstance().bitXor(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_ptr);
   if (!result)
     throw std::runtime_error("Backend::bitXor returned invalid type");
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator==(const Compuon<T> &other) const {
+template <typename T> Fhenon<T> Fhenon<T>::operator==(const Fhenon<T> &other) const {
   auto result_ptr =
-    Backend::getInstance().compareEq(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
-  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+    Backend::getInstance().compareEq(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_ptr);
   if (!result)
     throw std::runtime_error("Backend::compareEq returned invalid type");
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator<(const Compuon<T> &other) const {
+template <typename T> Fhenon<T> Fhenon<T>::operator<(const Fhenon<T> &other) const {
   auto result_ptr =
-    Backend::getInstance().compareLt(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
-  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+    Backend::getInstance().compareLt(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_ptr);
   if (!result)
     throw std::runtime_error("Backend::compareLt returned invalid type");
   return *result;
 }
 
-template <typename T> Compuon<T> Compuon<T>::operator<=(const Compuon<T> &other) const {
+template <typename T> Fhenon<T> Fhenon<T>::operator<=(const Fhenon<T> &other) const {
   auto result_ptr =
-    Backend::getInstance().compareLe(static_cast<const CompuonBase &>(*this), static_cast<const CompuonBase &>(other));
-  auto result = std::dynamic_pointer_cast<Compuon<T>>(result_ptr);
+    Backend::getInstance().compareLe(static_cast<const FhenonBase &>(*this), static_cast<const FhenonBase &>(other));
+  auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_ptr);
   if (!result)
     throw std::runtime_error("Backend::compareLe returned invalid type");
   return *result;
 }
 
-template <typename T> T Compuon<T>::decrypt() const { return std::any_cast<T>(Backend::getInstance().decrypt(*this)); }
+template <typename T> T Fhenon<T>::decrypt() const { return std::any_cast<T>(Backend::getInstance().decrypt(*this)); }
 
-template class Compuon<int>;
+template class Fhenon<int>;
 
 } // namespace fhenomenon

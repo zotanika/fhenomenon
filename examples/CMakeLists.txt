@@ -1,5 +1,5 @@
-add_executable(compuon-basic compuon.cpp)
-target_link_libraries(compuon-basic PUBLIC Fhenomenon)
+add_executable(fhenon-basic fhenon.cpp)
+target_link_libraries(fhenon-basic PUBLIC Fhenomenon)
 
 add_executable(session-basic session.cpp)
 target_link_libraries(session-basic PUBLIC Fhenomenon)

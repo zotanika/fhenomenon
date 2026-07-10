@@ -1,5 +1,5 @@
 #include "Backend/Backend.h"
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "Parameter/ParameterGen.h"
 #include "Profile.h"
 #include "Scheduler/FusedOperation.h"
@@ -41,11 +41,11 @@ TEST(MatMulRecognitionTest, TripletDetection1x1x1) {
   auto &backend = Backend::getInstance();
 
   // Create entities (no encryption needed for pass structure test)
-  auto a = std::make_shared<Compuon<int>>(3);
-  auto b = std::make_shared<Compuon<int>>(5);
-  auto c = std::make_shared<Compuon<int>>(0);
-  auto tmp_mul = std::make_shared<Compuon<int>>(1234);
-  auto tmp_add = std::make_shared<Compuon<int>>(1234);
+  auto a = std::make_shared<Fhenon<int>>(3);
+  auto b = std::make_shared<Fhenon<int>>(5);
+  auto c = std::make_shared<Fhenon<int>>(0);
+  auto tmp_mul = std::make_shared<Fhenon<int>>(1234);
+  auto tmp_add = std::make_shared<Fhenon<int>>(1234);
 
   // Create valid (Multiply, Add, Assignment) triplet
   auto mul_op = std::make_shared<Operation<int>>(OperationType::Multiply, a, b, tmp_mul);
@@ -67,12 +67,12 @@ TEST(MatMulRecognitionTest, InvalidPatternBrokenConnectivity) {
   TestFixture fixture;
   auto &backend = Backend::getInstance();
 
-  auto a = std::make_shared<Compuon<int>>(3);
-  auto b = std::make_shared<Compuon<int>>(5);
-  auto c = std::make_shared<Compuon<int>>(0);
-  auto tmp_mul = std::make_shared<Compuon<int>>(1234);
-  auto tmp_add = std::make_shared<Compuon<int>>(1234);
-  auto unrelated = std::make_shared<Compuon<int>>(99);
+  auto a = std::make_shared<Fhenon<int>>(3);
+  auto b = std::make_shared<Fhenon<int>>(5);
+  auto c = std::make_shared<Fhenon<int>>(0);
+  auto tmp_mul = std::make_shared<Fhenon<int>>(1234);
+  auto tmp_add = std::make_shared<Fhenon<int>>(1234);
+  auto unrelated = std::make_shared<Fhenon<int>>(99);
 
   // Broken: add uses 'unrelated' instead of mul result
   auto mul_op = std::make_shared<Operation<int>>(OperationType::Multiply, a, b, tmp_mul);
@@ -93,11 +93,11 @@ TEST(MatMulRecognitionTest, WrongOperationTypes) {
   TestFixture fixture;
   auto &backend = Backend::getInstance();
 
-  auto a = std::make_shared<Compuon<int>>(3);
-  auto b = std::make_shared<Compuon<int>>(5);
-  auto c = std::make_shared<Compuon<int>>(0);
-  auto tmp1 = std::make_shared<Compuon<int>>(1234);
-  auto tmp2 = std::make_shared<Compuon<int>>(1234);
+  auto a = std::make_shared<Fhenon<int>>(3);
+  auto b = std::make_shared<Fhenon<int>>(5);
+  auto c = std::make_shared<Fhenon<int>>(0);
+  auto tmp1 = std::make_shared<Fhenon<int>>(1234);
+  auto tmp2 = std::make_shared<Fhenon<int>>(1234);
 
   auto op0 = std::make_shared<Operation<int>>(OperationType::Add, a, b, tmp1);
   auto op1 = std::make_shared<Operation<int>>(OperationType::Add, c, tmp1, tmp2);
@@ -117,30 +117,30 @@ TEST(MatMulRecognitionTest, Detect2x2MatMul) {
   auto &backend = Backend::getInstance();
 
   // A[2x2], B[2x2], C[2x2]
-  auto a00 = std::make_shared<Compuon<int>>(1);
-  auto a01 = std::make_shared<Compuon<int>>(2);
-  auto a10 = std::make_shared<Compuon<int>>(3);
-  auto a11 = std::make_shared<Compuon<int>>(4);
+  auto a00 = std::make_shared<Fhenon<int>>(1);
+  auto a01 = std::make_shared<Fhenon<int>>(2);
+  auto a10 = std::make_shared<Fhenon<int>>(3);
+  auto a11 = std::make_shared<Fhenon<int>>(4);
 
-  auto b00 = std::make_shared<Compuon<int>>(5);
-  auto b01 = std::make_shared<Compuon<int>>(6);
-  auto b10 = std::make_shared<Compuon<int>>(7);
-  auto b11 = std::make_shared<Compuon<int>>(8);
+  auto b00 = std::make_shared<Fhenon<int>>(5);
+  auto b01 = std::make_shared<Fhenon<int>>(6);
+  auto b10 = std::make_shared<Fhenon<int>>(7);
+  auto b11 = std::make_shared<Fhenon<int>>(8);
 
-  auto c00 = std::make_shared<Compuon<int>>(0);
-  auto c01 = std::make_shared<Compuon<int>>(0);
-  auto c10 = std::make_shared<Compuon<int>>(0);
-  auto c11 = std::make_shared<Compuon<int>>(0);
+  auto c00 = std::make_shared<Fhenon<int>>(0);
+  auto c01 = std::make_shared<Fhenon<int>>(0);
+  auto c10 = std::make_shared<Fhenon<int>>(0);
+  auto c11 = std::make_shared<Fhenon<int>>(0);
 
   std::vector<std::shared_ptr<OperationBase>> ops;
 
   // Generate (Multiply, Add, Assignment) triplets for each (i,j,k)
   // Simulates: for i in [0,1] for j in [0,1] for k in [0,1]:
   //   C[i][j] = C[i][j] + A[i][k] * B[k][j]
-  auto makeTriplet = [&](std::shared_ptr<Compuon<int>> aElem, std::shared_ptr<Compuon<int>> bElem,
-                         std::shared_ptr<Compuon<int>> cElem) {
-    auto tmp_mul = std::make_shared<Compuon<int>>(1234);
-    auto tmp_add = std::make_shared<Compuon<int>>(1234);
+  auto makeTriplet = [&](std::shared_ptr<Fhenon<int>> aElem, std::shared_ptr<Fhenon<int>> bElem,
+                         std::shared_ptr<Fhenon<int>> cElem) {
+    auto tmp_mul = std::make_shared<Fhenon<int>>(1234);
+    auto tmp_add = std::make_shared<Fhenon<int>>(1234);
     ops.push_back(std::make_shared<Operation<int>>(OperationType::Multiply, aElem, bElem, tmp_mul));
     ops.push_back(std::make_shared<Operation<int>>(OperationType::Add, cElem, tmp_mul, tmp_add));
     ops.push_back(std::make_shared<Operation<int>>(OperationType::Assignment, cElem, tmp_add));
@@ -179,19 +179,19 @@ TEST(MatMulRecognitionTest, InconsistentGroupSizesRejected) {
   TestFixture fixture;
   auto &backend = Backend::getInstance();
 
-  auto a0 = std::make_shared<Compuon<int>>(1);
-  auto a1 = std::make_shared<Compuon<int>>(2);
-  auto b0 = std::make_shared<Compuon<int>>(3);
-  auto b1 = std::make_shared<Compuon<int>>(4);
-  auto c0 = std::make_shared<Compuon<int>>(0);
-  auto c1 = std::make_shared<Compuon<int>>(0);
+  auto a0 = std::make_shared<Fhenon<int>>(1);
+  auto a1 = std::make_shared<Fhenon<int>>(2);
+  auto b0 = std::make_shared<Fhenon<int>>(3);
+  auto b1 = std::make_shared<Fhenon<int>>(4);
+  auto c0 = std::make_shared<Fhenon<int>>(0);
+  auto c1 = std::make_shared<Fhenon<int>>(0);
 
   std::vector<std::shared_ptr<OperationBase>> ops;
 
-  auto makeTriplet = [&](std::shared_ptr<Compuon<int>> a, std::shared_ptr<Compuon<int>> b,
-                         std::shared_ptr<Compuon<int>> c) {
-    auto tmp_mul = std::make_shared<Compuon<int>>(1234);
-    auto tmp_add = std::make_shared<Compuon<int>>(1234);
+  auto makeTriplet = [&](std::shared_ptr<Fhenon<int>> a, std::shared_ptr<Fhenon<int>> b,
+                         std::shared_ptr<Fhenon<int>> c) {
+    auto tmp_mul = std::make_shared<Fhenon<int>>(1234);
+    auto tmp_add = std::make_shared<Fhenon<int>>(1234);
     ops.push_back(std::make_shared<Operation<int>>(OperationType::Multiply, a, b, tmp_mul));
     ops.push_back(std::make_shared<Operation<int>>(OperationType::Add, c, tmp_mul, tmp_add));
     ops.push_back(std::make_shared<Operation<int>>(OperationType::Assignment, c, tmp_add));
@@ -219,11 +219,11 @@ TEST(MatMulRecognitionTest, InconsistentGroupSizesRejected) {
 TEST(MatMulEndToEndTest, Matmul1x1_NoCrash) {
   TestFixture fixture;
 
-  Compuon<int> a(7);
+  Fhenon<int> a(7);
   a.belong(fixture.profile);
-  Compuon<int> b(6);
+  Fhenon<int> b(6);
   b.belong(fixture.profile);
-  Compuon<int> c(0);
+  Fhenon<int> c(0);
   c.belong(fixture.profile);
 
   EXPECT_NO_THROW(fixture.session->run([&]() { c = c + a * b; }));
@@ -238,21 +238,21 @@ TEST(MatMulEndToEndTest, Matmul2x2_NoCrash) {
 
   const int M = 2, K = 2, N = 2;
 
-  std::vector<Compuon<int>> A;
+  std::vector<Fhenon<int>> A;
   A.reserve(M * K);
   for (int v : {1, 2, 3, 4})
     A.emplace_back(v);
   for (auto &a : A)
     a.belong(fixture.profile);
 
-  std::vector<Compuon<int>> B;
+  std::vector<Fhenon<int>> B;
   B.reserve(K * N);
   for (int v : {5, 6, 7, 8})
     B.emplace_back(v);
   for (auto &b : B)
     b.belong(fixture.profile);
 
-  std::vector<Compuon<int>> C;
+  std::vector<Fhenon<int>> C;
   C.reserve(M * N);
   for (int i = 0; i < M * N; i++)
     C.emplace_back(0);
@@ -278,21 +278,21 @@ TEST(MatMulEndToEndTest, Matmul2x3_3x2_NoCrash) {
 
   const int M = 2, K = 3, N = 2;
 
-  std::vector<Compuon<int>> A;
+  std::vector<Fhenon<int>> A;
   A.reserve(M * K);
   for (int v : {1, 2, 3, 4, 5, 6})
     A.emplace_back(v);
   for (auto &a : A)
     a.belong(fixture.profile);
 
-  std::vector<Compuon<int>> B;
+  std::vector<Fhenon<int>> B;
   B.reserve(K * N);
   for (int v : {7, 8, 9, 10, 11, 12})
     B.emplace_back(v);
   for (auto &b : B)
     b.belong(fixture.profile);
 
-  std::vector<Compuon<int>> C;
+  std::vector<Fhenon<int>> C;
   C.reserve(M * N);
   for (int i = 0; i < M * N; i++)
     C.emplace_back(0);
@@ -317,9 +317,9 @@ TEST(MatMulEndToEndTest, FusedMatchesDirect1x1) {
   auto &backend = Backend::getInstance();
 
   // Compute expected result using direct backend calls
-  Compuon<int> a_direct(7);
+  Fhenon<int> a_direct(7);
   a_direct.belong(fixture.profile);
-  Compuon<int> b_direct(6);
+  Fhenon<int> b_direct(6);
   b_direct.belong(fixture.profile);
 
   auto prod_direct = backend.multiply(a_direct, b_direct);
@@ -329,11 +329,11 @@ TEST(MatMulEndToEndTest, FusedMatchesDirect1x1) {
   // Need a fresh session since the backend is shared
   auto session2 = Session::create(backend);
 
-  Compuon<int> a(7);
+  Fhenon<int> a(7);
   a.belong(fixture.profile);
-  Compuon<int> b(6);
+  Fhenon<int> b(6);
   b.belong(fixture.profile);
-  Compuon<int> c(0);
+  Fhenon<int> c(0);
   c.belong(fixture.profile);
 
   session2->run([&]() { c = c + a * b; });

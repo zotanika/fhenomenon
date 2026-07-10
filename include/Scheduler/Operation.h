@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Compuon.h"
+#include "Fhenon.h"
 
 #include <optional>
 
 namespace fhenomenon {
 
-// Forward declaration of Compuon class to avoid circular dependency
-template <typename T> class Compuon;
+// Forward declaration of Fhenon class to avoid circular dependency
+template <typename T> class Fhenon;
 class Backend; // Forward declaration
 
 namespace scheduler {
@@ -33,8 +33,8 @@ class OperationBase {
 
 template <typename T> class Operation final : public OperationBase {
   public:
-  Operation(OperationType type, std::shared_ptr<Compuon<T>> op1, std::shared_ptr<Compuon<T>> op2,
-            std::shared_ptr<Compuon<T>> tmp = nullptr, const Backend *backend_delegate = nullptr, int64_t param = 0)
+  Operation(OperationType type, std::shared_ptr<Fhenon<T>> op1, std::shared_ptr<Fhenon<T>> op2,
+            std::shared_ptr<Fhenon<T>> tmp = nullptr, const Backend *backend_delegate = nullptr, int64_t param = 0)
     : type_(type), operand1_(op1), operand2_(op2), result_(tmp), backend_delegate_(backend_delegate), param_(param) {}
 
   void execute() override;
@@ -43,9 +43,9 @@ template <typename T> class Operation final : public OperationBase {
   void setBackendDelegate(const Backend *backend) { backend_delegate_ = backend; }
 
   OperationType getType() const override { return type_; }
-  std::shared_ptr<Compuon<T>> getOperand1() const { return operand1_; }
-  std::shared_ptr<Compuon<T>> getOperand2() const { return operand2_; }
-  std::shared_ptr<Compuon<T>> getResult() const { return result_; }
+  std::shared_ptr<Fhenon<T>> getOperand1() const { return operand1_; }
+  std::shared_ptr<Fhenon<T>> getOperand2() const { return operand2_; }
+  std::shared_ptr<Fhenon<T>> getResult() const { return result_; }
 
   // Operation-specific integer parameter (e.g. rotation distance for
   // LeftRotate/RightRotate). Mirrors FhnInstruction::params[0].
@@ -54,9 +54,9 @@ template <typename T> class Operation final : public OperationBase {
 
   private:
   OperationType type_;
-  std::shared_ptr<Compuon<T>> operand1_;
-  std::shared_ptr<Compuon<T>> operand2_;
-  std::shared_ptr<Compuon<T>> result_;
+  std::shared_ptr<Fhenon<T>> operand1_;
+  std::shared_ptr<Fhenon<T>> operand2_;
+  std::shared_ptr<Fhenon<T>> result_;
   const Backend *backend_delegate_; // Backend delegate for executing operations
   int64_t param_ = 0;
 };

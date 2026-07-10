@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Compuon.h"
+#include "Fhenon.h"
 
 #include <any>
 
@@ -10,10 +10,10 @@ class BackendInterface {
   public:
   virtual ~BackendInterface() = default;
 
-  virtual void transform(CompuonBase &entity, const Parameter &params) = 0;
-  virtual std::shared_ptr<CompuonBase> add(const CompuonBase &a, const CompuonBase &b) = 0;
-  virtual std::shared_ptr<CompuonBase> multiply(const CompuonBase &a, const CompuonBase &b) = 0;
-  virtual std::any decrypt(const CompuonBase &entity) const = 0;
+  virtual void transform(FhenonBase &entity, const Parameter &params) = 0;
+  virtual std::shared_ptr<FhenonBase> add(const FhenonBase &a, const FhenonBase &b) = 0;
+  virtual std::shared_ptr<FhenonBase> multiply(const FhenonBase &a, const FhenonBase &b) = 0;
+  virtual std::any decrypt(const FhenonBase &entity) const = 0;
 };
 
 } // namespace fhenomenon

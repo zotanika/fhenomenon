@@ -13,16 +13,16 @@ using namespace fhenomenon;
 
 void performArithmeticDemo(const std::shared_ptr<Profile> &profile) {
   std::cout << "\n--- Arithmetic Demo ---\n";
-  Compuon<int> a = 10;
+  Fhenon<int> a = 10;
   a.belong(profile);
 
-  Compuon<int> b = 20;
+  Fhenon<int> b = 20;
   b.belong(profile);
 
   std::cout << "Initial values: a=" << a.decrypt() << ", b=" << b.decrypt() << std::endl;
 
-  Compuon<int> c = a + 2;
-  Compuon<int> d = c * b;
+  Fhenon<int> c = a + 2;
+  Fhenon<int> d = c * b;
   c = c + 2;
   d = c * d;
   a = c + 1;
@@ -38,9 +38,9 @@ void performLogicDemo(const std::shared_ptr<Profile> &profile) {
   try {
     // Test Bitwise AND
     {
-      Compuon<int> a(5); // 0101
+      Fhenon<int> a(5); // 0101
       a.belong(profile);
-      Compuon<int> b(3); // 0011
+      Fhenon<int> b(3); // 0011
       b.belong(profile);
 
       auto c = a & b; // Should be 0001 = 1
@@ -50,9 +50,9 @@ void performLogicDemo(const std::shared_ptr<Profile> &profile) {
 
     // Test Bitwise OR
     {
-      Compuon<int> a(5); // 0101
+      Fhenon<int> a(5); // 0101
       a.belong(profile);
-      Compuon<int> b(3); // 0011
+      Fhenon<int> b(3); // 0011
       b.belong(profile);
 
       auto c = a | b; // Should be 0111 = 7
@@ -62,9 +62,9 @@ void performLogicDemo(const std::shared_ptr<Profile> &profile) {
 
     // Test Bitwise XOR
     {
-      Compuon<int> a(5); // 0101
+      Fhenon<int> a(5); // 0101
       a.belong(profile);
-      Compuon<int> b(3); // 0011
+      Fhenon<int> b(3); // 0011
       b.belong(profile);
 
       auto c = a ^ b; // Should be 0110 = 6
@@ -74,11 +74,11 @@ void performLogicDemo(const std::shared_ptr<Profile> &profile) {
 
     // Test Equality
     {
-      Compuon<int> a(42);
+      Fhenon<int> a(42);
       a.belong(profile);
-      Compuon<int> b(42);
+      Fhenon<int> b(42);
       b.belong(profile);
-      Compuon<int> c(10);
+      Fhenon<int> c(10);
       c.belong(profile);
 
       auto eq1 = (a == b);
@@ -92,9 +92,9 @@ void performLogicDemo(const std::shared_ptr<Profile> &profile) {
 
     // Test Less Than
     {
-      Compuon<int> a(10);
+      Fhenon<int> a(10);
       a.belong(profile);
-      Compuon<int> b(20);
+      Fhenon<int> b(20);
       b.belong(profile);
 
       auto lt = (a < b);

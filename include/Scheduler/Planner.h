@@ -11,17 +11,17 @@ namespace scheduler {
 
 template <typename T> class Planner {
   private:
-  std::unordered_map<std::shared_ptr<Compuon<T>>, std::shared_ptr<ASTNode>> entityToNodeMap_;
+  std::unordered_map<std::shared_ptr<Fhenon<T>>, std::shared_ptr<ASTNode>> entityToNodeMap_;
   std::unordered_set<std::shared_ptr<ASTNode>> rootSet_;
   std::vector<std::shared_ptr<ASTNode>> roots_;
 
   public:
   const std::vector<std::shared_ptr<ASTNode>> &getRoots() const { return roots_; }
   std::vector<std::shared_ptr<ASTNode>> &getRoots() { return roots_; }
-  const std::unordered_map<std::shared_ptr<Compuon<T>>, std::shared_ptr<ASTNode>> &getEntityToNodeMap() const {
+  const std::unordered_map<std::shared_ptr<Fhenon<T>>, std::shared_ptr<ASTNode>> &getEntityToNodeMap() const {
     return entityToNodeMap_;
   }
-  std::unordered_map<std::shared_ptr<Compuon<T>>, std::shared_ptr<ASTNode>> &getEntityToNodeMap() {
+  std::unordered_map<std::shared_ptr<Fhenon<T>>, std::shared_ptr<ASTNode>> &getEntityToNodeMap() {
     return entityToNodeMap_;
   }
 

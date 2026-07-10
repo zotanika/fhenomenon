@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Backend/Backend.h"
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "Parameter/CKKSParameter.h"
 #include "Parameter/Parameter.h"
 #include "Parameter/ParameterGen.h"
@@ -29,41 +29,41 @@ class Session final : public std::enable_shared_from_this<Session> {
       session_ptr_ = nullptr;
   }
 
-  template <typename T> void setEntity(const void *key, Compuon<T> &entity) {
-    entity_map_[key] = std::any(std::reference_wrapper<Compuon<T>>(entity));
+  template <typename T> void setEntity(const void *key, Fhenon<T> &entity) {
+    entity_map_[key] = std::any(std::reference_wrapper<Fhenon<T>>(entity));
   }
 
-  template <typename T> void saveEntity(Compuon<T> &entity) {
+  template <typename T> void saveEntity(Fhenon<T> &entity) {
     // Check if entity is already managed
     if (entity_map_.find(&entity) == entity_map_.end()) {
-      entity_map_[&entity] = std::any(std::reference_wrapper<Compuon<T>>(entity));
+      entity_map_[&entity] = std::any(std::reference_wrapper<Fhenon<T>>(entity));
     }
   }
 
-  template <typename T> void saveEntity(const void *key, Compuon<T> &entity) {
+  template <typename T> void saveEntity(const void *key, Fhenon<T> &entity) {
     // Check if entity is already managed
     if (entity_map_.find(key) == entity_map_.end()) {
-      entity_map_[key] = std::any(std::reference_wrapper<Compuon<T>>(entity));
+      entity_map_[key] = std::any(std::reference_wrapper<Fhenon<T>>(entity));
     }
   }
 
-  template <typename T> Compuon<T> *getEntity(Compuon<T> &entity) {
+  template <typename T> Fhenon<T> *getEntity(Fhenon<T> &entity) {
     auto it = entity_map_.find(&entity);
-    return it != entity_map_.end() ? &std::any_cast<std::reference_wrapper<Compuon<T>>>(it->second).get() : nullptr;
+    return it != entity_map_.end() ? &std::any_cast<std::reference_wrapper<Fhenon<T>>>(it->second).get() : nullptr;
   }
 
-  template <typename T> Compuon<T> *getEntity(const void *key) {
+  template <typename T> Fhenon<T> *getEntity(const void *key) {
     auto it = entity_map_.find(key);
-    return it != entity_map_.end() ? &std::any_cast<std::reference_wrapper<Compuon<T>>>(it->second).get() : nullptr;
+    return it != entity_map_.end() ? &std::any_cast<std::reference_wrapper<Fhenon<T>>>(it->second).get() : nullptr;
   }
 
-  template <typename T> std::shared_ptr<Compuon<T>> trackEntity(Compuon<T> &entity) {
+  template <typename T> std::shared_ptr<Fhenon<T>> trackEntity(Fhenon<T> &entity) {
     // Resolve to the canonical object for this address: caller-owned
     // variables map to themselves, copies of operation results map to the
     // shared result they were copied from (registered by the copy
     // constructor).
     const void *key = &entity;
-    Compuon<T> *canonical = getEntity<T>(key);
+    Fhenon<T> *canonical = getEntity<T>(key);
     if (!canonical) {
       saveEntity(key, entity);
       canonical = &entity;
@@ -82,7 +82,7 @@ class Session final : public std::enable_shared_from_this<Session> {
     // object. The alias cannot outlive the variable because execution
     // completes inside run(), while the caller's scope is still alive.
     LOG_MESSAGE("Tracking caller entity: " << canonical << ", " << canonical->getValue());
-    return std::shared_ptr<Compuon<T>>(canonical, [](Compuon<T> *) {});
+    return std::shared_ptr<Fhenon<T>>(canonical, [](Fhenon<T> *) {});
   }
 
   template <typename T> void saveOp(std::shared_ptr<scheduler::Operation<T>> op);
@@ -119,7 +119,7 @@ class Session final : public std::enable_shared_from_this<Session> {
   std::unique_ptr<scheduler::Scheduler> scheduler_; // Scheduler with backend delegate
   // set of operations
   std::vector<std::shared_ptr<scheduler::OperationBase>> operations_;
-  // Map for reference of Compuon
+  // Map for reference of Fhenon
   std::unordered_map<const void *, std::any> entity_map_;
 
   // `thread_local` variable to save current session

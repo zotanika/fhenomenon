@@ -123,13 +123,13 @@ void BuiltinBackend::saveKeys([[maybe_unused]] const std::string &publicKeyPath,
   LOG_MESSAGE("BuiltinBackend: saveKeys is a no-op.");
 }
 
-void BuiltinBackend::transform(CompuonBase &entity, [[maybe_unused]] const Parameter &params) const {
+void BuiltinBackend::transform(FhenonBase &entity, [[maybe_unused]] const Parameter &params) const {
   ensureReady();
   auto type = entity.type();
 
 #ifdef FHENOMENON_USE_TFHE
   if (type == typeid(int)) {
-    auto &derivedEntity = dynamic_cast<Compuon<int> &>(entity);
+    auto &derivedEntity = dynamic_cast<Fhenon<int> &>(entity);
     int32_t value = derivedEntity.getValue();
 
     auto handle = checkAndWrap(tfhe_encrypt_int32(context_, value), "encrypt_int32");
@@ -142,21 +142,21 @@ void BuiltinBackend::transform(CompuonBase &entity, [[maybe_unused]] const Param
   }
 #else
   if (type == typeid(int)) {
-    auto &derivedEntity = dynamic_cast<Compuon<int> &>(entity);
+    auto &derivedEntity = dynamic_cast<Fhenon<int> &>(entity);
     const int value = derivedEntity.getValue();
     auto ciphertext = std::make_shared<toyfhe::Ciphertext>(engine_.encryptInt(value));
     entity.ciphertext_ = ciphertext;
     entity.isEncrypted_ = true;
     LOG_MESSAGE("BuiltinBackend: Encrypted int value " << value);
   } else if (type == typeid(double)) {
-    auto &derivedEntity = dynamic_cast<Compuon<double> &>(entity);
+    auto &derivedEntity = dynamic_cast<Fhenon<double> &>(entity);
     const double value = derivedEntity.getValue();
     auto ciphertext = std::make_shared<toyfhe::Ciphertext>(engine_.encryptDouble(value));
     entity.ciphertext_ = ciphertext;
     entity.isEncrypted_ = true;
     LOG_MESSAGE("BuiltinBackend: Encrypted double value " << value);
   } else if (type == typeid(float)) {
-    auto &derivedEntity = dynamic_cast<Compuon<float> &>(entity);
+    auto &derivedEntity = dynamic_cast<Fhenon<float> &>(entity);
     const double value = static_cast<double>(derivedEntity.getValue());
     auto ciphertext = std::make_shared<toyfhe::Ciphertext>(engine_.encryptDouble(value));
     entity.ciphertext_ = ciphertext;
@@ -171,165 +171,165 @@ void BuiltinBackend::transform(CompuonBase &entity, [[maybe_unused]] const Param
 namespace {
 template <typename T>
 #ifdef FHENOMENON_USE_TFHE
-std::shared_ptr<CompuonBase> makeResultCompuon(const Compuon<T> &reference, SharedCiphertextHandle ciphertext) {
-  auto resultCompuon = std::make_shared<Compuon<T>>(0);
-  resultCompuon->ciphertext_ = ciphertext;
-  resultCompuon->isEncrypted_ = true;
-  resultCompuon->setProfile(reference.getProfile());
-  return resultCompuon;
+std::shared_ptr<FhenonBase> makeResultFhenon(const Fhenon<T> &reference, SharedCiphertextHandle ciphertext) {
+  auto resultFhenon = std::make_shared<Fhenon<T>>(0);
+  resultFhenon->ciphertext_ = ciphertext;
+  resultFhenon->isEncrypted_ = true;
+  resultFhenon->setProfile(reference.getProfile());
+  return resultFhenon;
 }
 #else
-std::shared_ptr<CompuonBase> makeResultCompuon(const Compuon<T> &reference, const toyfhe::Ciphertext &ciphertext) {
-  auto resultCompuon = std::make_shared<Compuon<T>>(0);
-  resultCompuon->ciphertext_ = std::make_shared<toyfhe::Ciphertext>(ciphertext);
-  resultCompuon->isEncrypted_ = true;
-  resultCompuon->setProfile(reference.getProfile());
-  return resultCompuon;
+std::shared_ptr<FhenonBase> makeResultFhenon(const Fhenon<T> &reference, const toyfhe::Ciphertext &ciphertext) {
+  auto resultFhenon = std::make_shared<Fhenon<T>>(0);
+  resultFhenon->ciphertext_ = std::make_shared<toyfhe::Ciphertext>(ciphertext);
+  resultFhenon->isEncrypted_ = true;
+  resultFhenon->setProfile(reference.getProfile());
+  return resultFhenon;
 }
 #endif
 } // namespace
 
-std::shared_ptr<CompuonBase> BuiltinBackend::add(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::add(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
 
   if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_.has_value() || !b.ciphertext_.has_value()) {
-    throw std::runtime_error("BuiltinBackend: Cannot add unencrypted Compuon values");
+    throw std::runtime_error("BuiltinBackend: Cannot add unencrypted Fhenon values");
   }
 
 #ifdef FHENOMENON_USE_TFHE
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
 
     auto result = checkAndWrap(tfhe_add_int32(context_, ctA.get(), ctB.get()), "add_int32");
 
     LOG_MESSAGE("BuiltinBackend: Performed addition (TFHE)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("BuiltinBackend: Unsupported types for add (TFHE only supports int)");
 #else
   auto type = a.type();
   if (type == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
     const auto result = engine_.add(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (int)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   } else if (type == typeid(double)) {
-    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<double> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
     const auto result = engine_.add(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (double)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   } else if (type == typeid(float)) {
-    const auto &derivedA = dynamic_cast<const Compuon<float> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<float> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
     const auto result = engine_.add(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE addition (float)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("BuiltinBackend: Unsupported type for add");
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::multiply(const CompuonBase &a, const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::multiply(const FhenonBase &a, const FhenonBase &b) const {
   ensureReady();
   if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_.has_value() || !b.ciphertext_.has_value()) {
-    throw std::runtime_error("BuiltinBackend: Cannot multiply unencrypted Compuon values");
+    throw std::runtime_error("BuiltinBackend: Cannot multiply unencrypted Fhenon values");
   }
 
 #ifdef FHENOMENON_USE_TFHE
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
 
     auto result = checkAndWrap(tfhe_mul_int32(context_, ctA.get(), ctB.get()), "mul_int32");
 
     LOG_MESSAGE("BuiltinBackend: Performed multiplication (TFHE)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("BuiltinBackend: Unsupported types for multiply (TFHE only supports int)");
 #else
   if (a.type() != b.type()) {
-    throw std::runtime_error("BuiltinBackend: Cannot multiply Compuon values of different types");
+    throw std::runtime_error("BuiltinBackend: Cannot multiply Fhenon values of different types");
   }
 
   auto type = a.type();
 
   if (type == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
     const auto result = engine_.multiply(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (int)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   } else if (type == typeid(double)) {
-    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<double> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
     const auto result = engine_.multiply(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (double)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   } else if (type == typeid(float)) {
-    const auto &derivedA = dynamic_cast<const Compuon<float> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<float> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     auto ctB = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(b.ciphertext_);
     const auto result = engine_.multiply(*ctA, *ctB);
     LOG_MESSAGE("BuiltinBackend: Performed ToyFHE multiplication (float)");
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("BuiltinBackend: Unsupported type for multiply");
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::addPlain([[maybe_unused]] const CompuonBase &a,
+std::shared_ptr<FhenonBase> BuiltinBackend::addPlain([[maybe_unused]] const FhenonBase &a,
                                                       [[maybe_unused]] double scalar) {
   ensureReady();
 #ifdef FHENOMENON_USE_TFHE
   throw std::runtime_error("BuiltinBackend: addPlain not implemented for TFHE");
 #else
   if (!a.isEncrypted_ || !a.ciphertext_.has_value()) {
-    throw std::runtime_error("BuiltinBackend: Cannot add plain to unencrypted Compuon value");
+    throw std::runtime_error("BuiltinBackend: Cannot add plain to unencrypted Fhenon value");
   }
   auto type = a.type();
   if (type == typeid(double)) {
-    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<double> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     const auto result = engine_.addPlain(*ctA, scalar);
     LOG_MESSAGE("BuiltinBackend: ToyFHE addPlain(double) with scalar " << scalar);
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("BuiltinBackend: addPlain currently supports double types only");
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::multiplyPlain([[maybe_unused]] const CompuonBase &a,
+std::shared_ptr<FhenonBase> BuiltinBackend::multiplyPlain([[maybe_unused]] const FhenonBase &a,
                                                            [[maybe_unused]] double scalar) {
   ensureReady();
 #ifdef FHENOMENON_USE_TFHE
   throw std::runtime_error("BuiltinBackend: multiplyPlain not implemented for TFHE");
 #else
   if (!a.isEncrypted_ || !a.ciphertext_.has_value()) {
-    throw std::runtime_error("BuiltinBackend: Cannot multiply plain with unencrypted Compuon value");
+    throw std::runtime_error("BuiltinBackend: Cannot multiply plain with unencrypted Fhenon value");
   }
   auto type = a.type();
   if (type == typeid(double)) {
-    const auto &derivedA = dynamic_cast<const Compuon<double> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<double> &>(a);
     auto ctA = std::any_cast<std::shared_ptr<toyfhe::Ciphertext>>(a.ciphertext_);
     const auto result = engine_.multiplyPlain(*ctA, scalar);
     LOG_MESSAGE("BuiltinBackend: ToyFHE multiplyPlain(double) with scalar " << scalar);
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error("BuiltinBackend: multiplyPlain currently supports double types only");
 #endif
 }
 
-std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
+std::any BuiltinBackend::decrypt(const FhenonBase &entity) const {
   ensureReady();
 
 #ifdef FHENOMENON_USE_TFHE
@@ -337,7 +337,7 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
     // Fallback for unencrypted values
     auto type = entity.type();
     if (type == typeid(int)) {
-      return dynamic_cast<const Compuon<int> &>(entity).getValue();
+      return dynamic_cast<const Fhenon<int> &>(entity).getValue();
     }
     return {};
   }
@@ -363,13 +363,13 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
   if (!entity.isEncrypted_ || !entity.ciphertext_.has_value()) {
     auto type = entity.type();
     if (type == typeid(int)) {
-      const auto &derivedEntity = dynamic_cast<const Compuon<int> &>(entity);
+      const auto &derivedEntity = dynamic_cast<const Fhenon<int> &>(entity);
       return derivedEntity.getValue();
     } else if (type == typeid(double)) {
-      const auto &derivedEntity = dynamic_cast<const Compuon<double> &>(entity);
+      const auto &derivedEntity = dynamic_cast<const Fhenon<double> &>(entity);
       return derivedEntity.getValue();
     } else if (type == typeid(float)) {
-      const auto &derivedEntity = dynamic_cast<const Compuon<float> &>(entity);
+      const auto &derivedEntity = dynamic_cast<const Fhenon<float> &>(entity);
       return derivedEntity.getValue();
     }
     return {};
@@ -397,22 +397,22 @@ std::any BuiltinBackend::decrypt(const CompuonBase &entity) const {
 }
 
 #ifdef FHENOMENON_USE_TFHE
-std::shared_ptr<CompuonBase> BuiltinBackend::executeBinaryTfheOp(const CompuonBase &a, const CompuonBase &b,
+std::shared_ptr<FhenonBase> BuiltinBackend::executeBinaryTfheOp(const FhenonBase &a, const FhenonBase &b,
                                                                  TfheBinaryOp op, const char *opName) const {
   ensureReady();
   if (a.type() == typeid(int) && b.type() == typeid(int)) {
-    const auto &derivedA = dynamic_cast<const Compuon<int> &>(a);
+    const auto &derivedA = dynamic_cast<const Fhenon<int> &>(a);
     auto ctA = std::any_cast<SharedCiphertextHandle>(a.ciphertext_);
     auto ctB = std::any_cast<SharedCiphertextHandle>(b.ciphertext_);
     auto result = checkAndWrap(op(context_, ctA.get(), ctB.get()), opName);
-    return makeResultCompuon(derivedA, result);
+    return makeResultFhenon(derivedA, result);
   }
   throw std::runtime_error(std::string(opName) + " only supports int type with TFHE backend");
 }
 #endif
 
-std::shared_ptr<CompuonBase> BuiltinBackend::bitAnd([[maybe_unused]] const CompuonBase &a,
-                                                    [[maybe_unused]] const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::bitAnd([[maybe_unused]] const FhenonBase &a,
+                                                    [[maybe_unused]] const FhenonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
   return executeBinaryTfheOp(a, b, tfhe_bitand_int32, "bitwise_and");
 #else
@@ -420,8 +420,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::bitAnd([[maybe_unused]] const Compu
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::bitOr([[maybe_unused]] const CompuonBase &a,
-                                                   [[maybe_unused]] const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::bitOr([[maybe_unused]] const FhenonBase &a,
+                                                   [[maybe_unused]] const FhenonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
   return executeBinaryTfheOp(a, b, tfhe_bitor_int32, "bitwise_or");
 #else
@@ -429,8 +429,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::bitOr([[maybe_unused]] const Compuo
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::bitXor([[maybe_unused]] const CompuonBase &a,
-                                                    [[maybe_unused]] const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::bitXor([[maybe_unused]] const FhenonBase &a,
+                                                    [[maybe_unused]] const FhenonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
   return executeBinaryTfheOp(a, b, tfhe_bitxor_int32, "bitwise_xor");
 #else
@@ -438,8 +438,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::bitXor([[maybe_unused]] const Compu
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::compareEq([[maybe_unused]] const CompuonBase &a,
-                                                       [[maybe_unused]] const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::compareEq([[maybe_unused]] const FhenonBase &a,
+                                                       [[maybe_unused]] const FhenonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
   return executeBinaryTfheOp(a, b, tfhe_eq_int32, "compare_eq");
 #else
@@ -447,8 +447,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::compareEq([[maybe_unused]] const Co
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::compareLt([[maybe_unused]] const CompuonBase &a,
-                                                       [[maybe_unused]] const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::compareLt([[maybe_unused]] const FhenonBase &a,
+                                                       [[maybe_unused]] const FhenonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
   return executeBinaryTfheOp(a, b, tfhe_lt_int32, "compare_lt");
 #else
@@ -456,8 +456,8 @@ std::shared_ptr<CompuonBase> BuiltinBackend::compareLt([[maybe_unused]] const Co
 #endif
 }
 
-std::shared_ptr<CompuonBase> BuiltinBackend::compareLe([[maybe_unused]] const CompuonBase &a,
-                                                       [[maybe_unused]] const CompuonBase &b) const {
+std::shared_ptr<FhenonBase> BuiltinBackend::compareLe([[maybe_unused]] const FhenonBase &a,
+                                                       [[maybe_unused]] const FhenonBase &b) const {
 #ifdef FHENOMENON_USE_TFHE
   return executeBinaryTfheOp(a, b, tfhe_le_int32, "compare_le");
 #else

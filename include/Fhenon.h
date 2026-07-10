@@ -13,9 +13,9 @@ namespace fhenomenon {
 class Profile;
 class Session;
 
-class CompuonBase {
+class FhenonBase {
   public:
-  virtual ~CompuonBase() = default;
+  virtual ~FhenonBase() = default;
   virtual std::type_index type() const = 0;
 
   // Store encrypted values using backend-specific representation
@@ -23,7 +23,7 @@ class CompuonBase {
   bool isEncrypted_ = false;
 };
 
-template <typename T> class Compuon final : public CompuonBase, public std::enable_shared_from_this<Compuon<T>> {
+template <typename T> class Fhenon final : public FhenonBase, public std::enable_shared_from_this<Fhenon<T>> {
   private:
   T val_;
   std::shared_ptr<Profile> profile_;
@@ -31,14 +31,14 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
 
   public:
   // constructor
-  // (TODO) explicit Compuon(const T v) : val_(v) {}
-  Compuon(const T v) : val_(v) { LOG_MESSAGE("Constructor with value: " << val_); }
+  // (TODO) explicit Fhenon(const T v) : val_(v) {}
+  Fhenon(const T v) : val_(v) { LOG_MESSAGE("Constructor with value: " << val_); }
   // copy constrcutor
-  Compuon(const Compuon<T> &other);
+  Fhenon(const Fhenon<T> &other);
 
   // move constructor
-  Compuon(Compuon<T> &&other) noexcept
-    : std::enable_shared_from_this<Compuon<T>>(std::move(other)), val_(std::move(other.val_)),
+  Fhenon(Fhenon<T> &&other) noexcept
+    : std::enable_shared_from_this<Fhenon<T>>(std::move(other)), val_(std::move(other.val_)),
       profile_(std::move(other.profile_)) {
     LOG_MESSAGE("Move constructor with value: " << val_ << " " << this << "other:" << &other);
     // reset 'other'
@@ -46,20 +46,20 @@ template <typename T> class Compuon final : public CompuonBase, public std::enab
     other.profile_ = nullptr;
   }
 
-  Compuon<T> &operator=(const T &scalar);
-  Compuon<T> &operator=(const Compuon &other);
-  Compuon<T> &operator=(Compuon &&other) noexcept;
-  Compuon<T> operator+(const T &scalar) const;
-  Compuon<T> operator+(const Compuon<T> &other) const;
-  Compuon<T> operator*(const T &scalar) const;
-  Compuon<T> operator*(const Compuon<T> &other) const;
+  Fhenon<T> &operator=(const T &scalar);
+  Fhenon<T> &operator=(const Fhenon &other);
+  Fhenon<T> &operator=(Fhenon &&other) noexcept;
+  Fhenon<T> operator+(const T &scalar) const;
+  Fhenon<T> operator+(const Fhenon<T> &other) const;
+  Fhenon<T> operator*(const T &scalar) const;
+  Fhenon<T> operator*(const Fhenon<T> &other) const;
 
-  Compuon<T> operator&(const Compuon<T> &other) const;
-  Compuon<T> operator|(const Compuon<T> &other) const;
-  Compuon<T> operator^(const Compuon<T> &other) const;
-  Compuon<T> operator==(const Compuon<T> &other) const;
-  Compuon<T> operator<(const Compuon<T> &other) const;
-  Compuon<T> operator<=(const Compuon<T> &other) const;
+  Fhenon<T> operator&(const Fhenon<T> &other) const;
+  Fhenon<T> operator|(const Fhenon<T> &other) const;
+  Fhenon<T> operator^(const Fhenon<T> &other) const;
+  Fhenon<T> operator==(const Fhenon<T> &other) const;
+  Fhenon<T> operator<(const Fhenon<T> &other) const;
+  Fhenon<T> operator<=(const Fhenon<T> &other) const;
 
   std::type_index type() const override { return typeid(T); }
 

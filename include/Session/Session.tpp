@@ -4,7 +4,7 @@
 
 namespace fhenomenon {
 
-// Contract: Compuon variables used inside `ops` must be declared in a scope
+// Contract: Fhenon variables used inside `ops` must be declared in a scope
 // enclosing this call (and belong() to a profile) — recorded operations alias
 // them in place, and evaluation happens after the lambda body returns.
 template <typename Op> void Session::run(Op &&ops) {

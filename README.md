@@ -71,7 +71,7 @@ The current ABI is intentionally modest. It can load a backend, inspect its kern
 
 ```mermaid
 flowchart TD
-    A["Application code<br/>Compuon<int>, Session"] --> B["Scheduler<br/>operations to AST"]
+    A["Application code<br/>Fhenon<int>, Session"] --> B["Scheduler<br/>operations to AST"]
     B --> C["LowerToFhnProgram<br/>AST to flat FHN program"]
     C --> D["FhnDefaultExecutor"]
     D --> E["Kernel table lookup"]
@@ -194,7 +194,7 @@ ctest --test-dir build --output-on-failure
 Run examples:
 
 ```bash
-./build/bin/compuon-basic
+./build/bin/fhenon-basic
 ./build/bin/session-basic
 ```
 
@@ -216,10 +216,10 @@ int main() {
   auto param = ParameterGen::createCKKSParam(CKKSParamPreset::FGb);
   auto profile = Profile::createProfile(param);
 
-  Compuon<int> a = 10;
+  Fhenon<int> a = 10;
   a.belong(profile);
 
-  Compuon<int> b = 20;
+  Fhenon<int> b = 20;
   b.belong(profile);
 
   auto c = a + b;
@@ -229,7 +229,7 @@ int main() {
 }
 ```
 
-Today, `Compuon<int>` is the most exercised path. ToyFHE also contains fixed-point internals, and the codebase has experiments for other types and TFHE-rs, but broad type support should be treated as roadmap rather than stable API.
+Today, `Fhenon<int>` is the most exercised path. ToyFHE also contains fixed-point internals, and the codebase has experiments for other types and TFHE-rs, but broad type support should be treated as roadmap rather than stable API.
 
 ## Backend Author Sketch
 

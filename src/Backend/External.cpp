@@ -74,20 +74,20 @@ ExternalBackend::~ExternalBackend() {
   }
 }
 
-void ExternalBackend::transform(CompuonBase & /*entity*/, const Parameter & /*params*/) const {
+void ExternalBackend::transform(FhenonBase & /*entity*/, const Parameter & /*params*/) const {
   // External backends handle encryption through FHN_ENCRYPT kernel
 }
 
-std::shared_ptr<CompuonBase> ExternalBackend::add(const CompuonBase & /*a*/, const CompuonBase & /*b*/) const {
+std::shared_ptr<FhenonBase> ExternalBackend::add(const FhenonBase & /*a*/, const FhenonBase & /*b*/) const {
   // Direct Backend::add() is legacy interface.
   // External backends use FHN executor pipeline.
   return nullptr;
 }
 
-std::shared_ptr<CompuonBase> ExternalBackend::multiply(const CompuonBase & /*a*/, const CompuonBase & /*b*/) const {
+std::shared_ptr<FhenonBase> ExternalBackend::multiply(const FhenonBase & /*a*/, const FhenonBase & /*b*/) const {
   return nullptr;
 }
 
-std::any ExternalBackend::decrypt(const CompuonBase & /*entity*/) const { return 0; }
+std::any ExternalBackend::decrypt(const FhenonBase & /*entity*/) const { return 0; }
 
 } // namespace fhenomenon

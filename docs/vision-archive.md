@@ -22,9 +22,9 @@ This direction comes before the older high-level frontend story. The long-term a
 
 | Earlier README claim | Current status | Reason |
 | --- | --- | --- |
-| `Compuon<T>` should transparently support `int`, `float`, `double`, `std::complex`, and POD structs. | Long-horizon. | The most exercised frontend path is `Compuon<int>`. ToyFHE has fixed-point internals, but broad public template support and POD packing need a real layout story first. |
+| `Fhenon<T>` should transparently support `int`, `float`, `double`, `std::complex`, and POD structs. | Long-horizon. | The most exercised frontend path is `Fhenon<int>`. ToyFHE has fixed-point internals, but broad public template support and POD packing need a real layout story first. |
 | Repeated `belong()` calls should transcrypt between schemes. | Long-horizon. | The code does not implement scheme switching or bootstrapped transciphering/transcryption. This can return later as an explicit operation with cost and security semantics, not as magic. |
-| POD struct fields should map directly into CKKS slots. | Long-horizon. | Slot layout should probably be handled by an explicit packing/layout layer or compiler frontend, not by magical struct reflection in `Compuon<T>`. |
+| POD struct fields should map directly into CKKS slots. | Long-horizon. | Slot layout should probably be handled by an explicit packing/layout layer or compiler frontend, not by magical struct reflection in `Fhenon<T>`. |
 | The scheduler should automatically infer FHE parameters for arbitrary programs. | Long-horizon. | Parameter selection is scheme- and backend-specific. The current FHN ABI leaves such policy closer to the backend and future planning layers. |
 | Fhenomenon should expose a general hardware abstraction layer for GPUs, ASICs, and FPGAs. | Reframed. | Hardware control is backend-owned today. A future cross-backend capability model may emerge after backend-owned kernels are real. |
 | External libraries should mainly implement a C++ virtual `Backend` interface. | Replaced for now. | The newer direction uses a C ABI and kernel table so FHE libraries can integrate through stable shared-library exports. |

@@ -43,13 +43,13 @@ template <typename T> void Operation<T>::execute() {
 
     // Use backend delegate to execute addition
     auto result_add =
-      backend.add(static_cast<const CompuonBase &>(*operand1_), static_cast<const CompuonBase &>(*operand2_));
+      backend.add(static_cast<const FhenonBase &>(*operand1_), static_cast<const FhenonBase &>(*operand2_));
 
     if (!result_add) {
       throw std::runtime_error("Backend::add returned nullptr");
     }
 
-    auto result = std::dynamic_pointer_cast<Compuon<T>>(result_add);
+    auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_add);
 
     if (!result) {
       throw std::runtime_error("Backend::add returned wrong type");
@@ -77,12 +77,12 @@ template <typename T> void Operation<T>::execute() {
 
     // Use backend delegate to execute multiplication
     auto result_multiply =
-      backend.multiply(static_cast<const CompuonBase &>(*operand1_), static_cast<const CompuonBase &>(*operand2_));
+      backend.multiply(static_cast<const FhenonBase &>(*operand1_), static_cast<const FhenonBase &>(*operand2_));
     if (!result_multiply) {
       throw std::runtime_error("Backend::multiply returned nullptr");
     }
 
-    auto result = std::dynamic_pointer_cast<Compuon<T>>(result_multiply);
+    auto result = std::dynamic_pointer_cast<Fhenon<T>>(result_multiply);
 
     if (!result) {
       throw std::runtime_error("Backend::multiply returned wrong type");

@@ -1,5 +1,5 @@
 #include "Scheduler/LowerToFhnProgram.h"
-#include "Compuon.h"
+#include "Fhenon.h"
 #include "FHN/fhn_program.h"
 #include "Scheduler/ASTNode.h"
 #include "Scheduler/Operation.h"
@@ -10,9 +10,9 @@ using namespace fhenomenon;
 using namespace fhenomenon::scheduler;
 
 TEST(LowerToFhnProgram, SingleAdd) {
-  auto a = std::make_shared<Compuon<int>>(10);
-  auto b = std::make_shared<Compuon<int>>(20);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(10);
+  auto b = std::make_shared<Fhenon<int>>(20);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto op = std::make_shared<Operation<int>>(OperationType::Add, a, b, result);
   auto left = std::make_shared<OperandNode<int>>(a);
@@ -36,11 +36,11 @@ TEST(LowerToFhnProgram, SingleAdd) {
 
 TEST(LowerToFhnProgram, ChainedAddMult) {
   // AST: t = a + b; result = t * c
-  auto a = std::make_shared<Compuon<int>>(1);
-  auto b = std::make_shared<Compuon<int>>(2);
-  auto c = std::make_shared<Compuon<int>>(3);
-  auto t = std::make_shared<Compuon<int>>(0);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(1);
+  auto b = std::make_shared<Fhenon<int>>(2);
+  auto c = std::make_shared<Fhenon<int>>(3);
+  auto t = std::make_shared<Fhenon<int>>(0);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto add_op = std::make_shared<Operation<int>>(OperationType::Add, a, b, t);
   auto mul_op = std::make_shared<Operation<int>>(OperationType::Multiply, t, c, result);
@@ -71,8 +71,8 @@ TEST(LowerToFhnProgram, ChainedAddMult) {
 }
 
 TEST(LowerToFhnProgram, RotationDistanceIsEncoded) {
-  auto a = std::make_shared<Compuon<int>>(5);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(5);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto op = std::make_shared<Operation<int>>(OperationType::LeftRotate, a, nullptr, result, nullptr, 3);
   auto leaf = std::make_shared<OperandNode<int>>(a);
@@ -94,8 +94,8 @@ TEST(LowerToFhnProgram, RotationDistanceIsEncoded) {
 }
 
 TEST(LowerToFhnProgram, RightRotationEncodesNegativeDistance) {
-  auto a = std::make_shared<Compuon<int>>(5);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(5);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto op = std::make_shared<Operation<int>>(OperationType::RightRotate, a, nullptr, result, nullptr, 2);
   auto leaf = std::make_shared<OperandNode<int>>(a);
@@ -117,8 +117,8 @@ TEST(LowerToFhnProgram, RightRotationEncodesNegativeDistance) {
 
 TEST(LowerToFhnProgram, SharedOperand) {
   // AST: r1 = a + a (same operand node used twice)
-  auto a = std::make_shared<Compuon<int>>(5);
-  auto result = std::make_shared<Compuon<int>>(0);
+  auto a = std::make_shared<Fhenon<int>>(5);
+  auto result = std::make_shared<Fhenon<int>>(0);
 
   auto op = std::make_shared<Operation<int>>(OperationType::Add, a, a, result);
   auto left = std::make_shared<OperandNode<int>>(a);

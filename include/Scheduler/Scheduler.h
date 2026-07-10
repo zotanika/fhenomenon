@@ -56,7 +56,7 @@ class Scheduler {
   }
   template <typename T>
   void buildAST(const std::vector<std::shared_ptr<scheduler::OperationBase>> &operations, Planner<T> &plan) {
-    std::unordered_map<std::shared_ptr<Compuon<T>>, std::shared_ptr<ASTNode>> entityToNodeMap;
+    std::unordered_map<std::shared_ptr<Fhenon<T>>, std::shared_ptr<ASTNode>> entityToNodeMap;
     std::vector<std::shared_ptr<ASTNode>> roots;
     for (const auto &op : operations) {
       // Handle FusedOperation (from pre-AST passes like MatMul recognition)
@@ -78,7 +78,7 @@ class Scheduler {
 
         // Create FusedKernelNode
         auto fusedNode = std::make_shared<FusedKernelNode<T>>(
-          fusedOp, std::move(deps), std::vector<std::shared_ptr<Compuon<T>>>(fusedOp->getOutputs()));
+          fusedOp, std::move(deps), std::vector<std::shared_ptr<Fhenon<T>>>(fusedOp->getOutputs()));
 
         // Map all outputs to this node
         for (const auto &output : fusedOp->getOutputs()) {

@@ -14,13 +14,13 @@ class ASTNode {
 template <typename T> class OperatorNode : public ASTNode {
   public:
   OperatorNode(std::shared_ptr<Operation<T>> operation, OperationType type, std::shared_ptr<ASTNode> left,
-               std::shared_ptr<ASTNode> right, std::shared_ptr<Compuon<T>> result)
+               std::shared_ptr<ASTNode> right, std::shared_ptr<Fhenon<T>> result)
     : operation_(operation), type_(type), left_(left), right_(right), result_(result), evaluated_(false) {}
 
   OperationType getType() const { return type_; }
   std::shared_ptr<ASTNode> getRight() const { return right_; }
   std::shared_ptr<ASTNode> getLeft() const { return left_; }
-  std::shared_ptr<Compuon<T>> getResult() const { return result_; }
+  std::shared_ptr<Fhenon<T>> getResult() const { return result_; }
   std::shared_ptr<Operation<T>> getOperation() const { return operation_; }
 
   void evaluate() override {
@@ -52,15 +52,15 @@ template <typename T> class OperatorNode : public ASTNode {
   OperationType type_;
   std::shared_ptr<ASTNode> left_;
   std::shared_ptr<ASTNode> right_;
-  std::shared_ptr<Compuon<T>> result_;
+  std::shared_ptr<Fhenon<T>> result_;
   bool evaluated_;
 };
 
 template <typename T> class OperandNode : public ASTNode {
   public:
-  explicit OperandNode(std::shared_ptr<Compuon<T>> entity) : entity_(entity), evaluated_(false) {}
+  explicit OperandNode(std::shared_ptr<Fhenon<T>> entity) : entity_(entity), evaluated_(false) {}
 
-  std::shared_ptr<Compuon<T>> getEntity() const { return entity_; }
+  std::shared_ptr<Fhenon<T>> getEntity() const { return entity_; }
 
   void evaluate() override {
     if (evaluated_)
@@ -75,7 +75,7 @@ template <typename T> class OperandNode : public ASTNode {
   }
 
   private:
-  std::shared_ptr<Compuon<T>> entity_;
+  std::shared_ptr<Fhenon<T>> entity_;
   T value_;
   bool evaluated_;
 };

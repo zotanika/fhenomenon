@@ -13,8 +13,8 @@ namespace scheduler {
 /// composite kernel (e.g., matrix-multiply = many rotate + multiply + add).
 template <typename T> class FusedOperation : public OperationBase {
   public:
-  FusedOperation(OperationType type, std::vector<std::shared_ptr<Compuon<T>>> inputs,
-                 std::vector<std::shared_ptr<Compuon<T>>> outputs)
+  FusedOperation(OperationType type, std::vector<std::shared_ptr<Fhenon<T>>> inputs,
+                 std::vector<std::shared_ptr<Fhenon<T>>> outputs)
     : type_(type), inputs_(std::move(inputs)), outputs_(std::move(outputs)) {}
 
   void execute() override {
@@ -25,14 +25,14 @@ template <typename T> class FusedOperation : public OperationBase {
 
   void setBackendDelegate(const Backend *backend) { backend_delegate_ = backend; }
 
-  const std::vector<std::shared_ptr<Compuon<T>>> &getInputs() const { return inputs_; }
+  const std::vector<std::shared_ptr<Fhenon<T>>> &getInputs() const { return inputs_; }
 
-  const std::vector<std::shared_ptr<Compuon<T>>> &getOutputs() const { return outputs_; }
+  const std::vector<std::shared_ptr<Fhenon<T>>> &getOutputs() const { return outputs_; }
 
   private:
   OperationType type_;
-  std::vector<std::shared_ptr<Compuon<T>>> inputs_;
-  std::vector<std::shared_ptr<Compuon<T>>> outputs_;
+  std::vector<std::shared_ptr<Fhenon<T>>> inputs_;
+  std::vector<std::shared_ptr<Fhenon<T>>> outputs_;
   const Backend *backend_delegate_ = nullptr;
 };
 
@@ -40,7 +40,7 @@ template <typename T> class FusedOperation : public OperationBase {
 template <typename T> class FusedKernelNode : public ASTNode {
   public:
   FusedKernelNode(std::shared_ptr<FusedOperation<T>> op, std::vector<std::shared_ptr<ASTNode>> dependencies,
-                  std::vector<std::shared_ptr<Compuon<T>>> outputs)
+                  std::vector<std::shared_ptr<Fhenon<T>>> outputs)
     : op_(std::move(op)), dependencies_(std::move(dependencies)), outputs_(std::move(outputs)), evaluated_(false) {}
 
   void evaluate() override {
@@ -64,7 +64,7 @@ template <typename T> class FusedKernelNode : public ASTNode {
   private:
   std::shared_ptr<FusedOperation<T>> op_;
   std::vector<std::shared_ptr<ASTNode>> dependencies_;
-  std::vector<std::shared_ptr<Compuon<T>>> outputs_;
+  std::vector<std::shared_ptr<Fhenon<T>>> outputs_;
   bool evaluated_;
 };
 
