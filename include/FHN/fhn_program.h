@@ -49,7 +49,7 @@ typedef enum FhnOpCode {
   FHN_HROT,      /* key_switch + permute     */
   FHN_HROT_ADD,  /* rotate(a) + b            */
   FHN_HCONJ_ADD, /* conj(a) + b              */
-  FHN_MAD,       /* res += a * scalar         */
+  FHN_MAD,       /* res = a * fparams[0] + b; res must not alias b */
 
   /* Boolean / comparison (TFHE-style) */
   FHN_AND,

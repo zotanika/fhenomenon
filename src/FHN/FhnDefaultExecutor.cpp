@@ -72,23 +72,30 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
     if (call(FHN_MULT_CC, buffers[inst.result_id], ops, inst.params, inst.fparams) != 0)
       return false;
 
-    // RELINEARIZE and RESCALE are optional (applied if supported)
+    // RELINEARIZE and RESCALE are optional in the sense that a backend may
+    // not register them — but if a registered kernel fails, that failure
+    // must propagate, not be swallowed.
     const FhnBuffer *self_ops[] = {buffers[inst.result_id], nullptr, nullptr, nullptr};
-    if (dispatch_.count(static_cast<int>(FHN_RELINEARIZE)))
-      call(FHN_RELINEARIZE, buffers[inst.result_id], self_ops, inst.params, inst.fparams);
-    if (dispatch_.count(static_cast<int>(FHN_RESCALE)))
-      call(FHN_RESCALE, buffers[inst.result_id], self_ops, inst.params, inst.fparams);
+    if (dispatch_.count(static_cast<int>(FHN_RELINEARIZE))) {
+      if (call(FHN_RELINEARIZE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) != 0)
+        return false;
+    }
+    if (dispatch_.count(static_cast<int>(FHN_RESCALE))) {
+      if (call(FHN_RESCALE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) != 0)
+        return false;
+    }
 
     return true;
   }
   case FHN_HROT: {
-    if (!dispatch_.count(static_cast<int>(FHN_MULT_KEY)) || !dispatch_.count(static_cast<int>(FHN_ROTATE)))
+    // FHN_ROTATE is a complete key-switched rotation by convention, so the
+    // fused HROT decomposes to a single ROTATE. (A MULT_KEY + ROTATE
+    // sequence would apply the evaluation key twice and silently corrupt
+    // the ciphertext.)
+    if (!dispatch_.count(static_cast<int>(FHN_ROTATE)))
       return false;
     const FhnBuffer *ops[] = {buffers[inst.operands[0]], nullptr, nullptr, nullptr};
-    if (call(FHN_MULT_KEY, buffers[inst.result_id], ops, inst.params, inst.fparams) != 0)
-      return false;
-    const FhnBuffer *self_ops[] = {buffers[inst.result_id], nullptr, nullptr, nullptr};
-    return call(FHN_ROTATE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) == 0;
+    return call(FHN_ROTATE, buffers[inst.result_id], ops, inst.params, inst.fparams) == 0;
   }
   case FHN_HROT_ADD: {
     // Decompose HROT part first
@@ -116,6 +123,10 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
     return call(FHN_ADD_CC, buffers[inst.result_id], add_ops, inst.params, inst.fparams) == 0;
   }
   case FHN_MAD: {
+    // res = a * fparams[0] + b. The multiply lands in the result buffer
+    // before b is read, so b must be present and must not alias res.
+    if (inst.operands[1] == 0 || inst.operands[1] == inst.result_id)
+      return false;
     if (!dispatch_.count(static_cast<int>(FHN_MULT_CS)) || !dispatch_.count(static_cast<int>(FHN_ADD_CC)))
       return false;
     const FhnBuffer *mult_ops[] = {buffers[inst.operands[0]], nullptr, nullptr, nullptr};

@@ -37,6 +37,25 @@ int test_negate(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *oper
 
 int test_noop(FhnBackendCtx *, FhnBuffer *, const FhnBuffer *const *, const int64_t *, const double *) { return 0; }
 
+int test_fail(FhnBackendCtx *, FhnBuffer *, const FhnBuffer *const *, const int64_t *, const double *) { return -7; }
+
+// "Rotation" over scalar test buffers: multiply by 10 so single and double
+// application are distinguishable.
+int test_rotate(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *, const double *) {
+  auto *r = reinterpret_cast<TestBuffer *>(result);
+  auto *a = reinterpret_cast<const TestBuffer *>(operands[0]);
+  r->value = a->value * 10;
+  return 0;
+}
+
+int test_mult_key(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                  const double *) {
+  auto *r = reinterpret_cast<TestBuffer *>(result);
+  auto *a = reinterpret_cast<const TestBuffer *>(operands[0]);
+  r->value = a->value * 1000; // must NOT be applied by the HROT fallback
+  return 0;
+}
+
 } // namespace
 
 TEST(FhnExecutor, SupportsRegisteredOpcodes) {
@@ -287,6 +306,107 @@ TEST(FhnExecutor, DecomposeHMultMinimal) {
   int rc = executor.execute(nullptr, prog, ptrs);
   EXPECT_EQ(rc, 0);
   EXPECT_EQ(bufs[3].value, 45); // 5 * 9
+
+  fhn_program_free(prog);
+}
+
+TEST(FhnExecutor, DecomposeHRotIsASingleRotate) {
+  // ROTATE is a complete key-switched rotation, so HROT must decompose to
+  // exactly one ROTATE — never MULT_KEY + ROTATE (double key application).
+  FhnKernelEntry entries[2] = {
+    {FHN_ROTATE, test_rotate, "rotate"},
+    {FHN_MULT_KEY, test_mult_key, "mult_key"},
+  };
+  FhnKernelTable table = {2, entries};
+
+  fhenomenon::FhnDefaultExecutor executor(&table);
+
+  FhnProgram *prog = fhn_program_alloc(1, 1, 1);
+  ASSERT_NE(prog, nullptr);
+  prog->input_ids[0] = 1;
+  prog->output_ids[0] = 2;
+  prog->instructions[0].opcode = FHN_HROT;
+  prog->instructions[0].result_id = 2;
+  prog->instructions[0].operands[0] = 1;
+
+  TestBuffer bufs[3] = {{0}, {7}, {0}};
+  FhnBuffer *ptrs[3] = {
+    reinterpret_cast<FhnBuffer *>(&bufs[0]),
+    reinterpret_cast<FhnBuffer *>(&bufs[1]),
+    reinterpret_cast<FhnBuffer *>(&bufs[2]),
+  };
+
+  EXPECT_EQ(executor.execute(nullptr, prog, ptrs), 0);
+  EXPECT_EQ(bufs[2].value, 70); // one rotate; 70000 would mean mult_key ran too
+
+  fhn_program_free(prog);
+}
+
+TEST(FhnExecutor, DecomposeHMultPropagatesRelinFailure) {
+  FhnKernelEntry entries[2] = {
+    {FHN_MULT_CC, test_mult_cc, "mult_cc"},
+    {FHN_RELINEARIZE, test_fail, "relin"},
+  };
+  FhnKernelTable table = {2, entries};
+
+  fhenomenon::FhnDefaultExecutor executor(&table);
+
+  FhnProgram *prog = fhn_program_alloc(1, 2, 1);
+  ASSERT_NE(prog, nullptr);
+  prog->input_ids[0] = 1;
+  prog->input_ids[1] = 2;
+  prog->output_ids[0] = 3;
+  prog->instructions[0].opcode = FHN_HMULT;
+  prog->instructions[0].result_id = 3;
+  prog->instructions[0].operands[0] = 1;
+  prog->instructions[0].operands[1] = 2;
+
+  TestBuffer bufs[4] = {{0}, {7}, {6}, {0}};
+  FhnBuffer *ptrs[4] = {
+    reinterpret_cast<FhnBuffer *>(&bufs[0]),
+    reinterpret_cast<FhnBuffer *>(&bufs[1]),
+    reinterpret_cast<FhnBuffer *>(&bufs[2]),
+    reinterpret_cast<FhnBuffer *>(&bufs[3]),
+  };
+
+  // A registered-but-failing RELINEARIZE must fail the whole instruction.
+  EXPECT_NE(executor.execute(nullptr, prog, ptrs), 0);
+
+  fhn_program_free(prog);
+}
+
+TEST(FhnExecutor, MadRequiresDistinctAddend) {
+  FhnKernelEntry entries[2] = {
+    {FHN_MULT_CS, test_mult_cc, "mult_cs"}, // signature-compatible stand-in
+    {FHN_ADD_CC, test_add_cc, "add_cc"},
+  };
+  FhnKernelTable table = {2, entries};
+
+  fhenomenon::FhnDefaultExecutor executor(&table);
+
+  FhnProgram *prog = fhn_program_alloc(1, 2, 1);
+  ASSERT_NE(prog, nullptr);
+  prog->input_ids[0] = 1;
+  prog->input_ids[1] = 2;
+  prog->output_ids[0] = 3;
+  prog->instructions[0].opcode = FHN_MAD;
+  prog->instructions[0].result_id = 3;
+  prog->instructions[0].operands[0] = 1;
+  prog->instructions[0].operands[1] = 0; // missing addend: must be rejected
+
+  TestBuffer bufs[4] = {{0}, {5}, {4}, {0}};
+  FhnBuffer *ptrs[4] = {
+    reinterpret_cast<FhnBuffer *>(&bufs[0]),
+    reinterpret_cast<FhnBuffer *>(&bufs[1]),
+    reinterpret_cast<FhnBuffer *>(&bufs[2]),
+    reinterpret_cast<FhnBuffer *>(&bufs[3]),
+  };
+
+  EXPECT_NE(executor.execute(nullptr, prog, ptrs), 0);
+
+  // Aliasing the addend with the result is equally invalid.
+  prog->instructions[0].operands[1] = 3;
+  EXPECT_NE(executor.execute(nullptr, prog, ptrs), 0);
 
   fhn_program_free(prog);
 }
