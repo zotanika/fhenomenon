@@ -7,6 +7,13 @@
 extern "C" {
 #endif
 
+/* ABI version. Bumped on any incompatible change to these structures, the
+   opcode numbering, or the export contracts in fhn_backend_api.h. Backends
+   export fhn_get_abi_version() returning the value they were compiled
+   against; the host refuses to load a backend on mismatch, and the executor
+   refuses to run an FhnProgram whose version field does not match. */
+#define FHN_ABI_VERSION 1u
+
 /* Compute-only opcodes. Data-lifecycle operations (encode/encrypt/decrypt/
    decode) are deliberately absent: anything that touches plaintexts or key
    material belongs to the host-side data plane (see fhn_backend_api.h) and
@@ -64,7 +71,7 @@ typedef struct FhnInstruction {
 } FhnInstruction;
 
 typedef struct FhnProgram {
-  uint32_t version;
+  uint32_t version; /* stamped with FHN_ABI_VERSION by fhn_program_alloc */
   uint32_t num_instructions;
   FhnInstruction *instructions;
 

@@ -313,6 +313,8 @@ static FhnKernelTable cheddar_kernel_table = {
 
 extern "C" {
 
+uint32_t fhn_get_abi_version(void) { return FHN_ABI_VERSION; }
+
 FhnBackendInfo *fhn_get_info(void) {
   static FhnBackendInfo info = {
     "cheddar-ckks", "1.0", FHN_DEVICE_GPU,

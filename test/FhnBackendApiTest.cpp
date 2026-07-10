@@ -48,6 +48,7 @@ TEST(FhnBackendApi, VTableNullOptional) {
 
   /* Required fields are also NULL after zero-init, but the point is
      that optional fields are safely nullable. */
+  EXPECT_EQ(vtable.get_abi_version, nullptr);
   EXPECT_EQ(vtable.get_info, nullptr);
   EXPECT_EQ(vtable.create, nullptr);
   EXPECT_EQ(vtable.destroy, nullptr);

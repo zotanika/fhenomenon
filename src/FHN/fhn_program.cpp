@@ -10,7 +10,7 @@ FhnProgram *fhn_program_alloc(uint32_t num_instructions, uint32_t num_inputs, ui
     return nullptr;
   }
 
-  program->version = 1;
+  program->version = FHN_ABI_VERSION;
   program->num_instructions = num_instructions;
   program->num_inputs = num_inputs;
   program->num_outputs = num_outputs;

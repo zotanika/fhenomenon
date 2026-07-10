@@ -29,7 +29,14 @@ typedef struct FhnBackendInfo {
 } FhnBackendInfo;
 
 /* Uniform kernel function signature.
-   Returns 0 on success, non-zero on error. */
+   Returns 0 on success, non-zero on error.
+
+   Buffer ownership: buffers are created and destroyed only by the host,
+   through fhn_buffer_alloc/fhn_buffer_free. Kernels never allocate or free
+   buffers; they read operands and write into the pre-allocated result.
+
+   Aliasing: kernels must tolerate result == operands[i] (in-place update).
+   The default executor's decomposition paths rely on this. */
 typedef int (*FhnKernelFn)(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                            const int64_t *params, const double *fparams);
 
@@ -47,6 +54,9 @@ typedef struct FhnKernelTable {
 } FhnKernelTable;
 
 /* ── Function pointer typedefs for dlopen resolution ── */
+/* Deliberate leaf function with an eternal signature: safe to resolve and
+   call before any other symbol. Must return FHN_ABI_VERSION. */
+typedef uint32_t (*FhnGetAbiVersionFn)(void);
 typedef FhnBackendInfo *(*FhnGetInfoFn)(void);
 typedef FhnBackendCtx *(*FhnCreateFn)(const char *config_json);
 typedef void (*FhnDestroyFn)(FhnBackendCtx *ctx);
@@ -80,6 +90,7 @@ typedef void (*FhnExecFreeFn)(FhnExecHandle *handle);
 
 /* VTable for resolved backend symbols */
 typedef struct FhnBackendVTable {
+  FhnGetAbiVersionFn get_abi_version;
   FhnGetInfoFn get_info;
   FhnCreateFn create;
   FhnDestroyFn destroy;

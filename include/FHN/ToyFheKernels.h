@@ -6,7 +6,8 @@
 extern "C" {
 #endif
 
-// The 4 required backend exports for ToyFHE
+// The required backend exports for ToyFHE
+uint32_t toyfhe_fhn_get_abi_version(void);
 FhnBackendInfo *toyfhe_fhn_get_info(void);
 FhnBackendCtx *toyfhe_fhn_create(const char *config_json);
 void toyfhe_fhn_destroy(FhnBackendCtx *ctx);

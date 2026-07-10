@@ -140,6 +140,46 @@ TEST(FhnExecutor, ExecuteChain) {
   fhn_program_free(prog);
 }
 
+TEST(FhnExecutor, RejectsMismatchedProgramVersion) {
+  FhnKernelEntry entries[1] = {
+    {FHN_ADD_CC, test_add_cc, "add_cc"},
+  };
+  FhnKernelTable table = {1, entries};
+
+  fhenomenon::FhnDefaultExecutor executor(&table);
+
+  FhnProgram *prog = fhn_program_alloc(1, 2, 1);
+  ASSERT_NE(prog, nullptr);
+  EXPECT_EQ(prog->version, FHN_ABI_VERSION);
+
+  prog->input_ids[0] = 1;
+  prog->input_ids[1] = 2;
+  prog->output_ids[0] = 3;
+  prog->instructions[0].opcode = FHN_ADD_CC;
+  prog->instructions[0].result_id = 3;
+  prog->instructions[0].operands[0] = 1;
+  prog->instructions[0].operands[1] = 2;
+
+  TestBuffer bufs[4] = {{0}, {10}, {20}, {0}};
+  FhnBuffer *ptrs[4] = {
+    reinterpret_cast<FhnBuffer *>(&bufs[0]),
+    reinterpret_cast<FhnBuffer *>(&bufs[1]),
+    reinterpret_cast<FhnBuffer *>(&bufs[2]),
+    reinterpret_cast<FhnBuffer *>(&bufs[3]),
+  };
+
+  // A program stamped with a different ABI revision must be refused, even
+  // when every opcode it contains happens to be dispatchable.
+  prog->version = FHN_ABI_VERSION + 1;
+  EXPECT_NE(executor.execute(nullptr, prog, ptrs), 0);
+
+  prog->version = FHN_ABI_VERSION;
+  EXPECT_EQ(executor.execute(nullptr, prog, ptrs), 0);
+  EXPECT_EQ(bufs[3].value, 30);
+
+  fhn_program_free(prog);
+}
+
 TEST(FhnExecutor, UnsupportedOpcodeReturnsError) {
   FhnKernelEntry entries[1] = {
     {FHN_ADD_CC, test_add_cc, "add_cc"},

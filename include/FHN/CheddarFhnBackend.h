@@ -11,7 +11,8 @@
 extern "C" {
 #endif
 
-// 4 required exports
+// Required exports
+uint32_t fhn_get_abi_version(void);
 FhnBackendInfo *fhn_get_info(void);
 FhnBackendCtx *fhn_create(const char *config_json);
 void fhn_destroy(FhnBackendCtx *ctx);

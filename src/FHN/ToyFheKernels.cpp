@@ -100,6 +100,8 @@ static FhnKernelTable toyfhe_kernel_table = {
 
 // --- Backend exports -------------------------------------------------------
 
+uint32_t toyfhe_fhn_get_abi_version(void) { return FHN_ABI_VERSION; }
+
 FhnBackendInfo *toyfhe_fhn_get_info(void) {
   static FhnBackendInfo info = {
     "toyfhe-reference",

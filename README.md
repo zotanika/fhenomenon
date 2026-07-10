@@ -102,6 +102,7 @@ This is patient catalog-building work. Practical FHE will need many kernels at m
 A backend exports a compact C ABI:
 
 ```c
+uint32_t        fhn_get_abi_version(void); /* must return FHN_ABI_VERSION */
 FhnBackendInfo *fhn_get_info(void);
 FhnBackendCtx  *fhn_create(const char *config_json);
 void            fhn_destroy(FhnBackendCtx *ctx);
@@ -272,7 +273,7 @@ To add a backend:
 2. Define your opaque `FhnBackendCtx` and `FhnBuffer`.
 3. Wrap your library's operations in uniform `FhnKernelFn` functions.
 4. Fill a `FhnKernelEntry` array.
-5. Export the four required `fhn_*` functions plus `fhn_buffer_alloc`/`fhn_buffer_free` (and the optional `fhn_encrypt_*`/`fhn_decrypt_*` exports if your backend holds key material).
+5. Export `fhn_get_abi_version` (return `FHN_ABI_VERSION`), the four core `fhn_*` functions, and `fhn_buffer_alloc`/`fhn_buffer_free` (plus the optional `fhn_encrypt_*`/`fhn_decrypt_*` exports if your backend holds key material). The loader refuses libraries whose ABI version does not match.
 
 Example kernel table shape:
 

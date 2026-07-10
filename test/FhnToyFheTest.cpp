@@ -21,6 +21,8 @@ class FhnToyFheTest : public ::testing::Test {
   std::unique_ptr<fhenomenon::FhnDefaultExecutor> executor_;
 };
 
+TEST_F(FhnToyFheTest, AbiVersion) { EXPECT_EQ(toyfhe_fhn_get_abi_version(), FHN_ABI_VERSION); }
+
 TEST_F(FhnToyFheTest, BackendInfo) {
   EXPECT_STREQ(info_->name, "toyfhe-reference");
   EXPECT_STREQ(info_->version, "0.1");

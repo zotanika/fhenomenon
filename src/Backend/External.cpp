@@ -18,7 +18,24 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   // Build symbol names with optional prefix
   auto sym = [&](const char *base) { return symbolPrefix + base; };
 
-  // 2. Resolve the 4 required symbols
+  // 2. ABI handshake before anything else: a library built against a
+  //    different header revision may have renumbered opcodes or changed
+  //    struct layouts, and would otherwise load and dispatch silently.
+  vtable_.get_abi_version = reinterpret_cast<FhnGetAbiVersionFn>(dlsym(dl_handle_, sym("fhn_get_abi_version").c_str()));
+  if (!vtable_.get_abi_version) {
+    dlclose(dl_handle_);
+    dl_handle_ = nullptr;
+    throw std::runtime_error("ExternalBackend: library missing fhn_get_abi_version (pre-versioning binary?)");
+  }
+  const uint32_t abi = vtable_.get_abi_version();
+  if (abi != FHN_ABI_VERSION) {
+    dlclose(dl_handle_);
+    dl_handle_ = nullptr;
+    throw std::runtime_error("ExternalBackend: ABI version mismatch (library " + std::to_string(abi) + ", host " +
+                             std::to_string(FHN_ABI_VERSION) + ")");
+  }
+
+  // 3. Resolve the 4 required symbols
   vtable_.get_info = reinterpret_cast<FhnGetInfoFn>(dlsym(dl_handle_, sym("fhn_get_info").c_str()));
   vtable_.create = reinterpret_cast<FhnCreateFn>(dlsym(dl_handle_, sym("fhn_create").c_str()));
   vtable_.destroy = reinterpret_cast<FhnDestroyFn>(dlsym(dl_handle_, sym("fhn_destroy").c_str()));
@@ -30,7 +47,7 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
     throw std::runtime_error("ExternalBackend: library missing required fhn_* symbols");
   }
 
-  // 3. Resolve the host-side data plane. Buffers are required (a generic
+  // 4. Resolve the host-side data plane. Buffers are required (a generic
   //    host cannot feed kernels without them); encrypt/decrypt are optional
   //    (present only when the backend holds key material).
   vtable_.buffer_alloc = reinterpret_cast<FhnBufferAllocFn>(dlsym(dl_handle_, sym("fhn_buffer_alloc").c_str()));
@@ -45,17 +62,17 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   vtable_.decrypt_i64 = reinterpret_cast<FhnDecryptInt64Fn>(dlsym(dl_handle_, sym("fhn_decrypt_i64").c_str()));
   vtable_.decrypt_f64 = reinterpret_cast<FhnDecryptDoubleFn>(dlsym(dl_handle_, sym("fhn_decrypt_f64").c_str()));
 
-  // 4. Resolve optional advanced symbols (NULL if absent)
+  // 5. Resolve optional advanced symbols (NULL if absent)
   vtable_.submit = reinterpret_cast<FhnSubmitFn>(dlsym(dl_handle_, sym("fhn_submit").c_str()));
   vtable_.poll = reinterpret_cast<FhnPollFn>(dlsym(dl_handle_, sym("fhn_poll").c_str()));
   vtable_.wait = reinterpret_cast<FhnWaitFn>(dlsym(dl_handle_, sym("fhn_wait").c_str()));
   vtable_.get_outputs = reinterpret_cast<FhnGetOutputsFn>(dlsym(dl_handle_, sym("fhn_get_outputs").c_str()));
   vtable_.exec_free = reinterpret_cast<FhnExecFreeFn>(dlsym(dl_handle_, sym("fhn_exec_free").c_str()));
 
-  // 5. Get backend info
+  // 6. Get backend info
   info_ = vtable_.get_info();
 
-  // 6. Create backend context
+  // 7. Create backend context
   fhn_ctx_ = vtable_.create(config_json);
   if (!fhn_ctx_) {
     dlclose(dl_handle_);
@@ -63,7 +80,7 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
     throw std::runtime_error("ExternalBackend: fhn_create returned null");
   }
 
-  // 7. Get kernel table and create executor
+  // 8. Get kernel table and create executor
   fhn_table_ = vtable_.get_kernels(fhn_ctx_);
   if (!fhn_table_) {
     vtable_.destroy(fhn_ctx_);

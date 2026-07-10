@@ -44,6 +44,9 @@ TEST(FhnExternalBackend, ResolvesDataPlane) {
   ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
 
   auto &vtable = backend.getVTable();
+  // The ABI handshake resolved and matched, or the constructor would throw.
+  ASSERT_NE(vtable.get_abi_version, nullptr);
+  EXPECT_EQ(vtable.get_abi_version(), FHN_ABI_VERSION);
   ASSERT_NE(vtable.buffer_alloc, nullptr);
   ASSERT_NE(vtable.buffer_free, nullptr);
   // ToyFHE holds its own key material, so the optional key operations exist.

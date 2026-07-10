@@ -20,6 +20,10 @@ bool FhnDefaultExecutor::supports(FhnOpCode opcode) const {
 int FhnDefaultExecutor::execute(FhnBackendCtx *ctx, const FhnProgram *program, FhnBuffer **buffers) {
   if (!program || !buffers)
     return -1;
+  // A program built against a different ABI revision may carry renumbered
+  // opcodes or a different instruction layout; refuse to dispatch it.
+  if (program->version != FHN_ABI_VERSION)
+    return -1;
 
   for (uint32_t i = 0; i < program->num_instructions; ++i) {
     const FhnInstruction &inst = program->instructions[i];
