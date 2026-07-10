@@ -1,8 +1,10 @@
 // ---------------------------------------------------------------------------
 // Cheddar-FHE GPU backend for the FHN kernel API.
 //
-// This file implements the 4 required fhn_* exports for cheddar-fhe (CKKS).
-// It is compiled into libcheddar_fhn.so and loaded via ExternalBackend.
+// This file implements the 4 required fhn_* exports and the host-side data
+// plane (fhn_buffer_alloc/free, fhn_encrypt_f64/fhn_decrypt_f64) for
+// cheddar-fhe (CKKS). It is compiled into libcheddar_fhn.so and loaded via
+// ExternalBackend.
 // ---------------------------------------------------------------------------
 
 #include "FHN/CheddarFhnBackend.h"
@@ -114,52 +116,8 @@ static FhnBackendCtx *createFromJson(const char *config_json) {
 }
 
 // --- Kernel implementations ------------------------------------------------
-
-static int cheddar_encode(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t *params, const double *fparams) {
-  // params[0] = level, fparams[0] = scale (0 = use default)
-  int level = params[0] > 0 ? static_cast<int>(params[0]) : ctx->default_encryption_level;
-  double scale = fparams[0] > 0.0 ? fparams[0] : ctx->param->GetScale(level);
-
-  // operands[0] should contain the message
-  if (!operands[0] || operands[0]->kind != CheddarBufKind::Message)
-    return -1;
-
-  ctx->context->encoder_.Encode(result->pt, level, scale, operands[0]->msg);
-  result->kind = CheddarBufKind::Plaintext;
-  return 0;
-}
-
-static int cheddar_encrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                           const int64_t * /*params*/, const double * /*fparams*/) {
-  // operands[0] should contain plaintext
-  if (!operands[0] || operands[0]->kind != CheddarBufKind::Plaintext)
-    return -1;
-
-  ctx->ui->Encrypt(result->ct, operands[0]->pt);
-  result->kind = CheddarBufKind::Ciphertext;
-  return 0;
-}
-
-static int cheddar_decrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                           const int64_t * /*params*/, const double * /*fparams*/) {
-  if (!operands[0] || operands[0]->kind != CheddarBufKind::Ciphertext)
-    return -1;
-
-  ctx->ui->Decrypt(result->pt, operands[0]->ct);
-  result->kind = CheddarBufKind::Plaintext;
-  return 0;
-}
-
-static int cheddar_decode(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t * /*params*/, const double * /*fparams*/) {
-  if (!operands[0] || operands[0]->kind != CheddarBufKind::Plaintext)
-    return -1;
-
-  ctx->context->encoder_.Decode(result->msg, operands[0]->pt);
-  result->kind = CheddarBufKind::Message;
-  return 0;
-}
+// Compute-only: encode/encrypt/decrypt/decode are host-side data-plane
+// exports below, never kernel-table entries.
 
 // --- Arithmetic kernels ---
 
@@ -324,10 +282,6 @@ static int cheddar_level_down(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBu
 // --- Kernel table ----------------------------------------------------------
 
 static FhnKernelEntry cheddar_kernels[] = {
-  {FHN_ENCODE, cheddar_encode, "encode"},
-  {FHN_ENCRYPT, cheddar_encrypt, "encrypt"},
-  {FHN_DECRYPT, cheddar_decrypt, "decrypt"},
-  {FHN_DECODE, cheddar_decode, "decode"},
   {FHN_ADD_CC, cheddar_add_cc, "add_cc"},
   {FHN_ADD_CP, cheddar_add_cp, "add_cp"},
   {FHN_ADD_CS, cheddar_add_cs, "add_cs"},
@@ -361,9 +315,7 @@ extern "C" {
 
 FhnBackendInfo *fhn_get_info(void) {
   static FhnBackendInfo info = {
-    "cheddar-ckks",
-    "1.0",
-    FHN_DEVICE_GPU,
+    "cheddar-ckks", "1.0", FHN_DEVICE_GPU,
     0, // detected at runtime
   };
   return &info;
@@ -382,14 +334,68 @@ void fhn_destroy(FhnBackendCtx *ctx) { delete ctx; }
 
 FhnKernelTable *fhn_get_kernels(FhnBackendCtx * /*ctx*/) { return &cheddar_kernel_table; }
 
-// --- Buffer helpers --------------------------------------------------------
+// --- Host-side data plane --------------------------------------------------
+// These exports handle plaintexts and key material. The trusted host calls
+// them directly; they are never dispatched from an FhnProgram. Like the four
+// core exports above, they are un-prefixed so a prefix-less ExternalBackend
+// resolves the whole data plane.
 
-FhnBuffer *cheddar_fhn_buffer_alloc(FhnBackendCtx * /*ctx*/) { return new FhnBuffer{}; }
+FhnBuffer *fhn_buffer_alloc(FhnBackendCtx * /*ctx*/) { return new FhnBuffer{}; }
 
-void cheddar_fhn_buffer_free(FhnBackendCtx * /*ctx*/, FhnBuffer *buf) { delete buf; }
+void fhn_buffer_free(FhnBackendCtx * /*ctx*/, FhnBuffer *buf) { delete buf; }
 
-void cheddar_fhn_buffer_read_complex(FhnBackendCtx * /*ctx*/, FhnBuffer *buf, double *real_out, double *imag_out,
+int fhn_encrypt_f64(FhnBackendCtx *ctx, FhnBuffer *out, double value) {
+  if (!out)
+    return -1;
+  // Fused encode + encrypt: single-slot message at the default level/scale.
+  int level = ctx->default_encryption_level;
+  double scale = ctx->param->GetScale(level);
+  std::vector<cheddar::Complex> msg = {{value, 0.0}};
+  cheddar::Plaintext<word> pt;
+  ctx->context->encoder_.Encode(pt, level, scale, msg);
+  ctx->ui->Encrypt(out->ct, pt);
+  out->kind = CheddarBufKind::Ciphertext;
+  return 0;
+}
+
+int fhn_decrypt_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *value_out) {
+  if (!in || !value_out || in->kind != CheddarBufKind::Ciphertext)
+    return -1;
+  // Fused decrypt + decode: single-value convention is the first slot.
+  cheddar::Plaintext<word> pt;
+  ctx->ui->Decrypt(pt, in->ct);
+  std::vector<cheddar::Complex> msg;
+  ctx->context->encoder_.Decode(msg, pt);
+  if (msg.empty())
+    return -1;
+  *value_out = msg[0].real();
+  return 0;
+}
+
+// --- Buffer helpers (Cheddar-specific, for tests/examples) -----------------
+
+int cheddar_fhn_buffer_encrypt_message(FhnBackendCtx *ctx, FhnBuffer *buf) {
+  if (!buf || buf->kind != CheddarBufKind::Message)
+    return -1;
+  // Fused encode + encrypt of the staged message, in place.
+  int level = ctx->default_encryption_level;
+  double scale = ctx->param->GetScale(level);
+  cheddar::Plaintext<word> pt;
+  ctx->context->encoder_.Encode(pt, level, scale, buf->msg);
+  ctx->ui->Encrypt(buf->ct, pt);
+  buf->kind = CheddarBufKind::Ciphertext;
+  return 0;
+}
+
+void cheddar_fhn_buffer_read_complex(FhnBackendCtx *ctx, FhnBuffer *buf, double *real_out, double *imag_out,
                                      int max_slots) {
+  if (buf->kind == CheddarBufKind::Ciphertext) {
+    // Fused decrypt + decode of the ciphertext, in place.
+    cheddar::Plaintext<word> pt;
+    ctx->ui->Decrypt(pt, buf->ct);
+    ctx->context->encoder_.Decode(buf->msg, pt);
+    buf->kind = CheddarBufKind::Message;
+  }
   if (buf->kind != CheddarBufKind::Message)
     return;
   int n = std::min(max_slots, static_cast<int>(buf->msg.size()));

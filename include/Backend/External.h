@@ -44,6 +44,8 @@ class ExternalBackend : public Backend {
   std::shared_ptr<FhenonBase> compareLe(const FhenonBase &, const FhenonBase &) const override { return nullptr; }
 
   private:
+  std::shared_ptr<FhnBuffer> makeBuffer() const;
+
   void *dl_handle_ = nullptr;
   FhnBackendVTable vtable_{};
   FhnBackendInfo *info_ = nullptr;

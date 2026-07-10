@@ -28,170 +28,142 @@ TEST_F(FhnToyFheTest, BackendInfo) {
   EXPECT_EQ(info_->device_memory, 0u);
 }
 
-TEST_F(FhnToyFheTest, SupportsBasicOps) {
+TEST_F(FhnToyFheTest, SupportsComputeOpsOnly) {
   EXPECT_TRUE(executor_->supports(FHN_ADD_CC));
   EXPECT_TRUE(executor_->supports(FHN_HMULT));
-  EXPECT_TRUE(executor_->supports(FHN_ENCRYPT));
-  EXPECT_TRUE(executor_->supports(FHN_DECRYPT));
+  EXPECT_TRUE(executor_->supports(FHN_MULT_CS));
   EXPECT_FALSE(executor_->supports(FHN_ROTATE));
   EXPECT_FALSE(executor_->supports(FHN_AND));
 }
 
-TEST_F(FhnToyFheTest, EncryptAddDecrypt) {
-  // Program:
-  //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=10
-  //   inst[1]: FHN_ENCRYPT result_id=2, params[0]=20
-  //   inst[2]: FHN_ADD_CC  result_id=3, operands={1,2}
-  //   inst[3]: FHN_DECRYPT result_id=4, operands={3}
-  FhnProgram *prog = fhn_program_alloc(4, 0, 1);
+// Encryption and decryption live in the host-side data plane, not in the
+// instruction stream: encrypt into buffers, run a compute-only program,
+// decrypt the output buffer.
+TEST_F(FhnToyFheTest, DataPlaneRoundTrip) {
+  FhnBuffer *buf = toyfhe_fhn_buffer_alloc(ctx_);
+
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, buf, 42), 0);
+  int64_t value = 0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_i64(ctx_, buf, &value), 0);
+  EXPECT_EQ(value, 42);
+
+  ASSERT_EQ(toyfhe_fhn_encrypt_f64(ctx_, buf, 2.5), 0);
+  double dvalue = 0.0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_f64(ctx_, buf, &dvalue), 0);
+  EXPECT_NEAR(dvalue, 2.5, 1e-3);
+
+  // Decrypting an empty (non-ciphertext) buffer is an error, not a zero.
+  FhnBuffer *empty = toyfhe_fhn_buffer_alloc(ctx_);
+  EXPECT_NE(toyfhe_fhn_decrypt_i64(ctx_, empty, &value), 0);
+
+  toyfhe_fhn_buffer_free(ctx_, empty);
+  toyfhe_fhn_buffer_free(ctx_, buf);
+}
+
+TEST_F(FhnToyFheTest, AddProgram) {
+  // Program: buf[3] = buf[1] + buf[2] (inputs encrypted host-side)
+  FhnProgram *prog = fhn_program_alloc(1, 2, 1);
   ASSERT_NE(prog, nullptr);
 
-  prog->output_ids[0] = 4;
+  prog->input_ids[0] = 1;
+  prog->input_ids[1] = 2;
+  prog->output_ids[0] = 3;
 
-  // inst 0: encrypt 10
-  auto &enc1 = prog->instructions[0];
-  std::memset(&enc1, 0, sizeof(enc1));
-  enc1.opcode = FHN_ENCRYPT;
-  enc1.result_id = 1;
-  enc1.params[0] = 10;
-
-  // inst 1: encrypt 20
-  auto &enc2 = prog->instructions[1];
-  std::memset(&enc2, 0, sizeof(enc2));
-  enc2.opcode = FHN_ENCRYPT;
-  enc2.result_id = 2;
-  enc2.params[0] = 20;
-
-  // inst 2: add
-  auto &add = prog->instructions[2];
+  auto &add = prog->instructions[0];
   std::memset(&add, 0, sizeof(add));
   add.opcode = FHN_ADD_CC;
   add.result_id = 3;
   add.operands[0] = 1;
   add.operands[1] = 2;
 
-  // inst 3: decrypt
-  auto &dec = prog->instructions[3];
-  std::memset(&dec, 0, sizeof(dec));
-  dec.opcode = FHN_DECRYPT;
-  dec.result_id = 4;
-  dec.operands[0] = 3;
-
-  // Allocate buffers (index 0 unused, 1-4 for result_ids)
-  FhnBuffer *bufs[5];
-  for (int i = 0; i < 5; ++i) {
+  FhnBuffer *bufs[4];
+  for (int i = 0; i < 4; ++i) {
     bufs[i] = toyfhe_fhn_buffer_alloc(ctx_);
   }
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, bufs[1], 10), 0);
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, bufs[2], 20), 0);
 
   int rc = executor_->execute(ctx_, prog, bufs);
   EXPECT_EQ(rc, 0);
 
-  int64_t result = toyfhe_fhn_buffer_read_int(ctx_, bufs[4]);
+  int64_t result = 0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_i64(ctx_, bufs[3], &result), 0);
   EXPECT_EQ(result, 30);
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 4; ++i) {
     toyfhe_fhn_buffer_free(ctx_, bufs[i]);
   }
   fhn_program_free(prog);
 }
 
-TEST_F(FhnToyFheTest, EncryptMultiplyDecrypt) {
+TEST_F(FhnToyFheTest, ScalarMultiplyProgram) {
   // MULT_CS: ciphertext * scalar with an integral scalar stays scale-free.
-  // Program:
-  //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=7
-  //   inst[1]: FHN_MULT_CS result_id=2, operands={1}, fparams[0]=6.0
-  //   inst[2]: FHN_DECRYPT result_id=3, operands={2}
-  FhnProgram *prog = fhn_program_alloc(3, 0, 1);
+  // Program: buf[2] = buf[1] * 6.0
+  FhnProgram *prog = fhn_program_alloc(1, 1, 1);
   ASSERT_NE(prog, nullptr);
 
-  prog->output_ids[0] = 3;
+  prog->input_ids[0] = 1;
+  prog->output_ids[0] = 2;
 
-  auto &enc1 = prog->instructions[0];
-  std::memset(&enc1, 0, sizeof(enc1));
-  enc1.opcode = FHN_ENCRYPT;
-  enc1.result_id = 1;
-  enc1.params[0] = 7;
-
-  auto &mult = prog->instructions[1];
+  auto &mult = prog->instructions[0];
   std::memset(&mult, 0, sizeof(mult));
   mult.opcode = FHN_MULT_CS;
   mult.result_id = 2;
   mult.operands[0] = 1;
   mult.fparams[0] = 6.0;
 
-  auto &dec = prog->instructions[2];
-  std::memset(&dec, 0, sizeof(dec));
-  dec.opcode = FHN_DECRYPT;
-  dec.result_id = 3;
-  dec.operands[0] = 2;
-
-  FhnBuffer *bufs[4];
-  for (int i = 0; i < 4; ++i) {
+  FhnBuffer *bufs[3];
+  for (int i = 0; i < 3; ++i) {
     bufs[i] = toyfhe_fhn_buffer_alloc(ctx_);
   }
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, bufs[1], 7), 0);
 
   int rc = executor_->execute(ctx_, prog, bufs);
   EXPECT_EQ(rc, 0);
 
-  int64_t result = toyfhe_fhn_buffer_read_int(ctx_, bufs[3]);
+  int64_t result = 0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_i64(ctx_, bufs[2], &result), 0);
   EXPECT_EQ(result, 42);
 
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 3; ++i) {
     toyfhe_fhn_buffer_free(ctx_, bufs[i]);
   }
   fhn_program_free(prog);
 }
 
-TEST_F(FhnToyFheTest, EncryptCtCtMultiplyDecrypt) {
+TEST_F(FhnToyFheTest, CtCtMultiplyProgram) {
   // Ciphertext * ciphertext through the fused HMULT kernel must decrypt to
   // the exact integer product (mult + relin + rescale).
-  // Program:
-  //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=13
-  //   inst[1]: FHN_ENCRYPT result_id=2, params[0]=20
-  //   inst[2]: FHN_HMULT   result_id=3, operands={1,2}
-  //   inst[3]: FHN_DECRYPT result_id=4, operands={3}
-  FhnProgram *prog = fhn_program_alloc(4, 0, 1);
+  // Program: buf[3] = HMULT(buf[1], buf[2])
+  FhnProgram *prog = fhn_program_alloc(1, 2, 1);
   ASSERT_NE(prog, nullptr);
 
-  prog->output_ids[0] = 4;
+  prog->input_ids[0] = 1;
+  prog->input_ids[1] = 2;
+  prog->output_ids[0] = 3;
 
-  auto &enc1 = prog->instructions[0];
-  std::memset(&enc1, 0, sizeof(enc1));
-  enc1.opcode = FHN_ENCRYPT;
-  enc1.result_id = 1;
-  enc1.params[0] = 13;
-
-  auto &enc2 = prog->instructions[1];
-  std::memset(&enc2, 0, sizeof(enc2));
-  enc2.opcode = FHN_ENCRYPT;
-  enc2.result_id = 2;
-  enc2.params[0] = 20;
-
-  auto &mult = prog->instructions[2];
+  auto &mult = prog->instructions[0];
   std::memset(&mult, 0, sizeof(mult));
   mult.opcode = FHN_HMULT;
   mult.result_id = 3;
   mult.operands[0] = 1;
   mult.operands[1] = 2;
 
-  auto &dec = prog->instructions[3];
-  std::memset(&dec, 0, sizeof(dec));
-  dec.opcode = FHN_DECRYPT;
-  dec.result_id = 4;
-  dec.operands[0] = 3;
-
-  FhnBuffer *bufs[5];
-  for (int i = 0; i < 5; ++i) {
+  FhnBuffer *bufs[4];
+  for (int i = 0; i < 4; ++i) {
     bufs[i] = toyfhe_fhn_buffer_alloc(ctx_);
   }
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, bufs[1], 13), 0);
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, bufs[2], 20), 0);
 
   int rc = executor_->execute(ctx_, prog, bufs);
   EXPECT_EQ(rc, 0);
 
-  int64_t result = toyfhe_fhn_buffer_read_int(ctx_, bufs[4]);
+  int64_t result = 0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_i64(ctx_, bufs[3], &result), 0);
   EXPECT_EQ(result, 260);
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 4; ++i) {
     toyfhe_fhn_buffer_free(ctx_, bufs[i]);
   }
   fhn_program_free(prog);
@@ -199,47 +171,39 @@ TEST_F(FhnToyFheTest, EncryptCtCtMultiplyDecrypt) {
 
 TEST_F(FhnToyFheTest, FixedPointDecryptReturnsScaledValue) {
   // A fractional scalar moves the ciphertext to fixed-point encoding; the
-  // DECRYPT kernel must decode through the scale-aware path.
-  // Program:
-  //   inst[0]: FHN_ENCRYPT result_id=1, params[0]=10
-  //   inst[1]: FHN_MULT_CS result_id=2, operands={1}, fparams[0]=0.5
-  //   inst[2]: FHN_DECRYPT result_id=3, operands={2}
-  FhnProgram *prog = fhn_program_alloc(3, 0, 1);
+  // data-plane decrypt must decode through the scale-aware path.
+  // Program: buf[2] = buf[1] * 0.5
+  FhnProgram *prog = fhn_program_alloc(1, 1, 1);
   ASSERT_NE(prog, nullptr);
 
-  prog->output_ids[0] = 3;
+  prog->input_ids[0] = 1;
+  prog->output_ids[0] = 2;
 
-  auto &enc1 = prog->instructions[0];
-  std::memset(&enc1, 0, sizeof(enc1));
-  enc1.opcode = FHN_ENCRYPT;
-  enc1.result_id = 1;
-  enc1.params[0] = 10;
-
-  auto &mult = prog->instructions[1];
+  auto &mult = prog->instructions[0];
   std::memset(&mult, 0, sizeof(mult));
   mult.opcode = FHN_MULT_CS;
   mult.result_id = 2;
   mult.operands[0] = 1;
   mult.fparams[0] = 0.5;
 
-  auto &dec = prog->instructions[2];
-  std::memset(&dec, 0, sizeof(dec));
-  dec.opcode = FHN_DECRYPT;
-  dec.result_id = 3;
-  dec.operands[0] = 2;
-
-  FhnBuffer *bufs[4];
-  for (int i = 0; i < 4; ++i) {
+  FhnBuffer *bufs[3];
+  for (int i = 0; i < 3; ++i) {
     bufs[i] = toyfhe_fhn_buffer_alloc(ctx_);
   }
+  ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, bufs[1], 10), 0);
 
   int rc = executor_->execute(ctx_, prog, bufs);
   EXPECT_EQ(rc, 0);
 
-  EXPECT_NEAR(toyfhe_fhn_buffer_read_double(ctx_, bufs[3]), 5.0, 1e-3);
-  EXPECT_EQ(toyfhe_fhn_buffer_read_int(ctx_, bufs[3]), 5);
+  double dresult = 0.0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_f64(ctx_, bufs[2], &dresult), 0);
+  EXPECT_NEAR(dresult, 5.0, 1e-3);
 
-  for (int i = 0; i < 4; ++i) {
+  int64_t iresult = 0;
+  ASSERT_EQ(toyfhe_fhn_decrypt_i64(ctx_, bufs[2], &iresult), 0);
+  EXPECT_EQ(iresult, 5);
+
+  for (int i = 0; i < 3; ++i) {
     toyfhe_fhn_buffer_free(ctx_, bufs[i]);
   }
   fhn_program_free(prog);

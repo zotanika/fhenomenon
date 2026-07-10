@@ -53,6 +53,14 @@ TEST(FhnBackendApi, VTableNullOptional) {
   EXPECT_EQ(vtable.destroy, nullptr);
   EXPECT_EQ(vtable.get_kernels, nullptr);
 
+  /* Data plane (buffers required at load time, key ops optional) */
+  EXPECT_EQ(vtable.buffer_alloc, nullptr);
+  EXPECT_EQ(vtable.buffer_free, nullptr);
+  EXPECT_EQ(vtable.encrypt_i64, nullptr);
+  EXPECT_EQ(vtable.encrypt_f64, nullptr);
+  EXPECT_EQ(vtable.decrypt_i64, nullptr);
+  EXPECT_EQ(vtable.decrypt_f64, nullptr);
+
   /* Optional fields */
   EXPECT_EQ(vtable.submit, nullptr);
   EXPECT_EQ(vtable.poll, nullptr);

@@ -52,6 +52,24 @@ typedef FhnBackendCtx *(*FhnCreateFn)(const char *config_json);
 typedef void (*FhnDestroyFn)(FhnBackendCtx *ctx);
 typedef FhnKernelTable *(*FhnGetKernelsFn)(FhnBackendCtx *ctx);
 
+/* ── Host-side data plane (trusted) ──
+   Plaintexts and key material cross the trust boundary only through these
+   exports, which the trusted host resolves and calls directly. They are not
+   kernel-table entries and cannot be reached from an FhnProgram: the
+   instruction stream the executor dispatches is public and compute-only.
+
+   buffer_alloc/buffer_free are required — a generic host cannot feed any
+   kernel without them. The encrypt/decrypt exports are optional: they exist
+   only when the backend holds key material (development and single-process
+   deployments). A production evaluation-only executor never holds keys, and
+   ciphertexts then enter and leave through serialized buffers instead. */
+typedef FhnBuffer *(*FhnBufferAllocFn)(FhnBackendCtx *ctx);
+typedef void (*FhnBufferFreeFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
+typedef int (*FhnEncryptInt64Fn)(FhnBackendCtx *ctx, FhnBuffer *out, int64_t value);
+typedef int (*FhnEncryptDoubleFn)(FhnBackendCtx *ctx, FhnBuffer *out, double value);
+typedef int (*FhnDecryptInt64Fn)(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out);
+typedef int (*FhnDecryptDoubleFn)(FhnBackendCtx *ctx, const FhnBuffer *in, double *value_out);
+
 /* Optional advanced exports (NULL if not provided) */
 typedef FhnExecHandle *(*FhnSubmitFn)(FhnBackendCtx *ctx, const FhnProgram *program, FhnBuffer **inputs,
                                       uint32_t num_inputs);
@@ -66,6 +84,14 @@ typedef struct FhnBackendVTable {
   FhnCreateFn create;
   FhnDestroyFn destroy;
   FhnGetKernelsFn get_kernels;
+
+  /* Host-side data plane: buffers required, key operations optional */
+  FhnBufferAllocFn buffer_alloc;
+  FhnBufferFreeFn buffer_free;
+  FhnEncryptInt64Fn encrypt_i64;
+  FhnEncryptDoubleFn encrypt_f64;
+  FhnDecryptInt64Fn decrypt_i64;
+  FhnDecryptDoubleFn decrypt_f64;
 
   /* Optional (NULL if not provided by backend) */
   FhnSubmitFn submit;

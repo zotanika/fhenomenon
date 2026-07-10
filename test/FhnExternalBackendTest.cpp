@@ -1,7 +1,10 @@
 #include "Backend/External.h"
 #include "FHN/FhnDefaultExecutor.h"
 #include "FHN/fhn_program.h"
+#include "Fhenon.h"
+#include "Parameter/ParameterGen.h"
 
+#include <any>
 #include <dlfcn.h>
 #include <gtest/gtest.h>
 
@@ -27,21 +30,28 @@ TEST(FhnExternalBackend, LoadAndQueryInfo) {
   EXPECT_EQ(info->device_type, FHN_DEVICE_CPU);
 }
 
-TEST(FhnExternalBackend, ExecutorSupportsOps) {
+TEST(FhnExternalBackend, ExecutorSupportsComputeOpsOnly) {
   ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
 
   auto *exec = backend.getFhnExecutor();
   ASSERT_NE(exec, nullptr);
-  EXPECT_TRUE(exec->supports(FHN_ENCRYPT));
-  EXPECT_TRUE(exec->supports(FHN_DECRYPT));
   EXPECT_TRUE(exec->supports(FHN_ADD_CC));
   EXPECT_TRUE(exec->supports(FHN_HMULT));
+  EXPECT_FALSE(exec->supports(FHN_ROTATE));
 }
 
-// Resolve buffer helpers from the loaded library
-using BufAllocFn = FhnBuffer *(*)(FhnBackendCtx *);
-using BufFreeFn = void (*)(FhnBackendCtx *, FhnBuffer *);
-using BufReadIntFn = int64_t (*)(FhnBackendCtx *, FhnBuffer *);
+TEST(FhnExternalBackend, ResolvesDataPlane) {
+  ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
+
+  auto &vtable = backend.getVTable();
+  ASSERT_NE(vtable.buffer_alloc, nullptr);
+  ASSERT_NE(vtable.buffer_free, nullptr);
+  // ToyFHE holds its own key material, so the optional key operations exist.
+  EXPECT_NE(vtable.encrypt_i64, nullptr);
+  EXPECT_NE(vtable.encrypt_f64, nullptr);
+  EXPECT_NE(vtable.decrypt_i64, nullptr);
+  EXPECT_NE(vtable.decrypt_f64, nullptr);
+}
 
 TEST(FhnExternalBackend, EncryptAddDecryptViaDlopen) {
   ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
@@ -49,39 +59,45 @@ TEST(FhnExternalBackend, EncryptAddDecryptViaDlopen) {
   auto &vtable = backend.getVTable();
   auto *ctx = backend.getFhnCtx();
   auto *exec = backend.getFhnExecutor();
+  ASSERT_NE(vtable.encrypt_i64, nullptr);
+  ASSERT_NE(vtable.decrypt_i64, nullptr);
 
-  // Resolve buffer helpers from the shared lib
-  void *dl = dlopen(getTestLibPath().c_str(), RTLD_LAZY | RTLD_NOLOAD);
-  ASSERT_NE(dl, nullptr);
-  auto buf_alloc = reinterpret_cast<BufAllocFn>(dlsym(dl, "toyfhe_fhn_buffer_alloc"));
-  auto buf_free = reinterpret_cast<BufFreeFn>(dlsym(dl, "toyfhe_fhn_buffer_free"));
-  auto buf_read = reinterpret_cast<BufReadIntFn>(dlsym(dl, "toyfhe_fhn_buffer_read_int"));
-  ASSERT_NE(buf_alloc, nullptr);
-  ASSERT_NE(buf_free, nullptr);
-  ASSERT_NE(buf_read, nullptr);
+  // Inputs enter through the host-side data plane; the program is
+  // compute-only: bufs[3] = bufs[1] + bufs[2]
+  auto *prog = fhn_program_alloc(1, 2, 1);
+  prog->input_ids[0] = 1;
+  prog->input_ids[1] = 2;
+  prog->output_ids[0] = 3;
+  prog->instructions[0] = {FHN_ADD_CC, 3, {1, 2, 0, 0}, {}, {}};
 
-  // Program: encrypt(10), encrypt(20), add, decrypt
-  auto *prog = fhn_program_alloc(4, 0, 1);
-  prog->output_ids[0] = 4;
-  prog->instructions[0] = {FHN_ENCRYPT, 1, {0, 0, 0, 0}, {10, 0, 0, 0}, {}};
-  prog->instructions[1] = {FHN_ENCRYPT, 2, {0, 0, 0, 0}, {20, 0, 0, 0}, {}};
-  prog->instructions[2] = {FHN_ADD_CC, 3, {1, 2, 0, 0}, {}, {}};
-  prog->instructions[3] = {FHN_DECRYPT, 4, {3, 0, 0, 0}, {}, {}};
-
-  FhnBuffer *bufs[5];
-  for (int i = 0; i < 5; i++)
-    bufs[i] = buf_alloc(ctx);
+  FhnBuffer *bufs[4];
+  for (int i = 0; i < 4; i++)
+    bufs[i] = vtable.buffer_alloc(ctx);
+  ASSERT_EQ(vtable.encrypt_i64(ctx, bufs[1], 10), 0);
+  ASSERT_EQ(vtable.encrypt_i64(ctx, bufs[2], 20), 0);
 
   int err = exec->execute(ctx, prog, bufs);
   EXPECT_EQ(err, 0);
 
-  int64_t result = buf_read(ctx, bufs[4]);
+  int64_t result = 0;
+  ASSERT_EQ(vtable.decrypt_i64(ctx, bufs[3], &result), 0);
   EXPECT_EQ(result, 30);
 
-  for (int i = 0; i < 5; i++)
-    buf_free(ctx, bufs[i]);
+  for (int i = 0; i < 4; i++)
+    vtable.buffer_free(ctx, bufs[i]);
   fhn_program_free(prog);
-  dlclose(dl);
+}
+
+// The Backend-interface path: transform() encrypts and decrypt() decrypts
+// through the data plane instead of silently returning 0.
+TEST(FhnExternalBackend, BackendInterfaceEncryptDecrypt) {
+  ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
+
+  Fhenon<int> a = 123;
+  auto param = ParameterGen::createCKKSParam(CKKSParamPreset::FGb);
+  backend.transform(a, *param);
+  EXPECT_TRUE(a.isEncrypted_);
+  EXPECT_EQ(std::any_cast<int>(backend.decrypt(a)), 123);
 }
 
 TEST(FhnExternalBackend, InvalidLibraryThrows) {

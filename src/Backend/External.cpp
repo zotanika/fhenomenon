@@ -1,4 +1,5 @@
 #include "Backend/External.h"
+#include "Fhenon.h"
 
 #include <dlfcn.h>
 #include <iostream>
@@ -29,17 +30,32 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
     throw std::runtime_error("ExternalBackend: library missing required fhn_* symbols");
   }
 
-  // 3. Resolve optional advanced symbols (NULL if absent)
+  // 3. Resolve the host-side data plane. Buffers are required (a generic
+  //    host cannot feed kernels without them); encrypt/decrypt are optional
+  //    (present only when the backend holds key material).
+  vtable_.buffer_alloc = reinterpret_cast<FhnBufferAllocFn>(dlsym(dl_handle_, sym("fhn_buffer_alloc").c_str()));
+  vtable_.buffer_free = reinterpret_cast<FhnBufferFreeFn>(dlsym(dl_handle_, sym("fhn_buffer_free").c_str()));
+  if (!vtable_.buffer_alloc || !vtable_.buffer_free) {
+    dlclose(dl_handle_);
+    dl_handle_ = nullptr;
+    throw std::runtime_error("ExternalBackend: library missing required fhn_buffer_alloc/fhn_buffer_free");
+  }
+  vtable_.encrypt_i64 = reinterpret_cast<FhnEncryptInt64Fn>(dlsym(dl_handle_, sym("fhn_encrypt_i64").c_str()));
+  vtable_.encrypt_f64 = reinterpret_cast<FhnEncryptDoubleFn>(dlsym(dl_handle_, sym("fhn_encrypt_f64").c_str()));
+  vtable_.decrypt_i64 = reinterpret_cast<FhnDecryptInt64Fn>(dlsym(dl_handle_, sym("fhn_decrypt_i64").c_str()));
+  vtable_.decrypt_f64 = reinterpret_cast<FhnDecryptDoubleFn>(dlsym(dl_handle_, sym("fhn_decrypt_f64").c_str()));
+
+  // 4. Resolve optional advanced symbols (NULL if absent)
   vtable_.submit = reinterpret_cast<FhnSubmitFn>(dlsym(dl_handle_, sym("fhn_submit").c_str()));
   vtable_.poll = reinterpret_cast<FhnPollFn>(dlsym(dl_handle_, sym("fhn_poll").c_str()));
   vtable_.wait = reinterpret_cast<FhnWaitFn>(dlsym(dl_handle_, sym("fhn_wait").c_str()));
   vtable_.get_outputs = reinterpret_cast<FhnGetOutputsFn>(dlsym(dl_handle_, sym("fhn_get_outputs").c_str()));
   vtable_.exec_free = reinterpret_cast<FhnExecFreeFn>(dlsym(dl_handle_, sym("fhn_exec_free").c_str()));
 
-  // 4. Get backend info
+  // 5. Get backend info
   info_ = vtable_.get_info();
 
-  // 5. Create backend context
+  // 6. Create backend context
   fhn_ctx_ = vtable_.create(config_json);
   if (!fhn_ctx_) {
     dlclose(dl_handle_);
@@ -47,7 +63,7 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
     throw std::runtime_error("ExternalBackend: fhn_create returned null");
   }
 
-  // 6. Get kernel table and create executor
+  // 7. Get kernel table and create executor
   fhn_table_ = vtable_.get_kernels(fhn_ctx_);
   if (!fhn_table_) {
     vtable_.destroy(fhn_ctx_);
@@ -74,8 +90,47 @@ ExternalBackend::~ExternalBackend() {
   }
 }
 
-void ExternalBackend::transform(FhenonBase & /*entity*/, const Parameter & /*params*/) const {
-  // External backends handle encryption through FHN_ENCRYPT kernel
+std::shared_ptr<FhnBuffer> ExternalBackend::makeBuffer() const {
+  FhnBuffer *raw = vtable_.buffer_alloc(fhn_ctx_);
+  if (!raw) {
+    throw std::runtime_error("ExternalBackend: fhn_buffer_alloc failed");
+  }
+  // The deleter captures the vtable and context by value; the Backend
+  // singleton outlives every Fhenon that holds one of these buffers.
+  auto free_fn = vtable_.buffer_free;
+  auto *ctx = fhn_ctx_;
+  return std::shared_ptr<FhnBuffer>(raw, [free_fn, ctx](FhnBuffer *buf) { free_fn(ctx, buf); });
+}
+
+void ExternalBackend::transform(FhenonBase &entity, const Parameter & /*params*/) const {
+  // Host-side data plane: encryption never goes through the kernel table.
+  if (entity.type() == typeid(int)) {
+    if (!vtable_.encrypt_i64) {
+      throw std::runtime_error("ExternalBackend: backend does not export fhn_encrypt_i64 (no key material)");
+    }
+    auto &derived = dynamic_cast<Fhenon<int> &>(entity);
+    auto buffer = makeBuffer();
+    if (vtable_.encrypt_i64(fhn_ctx_, buffer.get(), derived.getValue()) != 0) {
+      throw std::runtime_error("ExternalBackend: fhn_encrypt_i64 failed");
+    }
+    entity.ciphertext_ = buffer;
+    entity.isEncrypted_ = true;
+    return;
+  }
+  if (entity.type() == typeid(double)) {
+    if (!vtable_.encrypt_f64) {
+      throw std::runtime_error("ExternalBackend: backend does not export fhn_encrypt_f64 (no key material)");
+    }
+    auto &derived = dynamic_cast<Fhenon<double> &>(entity);
+    auto buffer = makeBuffer();
+    if (vtable_.encrypt_f64(fhn_ctx_, buffer.get(), derived.getValue()) != 0) {
+      throw std::runtime_error("ExternalBackend: fhn_encrypt_f64 failed");
+    }
+    entity.ciphertext_ = buffer;
+    entity.isEncrypted_ = true;
+    return;
+  }
+  throw std::runtime_error("ExternalBackend: unsupported type for encryption");
 }
 
 std::shared_ptr<FhenonBase> ExternalBackend::add(const FhenonBase & /*a*/, const FhenonBase & /*b*/) const {
@@ -88,6 +143,40 @@ std::shared_ptr<FhenonBase> ExternalBackend::multiply(const FhenonBase & /*a*/, 
   return nullptr;
 }
 
-std::any ExternalBackend::decrypt(const FhenonBase & /*entity*/) const { return 0; }
+std::any ExternalBackend::decrypt(const FhenonBase &entity) const {
+  if (!entity.isEncrypted_ || !entity.ciphertext_.has_value()) {
+    // Unencrypted: fall back to the plaintext value.
+    if (entity.type() == typeid(int)) {
+      return dynamic_cast<const Fhenon<int> &>(entity).getValue();
+    }
+    if (entity.type() == typeid(double)) {
+      return dynamic_cast<const Fhenon<double> &>(entity).getValue();
+    }
+    return {};
+  }
+
+  auto buffer = std::any_cast<std::shared_ptr<FhnBuffer>>(entity.ciphertext_);
+  if (entity.type() == typeid(int)) {
+    if (!vtable_.decrypt_i64) {
+      throw std::runtime_error("ExternalBackend: backend does not export fhn_decrypt_i64 (no key material)");
+    }
+    int64_t value = 0;
+    if (vtable_.decrypt_i64(fhn_ctx_, buffer.get(), &value) != 0) {
+      throw std::runtime_error("ExternalBackend: fhn_decrypt_i64 failed");
+    }
+    return static_cast<int>(value);
+  }
+  if (entity.type() == typeid(double)) {
+    if (!vtable_.decrypt_f64) {
+      throw std::runtime_error("ExternalBackend: backend does not export fhn_decrypt_f64 (no key material)");
+    }
+    double value = 0.0;
+    if (vtable_.decrypt_f64(fhn_ctx_, buffer.get(), &value) != 0) {
+      throw std::runtime_error("ExternalBackend: fhn_decrypt_f64 failed");
+    }
+    return value;
+  }
+  throw std::runtime_error("ExternalBackend: unsupported type for decryption");
+}
 
 } // namespace fhenomenon

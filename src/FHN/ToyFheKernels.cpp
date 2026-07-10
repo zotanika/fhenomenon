@@ -27,29 +27,6 @@ struct FhnBuffer {
 
 // --- Kernel implementations ------------------------------------------------
 
-static int toyfhe_encrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const * /*operands*/,
-                          const int64_t *params, const double * /*fparams*/) {
-  int64_t value = params[0];
-  result->ct = ctx->engine.encryptInt(value);
-  result->kind = BufKind::Ciphertext;
-  return 0;
-}
-
-static int toyfhe_decrypt(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t * /*params*/, const double * /*fparams*/) {
-  const auto *src = operands[0];
-  // Fixed-point ciphertexts carry a scaled mantissa; decode through the
-  // scale-aware path so the buffer holds the actual value.
-  if (src->ct.encoding == fhenomenon::toyfhe::Encoding::FixedPoint) {
-    result->double_val = ctx->engine.decryptDouble(src->ct);
-    result->kind = BufKind::DoubleValue;
-  } else {
-    result->int_val = ctx->engine.decryptInt(src->ct);
-    result->kind = BufKind::IntValue;
-  }
-  return 0;
-}
-
 static int toyfhe_add_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
                          const int64_t * /*params*/, const double * /*fparams*/) {
   result->ct = ctx->engine.add(operands[0]->ct, operands[1]->ct);
@@ -107,8 +84,9 @@ static int toyfhe_hmult(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *
 
 // --- Kernel table ----------------------------------------------------------
 
+// Compute-only: encryption and decryption are host-side data-plane exports
+// below, never kernel-table entries.
 static FhnKernelEntry toyfhe_kernels[] = {
-  {FHN_ENCRYPT, toyfhe_encrypt, "encrypt"}, {FHN_DECRYPT, toyfhe_decrypt, "decrypt"},
   {FHN_ADD_CC, toyfhe_add_cc, "add_cc"},    {FHN_ADD_CS, toyfhe_add_cs, "add_cs"},
   {FHN_SUB_CC, toyfhe_sub_cc, "sub_cc"},    {FHN_NEGATE, toyfhe_negate, "negate"},
   {FHN_MULT_CC, toyfhe_mult_cc, "mult_cc"}, {FHN_MULT_CS, toyfhe_mult_cs, "mult_cs"},
@@ -144,11 +122,49 @@ void toyfhe_fhn_destroy(FhnBackendCtx *ctx) { delete ctx; }
 
 FhnKernelTable *toyfhe_fhn_get_kernels(FhnBackendCtx * /*ctx*/) { return &toyfhe_kernel_table; }
 
-// --- Buffer helpers --------------------------------------------------------
+// --- Host-side data plane ---------------------------------------------------
+// These exports handle plaintexts and key material. The trusted host calls
+// them directly; they are never dispatched from an FhnProgram.
 
 FhnBuffer *toyfhe_fhn_buffer_alloc(FhnBackendCtx * /*ctx*/) { return new FhnBuffer{}; }
 
 void toyfhe_fhn_buffer_free(FhnBackendCtx * /*ctx*/, FhnBuffer *buf) { delete buf; }
+
+int toyfhe_fhn_encrypt_i64(FhnBackendCtx *ctx, FhnBuffer *out, int64_t value) {
+  if (!out)
+    return -1;
+  out->ct = ctx->engine.encryptInt(value);
+  out->kind = BufKind::Ciphertext;
+  return 0;
+}
+
+int toyfhe_fhn_encrypt_f64(FhnBackendCtx *ctx, FhnBuffer *out, double value) {
+  if (!out)
+    return -1;
+  out->ct = ctx->engine.encryptDouble(value);
+  out->kind = BufKind::Ciphertext;
+  return 0;
+}
+
+int toyfhe_fhn_decrypt_i64(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out) {
+  if (!in || !value_out || in->kind != BufKind::Ciphertext)
+    return -1;
+  // Fixed-point ciphertexts carry a scaled mantissa; decode through the
+  // scale-aware path and round.
+  if (in->ct.encoding == fhenomenon::toyfhe::Encoding::FixedPoint) {
+    *value_out = static_cast<int64_t>(std::llround(ctx->engine.decryptDouble(in->ct)));
+  } else {
+    *value_out = ctx->engine.decryptInt(in->ct);
+  }
+  return 0;
+}
+
+int toyfhe_fhn_decrypt_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *value_out) {
+  if (!in || !value_out || in->kind != BufKind::Ciphertext)
+    return -1;
+  *value_out = ctx->engine.decryptDouble(in->ct);
+  return 0;
+}
 
 int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf) {
   if (buf->kind == BufKind::IntValue)

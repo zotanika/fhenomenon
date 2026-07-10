@@ -7,14 +7,12 @@
 extern "C" {
 #endif
 
+/* Compute-only opcodes. Data-lifecycle operations (encode/encrypt/decrypt/
+   decode) are deliberately absent: anything that touches plaintexts or key
+   material belongs to the host-side data plane (see fhn_backend_api.h) and
+   never enters the public instruction stream handed to the executor. */
 typedef enum FhnOpCode {
   FHN_NOP = 0,
-
-  /* Data lifecycle */
-  FHN_ENCODE,
-  FHN_ENCRYPT,
-  FHN_DECRYPT,
-  FHN_DECODE,
 
   /* Arithmetic (same-level, same-scale) */
   FHN_ADD_CC, /* ciphertext + ciphertext */

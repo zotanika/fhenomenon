@@ -54,7 +54,7 @@ The repository already contains the first version of that boundary.
 | Area | Status |
 | --- | --- |
 | FHN IR | Implemented in `include/FHN/fhn_program.h` as a flat C ABI instruction array. |
-| Backend ABI | Implemented in `include/FHN/fhn_backend_api.h` with `fhn_get_info`, `fhn_create`, `fhn_destroy`, and `fhn_get_kernels`. |
+| Backend ABI | Implemented in `include/FHN/fhn_backend_api.h`: `fhn_get_info`, `fhn_create`, `fhn_destroy`, `fhn_get_kernels`, plus a host-side data plane (`fhn_buffer_alloc/free`, optional `fhn_encrypt_*`/`fhn_decrypt_*`). Key-consuming operations are not kernel-table entries and cannot appear in an `FhnProgram`. |
 | Default executor | Implemented in `FhnDefaultExecutor`; dispatches kernel-table entries and decomposes fused operations such as `FHN_HMULT`. |
 | ToyFHE backend | Implemented as a CPU reference backend. Useful for tests and examples, not secure. |
 | External backend loading | Implemented with `dlopen` for Linux/macOS style shared libraries. |
@@ -106,6 +106,14 @@ FhnBackendInfo *fhn_get_info(void);
 FhnBackendCtx  *fhn_create(const char *config_json);
 void            fhn_destroy(FhnBackendCtx *ctx);
 FhnKernelTable *fhn_get_kernels(FhnBackendCtx *ctx);
+
+/* Host-side data plane: buffers required, key operations optional */
+FhnBuffer *fhn_buffer_alloc(FhnBackendCtx *ctx);
+void       fhn_buffer_free(FhnBackendCtx *ctx, FhnBuffer *buffer);
+int        fhn_encrypt_i64(FhnBackendCtx *ctx, FhnBuffer *out, int64_t value);
+int        fhn_encrypt_f64(FhnBackendCtx *ctx, FhnBuffer *out, double value);
+int        fhn_decrypt_i64(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out);
+int        fhn_decrypt_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *value_out);
 ```
 
 Every kernel has the same function shape:
@@ -134,6 +142,31 @@ The current `FhnKernelEntry` only records an opcode, function pointer, and debug
 - fallback and conformance-test requirements.
 
 This is the difference between a generic primitive library and an FHE-native execution substrate. Fhenomenon should make narrow fast paths visible to the runtime instead of hiding them behind a slow lowest-common-denominator interface.
+
+### Trust Boundary and Leakage
+
+The opcode space is partitioned to make the security contract structural, not
+prose. `FhnOpCode` contains compute-only operations: nothing dispatched from an
+`FhnProgram` can touch plaintexts or key material. Encoding, encryption, and
+decryption live in the host-side data plane (`fhn_encrypt_*` / `fhn_decrypt_*`),
+which the trusted host resolves and calls directly. The encrypt/decrypt exports
+are optional by design: a production evaluation-only executor never holds keys,
+and ciphertexts then enter and leave through serialized buffers. Backends that
+do export them (ToyFHE, the Cheddar demo) are declaring that they hold key
+material and are suitable only for development and single-process use.
+
+The instruction stream itself is public by design. Opcode sequences, rotation
+distances, loop trip counts, and program shape are all visible to the executor
+— that is the contract, and programs must be written so their shape is safe to
+reveal (in encrypted inference, for example, the program shape reveals the
+model architecture). What the shape may reveal is the application's
+responsibility to bound; FHN's responsibility is that nothing else leaks.
+
+One known caveat inherited from approximate schemes: for CKKS-style backends,
+decrypting and *acting on* approximate results can leak key material
+(IND-CPA-D / decryption-oracle attacks). `decrypt()` in the current frontend is
+a development convenience; a sanitized-decryption path (noise flooding) is
+roadmap work that must land before any multi-party deployment story.
 
 ### Fused Operations
 
@@ -239,7 +272,7 @@ To add a backend:
 2. Define your opaque `FhnBackendCtx` and `FhnBuffer`.
 3. Wrap your library's operations in uniform `FhnKernelFn` functions.
 4. Fill a `FhnKernelEntry` array.
-5. Export the four required `fhn_*` functions.
+5. Export the four required `fhn_*` functions plus `fhn_buffer_alloc`/`fhn_buffer_free` (and the optional `fhn_encrypt_*`/`fhn_decrypt_*` exports if your backend holds key material).
 
 Example kernel table shape:
 
