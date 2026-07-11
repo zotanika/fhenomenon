@@ -119,6 +119,12 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
 void Session::optimize() {
   LOG_MESSAGE("Session: optimize");
 
+  // A recorded entity died before evaluation: executing the graph would read
+  // dead objects, so refuse deterministically instead.
+  if (poisoned_) {
+    throw std::runtime_error(poison_reason_);
+  }
+
   if (!scheduler_) {
     throw std::runtime_error("Session: Scheduler not initialized");
   }

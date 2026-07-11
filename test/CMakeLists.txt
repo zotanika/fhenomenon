@@ -43,6 +43,11 @@ add_executable(SessionTest SessionTest.cpp)
 target_link_libraries(SessionTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(SessionTest)
 
+# Deliberately never creates a Session: pins the no-session (eager) paths.
+add_executable(NoSessionTest NoSessionTest.cpp)
+target_link_libraries(NoSessionTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
+add_gtest_target_to_ctest(NoSessionTest)
+
 add_executable(LowerToFhnProgramTest LowerToFhnProgramTest.cpp)
 target_link_libraries(LowerToFhnProgramTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(LowerToFhnProgramTest)

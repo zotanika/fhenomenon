@@ -15,6 +15,13 @@
 
 namespace fhenomenon {
 
+// Deleter type marking a session alias to a caller-owned variable: the
+// session does not own the object, and std::get_deleter against this type
+// lets callers distinguish aliases from genuinely shared-owned entities.
+struct SessionAliasDeleter {
+  void operator()(const void *) const noexcept {}
+};
+
 class Session final : public std::enable_shared_from_this<Session> {
   public:
   static std::shared_ptr<Session> create(const Backend &backend) {
@@ -79,16 +86,31 @@ class Session final : public std::enable_shared_from_this<Session> {
     // Caller-owned variables are aliased in place, never copied: every
     // recorded operation must observe earlier writes to the same variable
     // (read-after-write), and the final result must land in the caller's
-    // object. The alias cannot outlive the variable because execution
-    // completes inside run(), while the caller's scope is still alive.
+    // object. A variable dying before evaluation poisons the recording (see
+    // ~Fhenon), so the alias can never be executed against a dead object.
     LOG_MESSAGE("Tracking caller entity: " << canonical << ", " << canonical->getValue());
-    return std::shared_ptr<Fhenon<T>>(canonical, [](Fhenon<T> *) {});
+    return std::shared_ptr<Fhenon<T>>(canonical, SessionAliasDeleter{});
   }
 
   template <typename T> void saveOp(std::shared_ptr<scheduler::Operation<T>> op);
   template <typename Op> void run(Op &&ops);
 
   bool isActive() { return (session_ptr_ == nullptr) ? false : active_; }
+
+  // Null-safe recording check: safe to call when no session was ever
+  // created, unlike getSession()->isActive() (a member call on null).
+  static bool isRecording() { return session_ptr_ != nullptr && session_ptr_->active_; }
+
+  // A recorded entity died before the graph executed: evaluating would read
+  // a dead object, so mark the recording unusable and let run() fail loudly.
+  void poisonRecording(std::string reason) {
+    if (!poisoned_) {
+      poisoned_ = true;
+      poison_reason_ = std::move(reason);
+    }
+  }
+
+  void eraseEntity(const void *key) { entity_map_.erase(key); }
 
   void useBackend() const { (void)backend_; }
 
@@ -108,13 +130,20 @@ class Session final : public std::enable_shared_from_this<Session> {
   // address-keyed entries that would otherwise resurrect dead expression
   // temporaries when the stack reuses their addresses.
   void endRun() {
+    // Deactivate first: clearing operations_ destroys operation temporaries,
+    // and their destructors must not see an active recording (they would
+    // poison it as premature deaths).
+    active_ = false;
     operations_.clear();
     entity_map_.clear();
-    active_ = false;
+    poisoned_ = false;
+    poison_reason_.clear();
   }
 
   bool active_;
   bool passes_registered_ = false;
+  bool poisoned_ = false;
+  std::string poison_reason_;
   const Backend &backend_;
   std::unique_ptr<scheduler::Scheduler> scheduler_; // Scheduler with backend delegate
   // set of operations

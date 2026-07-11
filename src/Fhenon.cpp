@@ -20,12 +20,71 @@ Fhenon<T>::Fhenon(const Fhenon<T> &other)
   this->ciphertext_ = other.ciphertext_;
   this->isEncrypted_ = other.isEncrypted_;
   LOG_MESSAGE("Copy constructor with value: " << val_ << " (" << this << ")");
-  if (Session::getSession()->isActive()) {
-    // Map this copy to the canonical object it was copied from, collapsing
-    // copy chains so trackEntity() resolves any copy in one hop.
+  if (Session::isRecording()) {
     auto *canonical = Session::getSession()->getEntity<T>(&other);
-    Session::getSession()->setEntity<T>(this, canonical ? *canonical : const_cast<Fhenon<T> &>(other));
+    Fhenon<T> &source = canonical ? *canonical : const_cast<Fhenon<T> &>(other);
+    auto owned = source.weak_from_this().lock();
+    if (owned && std::get_deleter<SessionAliasDeleter>(owned) == nullptr) {
+      // Copies of shared-owned operation results collapse to their canonical
+      // object, so trackEntity() resolves any copy in one hop. (A session
+      // alias to a caller variable also locks, but carries the alias
+      // deleter — that source is caller-owned, not shared.)
+      Session::getSession()->setEntity<T>(this, source);
+    } else {
+      // Copying a caller-owned session variable inside run() would record
+      // against the source (clobbering it) and the copy dies with the
+      // lambda, so no result could be delivered anyway.
+      throw std::logic_error("Session: copying a session variable inside run() is not supported — "
+                             "assign to a variable declared outside run() instead");
+    }
   }
+}
+
+template <typename T>
+Fhenon<T>::Fhenon(Fhenon<T> &&other) noexcept
+  : std::enable_shared_from_this<Fhenon<T>>(std::move(other)), val_(std::move(other.val_)),
+    profile_(std::move(other.profile_)) {
+  // Steal the encrypted state: the moved-from shell must not keep serving
+  // the old ciphertext.
+  this->ciphertext_ = std::move(other.ciphertext_);
+  this->isEncrypted_ = other.isEncrypted_;
+  other.ciphertext_.reset();
+  other.isEncrypted_ = false;
+  other.val_ = T();
+  other.profile_ = nullptr;
+  LOG_MESSAGE("Move constructor with value: " << val_ << " " << this << "other:" << &other);
+  if (Session::isRecording()) {
+    // Mirror the copy constructor's collapse for shared-owned sources; a
+    // caller-owned source cannot be rejected by throwing from a noexcept
+    // move, so poison the recording instead.
+    auto *canonical = Session::getSession()->getEntity<T>(&other);
+    Fhenon<T> &source = canonical ? *canonical : other;
+    auto owned = source.weak_from_this().lock();
+    if (owned && std::get_deleter<SessionAliasDeleter>(owned) == nullptr) {
+      Session::getSession()->setEntity<T>(this, source);
+    } else {
+      Session::getSession()->poisonRecording(
+        "Session: a session variable was moved inside run() — declare and assign instead");
+    }
+  }
+}
+
+template <typename T> Fhenon<T>::~Fhenon() {
+  auto session = Session::getSession();
+  if (!session || !session->isActive())
+    return;
+  auto *canonical = session->getEntity<T>(this);
+  if (!canonical)
+    return;
+  if (canonical == this) {
+    // A recorded-against object is dying before run() executed its
+    // operations: evaluation would read a dead object.
+    session->poisonRecording("Session: a session-tracked Fhenon died before run() executed — "
+                             "declare variables in a scope enclosing run()");
+  }
+  // Drop the address-keyed entry either way so a later object reusing this
+  // address cannot resolve to a stale canonical.
+  session->eraseEntity(this);
 }
 
 template <typename T> void Fhenon<T>::belong(std::shared_ptr<Profile> newProfile) {
@@ -37,7 +96,7 @@ template <typename T> void Fhenon<T>::belong(std::shared_ptr<Profile> newProfile
 
 template <typename T> Fhenon<T> &Fhenon<T>::operator=(const T &scalar) {
   LOG_MESSAGE("Assignment of scalar");
-  if (Session::getSession()->isActive()) {
+  if (Session::isRecording()) {
     Session::getSession()->saveEntity(*this);
 
     auto op1_ptr = Session::getSession()->trackEntity(*this);
@@ -78,7 +137,7 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(const Fhenon<T> &other) {
 
     return *this;
 #endif
-  if (Session::getSession()->isActive()) {
+  if (Session::isRecording()) {
     std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
     auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
@@ -108,7 +167,7 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(Fhenon &&other) noexcept {
   if (this == &other)
     return *this;
 
-  if (Session::getSession()->isActive()) {
+  if (Session::isRecording()) {
     LOG_MESSAGE("(Move) Assignment on session");
     std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
@@ -147,7 +206,7 @@ template <typename T> Fhenon<T> Fhenon<T>::operator+(const Fhenon<T> &other) con
 
   std::shared_ptr<Fhenon<T>> result = nullptr;
 
-  if (Session::getSession()->isActive()) {
+  if (Session::isRecording()) {
     LOG_MESSAGE("Add on session (" << this->getValue() << ", " << other.getValue() << ")");
 
     // Track operands and result in the Session
@@ -186,7 +245,7 @@ template <typename T> Fhenon<T> Fhenon<T>::operator*(const Fhenon<T> &other) con
   LOG_MESSAGE("=====Operator Multiply of Fhenon=====");
   std::shared_ptr<Fhenon<T>> result = nullptr;
 
-  if (Session::getSession()->isActive()) {
+  if (Session::isRecording()) {
     LOG_MESSAGE("Multiplication on session");
 
     // Track operands and result in the Session
@@ -283,5 +342,9 @@ template <typename T> Fhenon<T> Fhenon<T>::operator<=(const Fhenon<T> &other) co
 template <typename T> T Fhenon<T>::decrypt() const { return std::any_cast<T>(Backend::getInstance().decrypt(*this)); }
 
 template class Fhenon<int>;
+// The backends instantiate double/float handles (Builtin/External plain-op
+// and decrypt paths); the out-of-line destructor needs their definitions too.
+template class Fhenon<double>;
+template class Fhenon<float>;
 
 } // namespace fhenomenon

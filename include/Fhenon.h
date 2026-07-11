@@ -37,14 +37,11 @@ template <typename T> class Fhenon final : public FhenonBase, public std::enable
   Fhenon(const Fhenon<T> &other);
 
   // move constructor
-  Fhenon(Fhenon<T> &&other) noexcept
-    : std::enable_shared_from_this<Fhenon<T>>(std::move(other)), val_(std::move(other.val_)),
-      profile_(std::move(other.profile_)) {
-    LOG_MESSAGE("Move constructor with value: " << val_ << " " << this << "other:" << &other);
-    // reset 'other'
-    other.val_ = T();
-    other.profile_ = nullptr;
-  }
+  Fhenon(Fhenon<T> &&other) noexcept;
+
+  // Deregisters from an active recording session; a tracked variable dying
+  // before run() executes poisons the recording (see Session::poisonRecording).
+  ~Fhenon() override;
 
   Fhenon<T> &operator=(const T &scalar);
   Fhenon<T> &operator=(const Fhenon &other);

@@ -140,6 +140,73 @@ TEST(SessionTest, UnencryptedOperandThrows) {
   EXPECT_EQ(a.decrypt(), 5);
 }
 
+// Moving a Fhenon must transfer the encrypted state to the new object and
+// leave the moved-from shell unencrypted — not the other way around.
+TEST(SessionTest, MoveConstructorCarriesEncryptedState) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  (void)session; // inactive: exercises the sessionless move path
+
+  Fhenon<int> a = 10;
+  a.belong(profile);
+
+  Fhenon<int> b = std::move(a);
+  EXPECT_TRUE(b.isEncrypted_);
+  EXPECT_EQ(b.decrypt(), 10);
+
+  // The moved-from shell must not keep serving the old ciphertext.
+  EXPECT_FALSE(a.isEncrypted_);
+}
+
+// Copy-constructing from a session variable inside run() records against the
+// source's entity and cannot deliver a result (the copy dies with the
+// lambda); it must fail loudly instead of silently clobbering the source.
+TEST(SessionTest, InSessionCopyOfSessionVariableThrows) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+
+  Fhenon<int> a = 0;
+  a.belong(profile);
+
+  EXPECT_THROW(session->run([&]() {
+    a = 4;
+    Fhenon<int> b = a;
+    b = b + 1;
+  }),
+               std::logic_error);
+
+  // The failed run must not have leaked the increment into a.
+  EXPECT_EQ(a.decrypt(), 0);
+}
+
+// A Fhenon declared inside the run() lambda dies before the recorded graph
+// executes; evaluation must refuse to run instead of reading the dead stack.
+TEST(SessionTest, LambdaLocalFhenonFailsLoudly) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+
+  Fhenon<int> a = 0;
+  a.belong(profile);
+
+  try {
+    session->run([&]() {
+      Fhenon<int> t = 13;
+      t.belong(profile);
+      t = t + 1;
+      a = t;
+    });
+    FAIL() << "run() must throw when a session-tracked variable dies before evaluation";
+  } catch (const std::runtime_error &e) {
+    // Must be the lifetime diagnostic, not a downstream symptom of reading
+    // the dead object (e.g. "operand is not encrypted").
+    EXPECT_NE(std::string(e.what()).find("died"), std::string::npos) << "actual message: " << e.what();
+  }
+
+  // The session must remain usable after the failed run.
+  session->run([&]() { a = a + 2; });
+  EXPECT_EQ(a.decrypt(), 2);
+}
+
 // Outside run(), operators evaluate eagerly and assignment must carry the
 // encrypted state, not just the plaintext mirror.
 TEST(SessionTest, SessionlessAssignmentCarriesCiphertext) {
