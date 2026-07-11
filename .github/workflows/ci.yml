@@ -42,3 +42,43 @@ jobs:
     - name: Test
       working-directory: build
       run: ctest -C ${{ matrix.build_type }} --output-on-failure
+
+    # ctest pipes gtest's fully-buffered stdout, so a crashing binary loses
+    # its output tail and hides which case trapped. Re-run each case in its
+    # own process to name the crasher, then dump any macOS crash reports.
+    - name: Diagnose test crashes (macOS)
+      if: runner.os == 'macOS' && failure()
+      working-directory: build
+      run: |
+        for t in SessionTest FhnExternalBackendTest NoSessionTest; do
+          echo "=== ${t}: per-case isolation ==="
+          ./bin/${t} --gtest_list_tests | awk '/^[A-Za-z]/{suite=$1} /^  /{print suite $1}' | while read -r c; do
+            if ./bin/${t} --gtest_filter="${c}" >/tmp/case.log 2>&1; then
+              echo "PASS  ${c}"
+            else
+              echo "FAIL  ${c} (exit $?)"
+              tail -60 /tmp/case.log
+            fi
+          done
+        done
+        echo "=== crash reports ==="
+        for f in "$HOME"/Library/Logs/DiagnosticReports/*; do
+          [ -f "$f" ] || continue
+          echo "--- $f"
+          head -120 "$f"
+        done
+
+    - name: Sanitizer build and test (macOS)
+      if: runner.os == 'macOS' && always()
+      run: |
+        cmake -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+        cmake --build build-asan
+        cd build-asan
+        rc=0
+        for t in SessionTest FhnExternalBackendTest NoSessionTest FhnToyFheTest; do
+          echo "=== ASan/UBSan: ${t} ==="
+          UBSAN_OPTIONS=print_stacktrace=1 ./bin/${t} || { echo "${t} exited $?"; rc=1; }
+        done
+        exit ${rc}
