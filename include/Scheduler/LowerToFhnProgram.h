@@ -94,10 +94,22 @@ void LowerToFhnProgram::lowerNode(ASTNode *node, std::vector<FhnInstruction> &in
     return; // Already visited (DAG)
 
   if (auto *op_node = dynamic_cast<OperatorNode<T> *>(node)) {
+    // A scalar right operand folds into the instruction itself (FHN_*_CS
+    // with the value in fparams[0]) instead of lowering to a ciphertext
+    // program input; it gets no id, no buffer, and no binding.
+    std::shared_ptr<Fhenon<T>> scalar;
+    if ((op_node->getType() == OperationType::Add || op_node->getType() == OperationType::Multiply) &&
+        op_node->getRight()) {
+      if (auto *rhs = dynamic_cast<OperandNode<T> *>(op_node->getRight().get())) {
+        if (rhs->getEntity() && rhs->getEntity()->isScalar())
+          scalar = rhs->getEntity();
+      }
+    }
+
     // Visit children first (post-order)
     if (op_node->getLeft())
       lowerNode<T>(op_node->getLeft().get(), instructions, inputs, next_id, node_ids, bindings, supported);
-    if (op_node->getRight())
+    if (op_node->getRight() && !scalar)
       lowerNode<T>(op_node->getRight().get(), instructions, inputs, next_id, node_ids, bindings, supported);
 
     // Assignment nodes don't produce FHN instructions: reads of the assigned
@@ -116,6 +128,11 @@ void LowerToFhnProgram::lowerNode(ASTNode *node, std::vector<FhnInstruction> &in
     FhnInstruction inst{};
     inst.opcode = mapOpType(op_node->getType());
     inst.result_id = next_id++;
+
+    if (scalar) {
+      inst.opcode = (op_node->getType() == OperationType::Add) ? FHN_ADD_CS : FHN_MULT_CS;
+      inst.fparams[0] = static_cast<double>(scalar->getValue());
+    }
 
     // Operation-specific parameters. FHN_ROTATE encodes a signed rotation
     // distance in params[0] (positive = left); RightRotate negates.
