@@ -48,6 +48,10 @@ add_executable(NoSessionTest NoSessionTest.cpp)
 target_link_libraries(NoSessionTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(NoSessionTest)
 
+add_executable(ParameterTest ParameterTest.cpp)
+target_link_libraries(ParameterTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
+add_gtest_target_to_ctest(ParameterTest)
+
 add_executable(LowerToFhnProgramTest LowerToFhnProgramTest.cpp)
 target_link_libraries(LowerToFhnProgramTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(LowerToFhnProgramTest)
