@@ -25,6 +25,7 @@ class ExternalBackend : public Backend {
   ExternalBackend &operator=(const ExternalBackend &) = delete;
 
   // FHN accessors
+  const FhnRuntime *fhnRuntime() const override { return &runtime_; }
   FhnDefaultExecutor *getFhnExecutor() const { return executor_.get(); }
   FhnBackendCtx *getFhnCtx() const { return fhn_ctx_; }
   const FhnBackendInfo *getInfo() const { return info_; }
@@ -44,14 +45,27 @@ class ExternalBackend : public Backend {
   std::shared_ptr<FhenonBase> compareLe(const FhenonBase &, const FhenonBase &) const override { return nullptr; }
 
   private:
-  std::shared_ptr<FhnBuffer> makeBuffer() const;
+  // Owns the dlopened library and backend context. Buffer deleters share it,
+  // so both stay alive until the backend AND every buffer allocated through
+  // it are gone — a deleter must never call into an unloaded library.
+  struct LibCore {
+    void *dl_handle = nullptr;
+    FhnDestroyFn destroy = nullptr;
+    FhnBackendCtx *ctx = nullptr;
+    ~LibCore();
+  };
 
+  std::shared_ptr<FhnBuffer> makeBuffer() const;
+  std::shared_ptr<FhnBuffer> bufferOf(const FhenonBase &entity, const char *opName) const;
+
+  std::shared_ptr<LibCore> core_;
   void *dl_handle_ = nullptr;
   FhnBackendVTable vtable_{};
   FhnBackendInfo *info_ = nullptr;
   FhnBackendCtx *fhn_ctx_ = nullptr;
   FhnKernelTable *fhn_table_ = nullptr;
   std::unique_ptr<FhnDefaultExecutor> executor_;
+  FhnRuntime runtime_{};
 };
 
 } // namespace fhenomenon

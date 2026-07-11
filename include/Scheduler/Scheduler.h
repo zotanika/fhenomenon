@@ -167,13 +167,14 @@ class Scheduler {
     }
   }
 
-  /// Evaluate graph using FHN pipeline: lower AST to FhnProgram, dispatch via executor.
-  /// This is the new execution path alongside the old evaluateGraph().
-  /// buffers_out is populated with FhnBuffer pointers indexed by result_id.
-  /// The caller is responsible for managing buffer lifecycle.
-  template <typename T> FhnProgram *lowerGraph(Planner<T> &plan) {
+  /// Lower the AST to an FhnProgram for executor dispatch. When `bindings`
+  /// is non-null it receives the (buffer id, entity) associations needed to
+  /// provision inputs and write results back. Caller owns the program and
+  /// must call fhn_program_free().
+  template <typename T>
+  FhnProgram *lowerGraph(Planner<T> &plan, LowerToFhnProgram::EntityBindings<T> *bindings = nullptr) {
     LowerToFhnProgram lowering;
-    return lowering.lower(plan);
+    return lowering.lower(plan, bindings);
   }
 
   void addASTPass(std::shared_ptr<ASTPass> pass) {

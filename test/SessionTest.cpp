@@ -121,6 +121,25 @@ TEST(SessionTest, EmptyRunIsANoOp) {
   EXPECT_EQ(a.decrypt(), 5);
 }
 
+// An operand that was never belong()'d must fail loudly, not silently
+// compute on an empty buffer (and must not be corrupted by write-back).
+TEST(SessionTest, UnencryptedOperandThrows) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+
+  Fhenon<int> a = 5; // deliberately no belong()
+  Fhenon<int> b = 3;
+  b.belong(profile);
+  Fhenon<int> c = 0;
+  c.belong(profile);
+
+  EXPECT_THROW(session->run([&]() { c = a + b; }), std::runtime_error);
+
+  // a must not have been stamped encrypted by a failed run.
+  EXPECT_FALSE(a.isEncrypted_);
+  EXPECT_EQ(a.decrypt(), 5);
+}
+
 // Outside run(), operators evaluate eagerly and assignment must carry the
 // encrypted state, not just the plaintext mirror.
 TEST(SessionTest, SessionlessAssignmentCarriesCiphertext) {

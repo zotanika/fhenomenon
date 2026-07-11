@@ -1,16 +1,46 @@
 #pragma once
 
 #include "Configuration.h"
+#include "FHN/fhn_backend_api.h"
 #include "KeyManager.h"
 #include "Parameter/Parameter.h"
 
 #include <any>
+#include <memory>
 
 namespace fhenomenon {
 
+class Backend;
 class FhenonBase;
+class FhnDefaultExecutor;
 
 template <typename T> class Fhenon;
+
+// Ciphertext handle stored in FhenonBase::ciphertext_ by FHN-backed
+// backends. The owner tag restores the type firewall that distinct std::any
+// payload types used to provide: the bytes behind an FhnBuffer are
+// backend-specific, so a buffer created by one backend must never reach
+// another backend's kernels.
+struct FhnCiphertext {
+  std::shared_ptr<FhnBuffer> buffer;
+  const Backend *owner = nullptr;
+};
+
+// Everything the session needs to run an FhnProgram against a backend:
+// a context, an executor over its kernel table, and the buffer half of the
+// host-side data plane. Backends that expose this run the FHN path; the
+// legacy per-operation path remains for those that don't.
+struct FhnRuntime {
+  FhnBackendCtx *ctx = nullptr;
+  FhnDefaultExecutor *executor = nullptr;
+  FhnBufferAllocFn buffer_alloc = nullptr;
+  FhnBufferFreeFn buffer_free = nullptr;
+  // Keeps the backend context (and, for dlopened backends, the library
+  // itself) alive for as long as any buffer allocated through this runtime
+  // exists. Buffer deleters must capture it, or a Fhenon outliving its
+  // backend would free through a destroyed context / unloaded library.
+  std::shared_ptr<void> keepalive;
+};
 
 enum class BackendType {
   BuiltinBackend,
@@ -36,6 +66,11 @@ class Backend {
   virtual ~Backend() = default;
 
   virtual BackendType getBackendType() const = 0;
+
+  // Non-null when the backend can execute FhnPrograms (context + executor +
+  // buffer data plane). The pointer remains owned by the backend.
+  virtual const FhnRuntime *fhnRuntime() const { return nullptr; }
+
   virtual void transform(FhenonBase &entity, const Parameter &params) const = 0;
   virtual std::shared_ptr<FhenonBase> add(const FhenonBase &a, const FhenonBase &b) const = 0;
   virtual std::shared_ptr<FhenonBase> multiply(const FhenonBase &a, const FhenonBase &b) const = 0;

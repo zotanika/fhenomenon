@@ -12,14 +12,24 @@ namespace scheduler {
 
 class LowerToFhnProgram {
   public:
+  // One (buffer id, entity) association, in lowering order. Inputs bind
+  // OperandNode entities to their input ids; instructions bind result
+  // entities to their result ids; assignments re-bind the assigned variable
+  // to the value's id. Walking the list forward therefore yields each
+  // entity's final id (later entries win).
+  template <typename T> using EntityBindings = std::vector<std::pair<uint32_t, std::shared_ptr<Fhenon<T>>>>;
+
   // Lower an AST plan to an FhnProgram.
   // Caller owns the returned FhnProgram and must call fhn_program_free().
-  template <typename T> FhnProgram *lower(const Planner<T> &plan) const;
+  // When `bindings` is non-null it receives the id/entity associations the
+  // caller needs to provision input buffers and write results back.
+  template <typename T> FhnProgram *lower(const Planner<T> &plan, EntityBindings<T> *bindings = nullptr) const;
 
   private:
   template <typename T>
   void lowerNode(ASTNode *node, std::vector<FhnInstruction> &instructions, std::vector<uint32_t> &inputs,
-                 uint32_t &next_id, std::unordered_map<ASTNode *, uint32_t> &node_ids) const;
+                 uint32_t &next_id, std::unordered_map<ASTNode *, uint32_t> &node_ids, EntityBindings<T> *bindings,
+                 bool &supported) const;
 
   static FhnOpCode mapOpType(OperationType type);
 };
@@ -28,15 +38,25 @@ class LowerToFhnProgram {
 // Template implementations
 // ---------------------------------------------------------------------------
 
-template <typename T> FhnProgram *LowerToFhnProgram::lower(const Planner<T> &plan) const {
+template <typename T> FhnProgram *LowerToFhnProgram::lower(const Planner<T> &plan, EntityBindings<T> *bindings) const {
   std::vector<FhnInstruction> instructions;
   std::vector<uint32_t> inputs;
   uint32_t next_id = 1;
   std::unordered_map<ASTNode *, uint32_t> node_ids;
+  bool supported = true;
 
   // Post-order traversal of all roots
   for (const auto &root : plan.getRoots()) {
-    lowerNode<T>(root.get(), instructions, inputs, next_id, node_ids);
+    lowerNode<T>(root.get(), instructions, inputs, next_id, node_ids, bindings, supported);
+  }
+
+  // A plan containing a node kind this lowering cannot express (e.g. a
+  // FusedKernelNode) must fail whole: a partial program would silently skip
+  // the unsupported work.
+  if (!supported) {
+    if (bindings)
+      bindings->clear();
+    return nullptr;
   }
 
   // Collect output ids (root results)
@@ -68,24 +88,27 @@ template <typename T> FhnProgram *LowerToFhnProgram::lower(const Planner<T> &pla
 template <typename T>
 void LowerToFhnProgram::lowerNode(ASTNode *node, std::vector<FhnInstruction> &instructions,
                                   std::vector<uint32_t> &inputs, uint32_t &next_id,
-                                  std::unordered_map<ASTNode *, uint32_t> &node_ids) const {
+                                  std::unordered_map<ASTNode *, uint32_t> &node_ids, EntityBindings<T> *bindings,
+                                  bool &supported) const {
   if (node_ids.count(node))
     return; // Already visited (DAG)
 
   if (auto *op_node = dynamic_cast<OperatorNode<T> *>(node)) {
     // Visit children first (post-order)
     if (op_node->getLeft())
-      lowerNode<T>(op_node->getLeft().get(), instructions, inputs, next_id, node_ids);
+      lowerNode<T>(op_node->getLeft().get(), instructions, inputs, next_id, node_ids, bindings, supported);
     if (op_node->getRight())
-      lowerNode<T>(op_node->getRight().get(), instructions, inputs, next_id, node_ids);
+      lowerNode<T>(op_node->getRight().get(), instructions, inputs, next_id, node_ids, bindings, supported);
 
-    // Skip Assignment nodes (they don't produce FHN instructions)
+    // Assignment nodes don't produce FHN instructions: reads of the assigned
+    // variable must resolve to the *assigned value* — the right child.
     if (op_node->getType() == OperationType::Assignment) {
-      // Map this node to its left child's id
-      if (op_node->getLeft()) {
-        auto it = node_ids.find(op_node->getLeft().get());
-        if (it != node_ids.end())
-          node_ids[node] = it->second;
+      ASTNode *value = op_node->getRight() ? op_node->getRight().get() : op_node->getLeft().get();
+      auto it = node_ids.find(value);
+      if (it != node_ids.end()) {
+        node_ids[node] = it->second;
+        if (bindings)
+          bindings->emplace_back(it->second, op_node->getResult());
       }
       return;
     }
@@ -117,11 +140,19 @@ void LowerToFhnProgram::lowerNode(ASTNode *node, std::vector<FhnInstruction> &in
 
     instructions.push_back(inst);
     node_ids[node] = inst.result_id;
+    if (bindings)
+      bindings->emplace_back(inst.result_id, op_node->getResult());
 
-  } else if (dynamic_cast<OperandNode<T> *>(node)) {
+  } else if (auto *operand_node = dynamic_cast<OperandNode<T> *>(node)) {
     uint32_t id = next_id++;
     node_ids[node] = id;
     inputs.push_back(id);
+    if (bindings)
+      bindings->emplace_back(id, operand_node->getEntity());
+  } else {
+    // Unknown node kind (e.g. FusedKernelNode) — this plan cannot be
+    // expressed as an FhnProgram.
+    supported = false;
   }
 }
 

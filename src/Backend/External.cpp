@@ -91,19 +91,35 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
 
   executor_ = std::make_unique<FhnDefaultExecutor>(fhn_table_);
 
+  // From here on the LibCore owns the context and the library handle;
+  // buffer deleters share it, so teardown waits for the last buffer.
+  core_ = std::make_shared<LibCore>();
+  core_->dl_handle = dl_handle_;
+  core_->destroy = vtable_.destroy;
+  core_->ctx = fhn_ctx_;
+
+  runtime_ = {fhn_ctx_, executor_.get(), vtable_.buffer_alloc, vtable_.buffer_free, core_};
+
   std::cout << "ExternalBackend loaded: " << info_->name << " v" << info_->version
             << " (device_type=" << static_cast<int>(info_->device_type) << ")" << std::endl;
 }
 
 ExternalBackend::~ExternalBackend() {
+  // The executor references the kernel table inside the library, so it must
+  // go first; the context and library are then released through core_ and
+  // destroyed once the last outstanding buffer drops its reference.
   executor_.reset();
-  if (fhn_ctx_ && vtable_.destroy) {
-    vtable_.destroy(fhn_ctx_);
-    fhn_ctx_ = nullptr;
+  fhn_ctx_ = nullptr;
+  dl_handle_ = nullptr;
+  core_.reset();
+}
+
+ExternalBackend::LibCore::~LibCore() {
+  if (ctx && destroy) {
+    destroy(ctx);
   }
-  if (dl_handle_) {
-    dlclose(dl_handle_);
-    dl_handle_ = nullptr;
+  if (dl_handle) {
+    dlclose(dl_handle);
   }
 }
 
@@ -112,11 +128,20 @@ std::shared_ptr<FhnBuffer> ExternalBackend::makeBuffer() const {
   if (!raw) {
     throw std::runtime_error("ExternalBackend: fhn_buffer_alloc failed");
   }
-  // The deleter captures the vtable and context by value; the Backend
-  // singleton outlives every Fhenon that holds one of these buffers.
+  // The deleter shares the LibCore, so a buffer held by an entity that
+  // outlives the backend still frees against a live context inside a
+  // still-loaded library.
+  auto core = core_;
   auto free_fn = vtable_.buffer_free;
-  auto *ctx = fhn_ctx_;
-  return std::shared_ptr<FhnBuffer>(raw, [free_fn, ctx](FhnBuffer *buf) { free_fn(ctx, buf); });
+  return std::shared_ptr<FhnBuffer>(raw, [core, free_fn](FhnBuffer *buf) { free_fn(core->ctx, buf); });
+}
+
+std::shared_ptr<FhnBuffer> ExternalBackend::bufferOf(const FhenonBase &entity, const char *opName) const {
+  const auto *ct = std::any_cast<FhnCiphertext>(&entity.ciphertext_);
+  if (!ct || ct->owner != this) {
+    throw std::runtime_error(std::string("ExternalBackend: ") + opName + ": operand was not encrypted by this backend");
+  }
+  return ct->buffer;
 }
 
 void ExternalBackend::transform(FhenonBase &entity, const Parameter & /*params*/) const {
@@ -130,7 +155,7 @@ void ExternalBackend::transform(FhenonBase &entity, const Parameter & /*params*/
     if (vtable_.encrypt_i64(fhn_ctx_, buffer.get(), derived.getValue()) != 0) {
       throw std::runtime_error("ExternalBackend: fhn_encrypt_i64 failed");
     }
-    entity.ciphertext_ = buffer;
+    entity.ciphertext_ = FhnCiphertext{buffer, this};
     entity.isEncrypted_ = true;
     return;
   }
@@ -143,7 +168,7 @@ void ExternalBackend::transform(FhenonBase &entity, const Parameter & /*params*/
     if (vtable_.encrypt_f64(fhn_ctx_, buffer.get(), derived.getValue()) != 0) {
       throw std::runtime_error("ExternalBackend: fhn_encrypt_f64 failed");
     }
-    entity.ciphertext_ = buffer;
+    entity.ciphertext_ = FhnCiphertext{buffer, this};
     entity.isEncrypted_ = true;
     return;
   }
@@ -172,7 +197,7 @@ std::any ExternalBackend::decrypt(const FhenonBase &entity) const {
     return {};
   }
 
-  auto buffer = std::any_cast<std::shared_ptr<FhnBuffer>>(entity.ciphertext_);
+  auto buffer = bufferOf(entity, "decrypt");
   if (entity.type() == typeid(int)) {
     if (!vtable_.decrypt_i64) {
       throw std::runtime_error("ExternalBackend: backend does not export fhn_decrypt_i64 (no key material)");

@@ -106,3 +106,33 @@ TEST(FhnExternalBackend, BackendInterfaceEncryptDecrypt) {
 TEST(FhnExternalBackend, InvalidLibraryThrows) {
   EXPECT_THROW(ExternalBackend("/nonexistent/libfoo.so"), std::runtime_error);
 }
+
+// A ciphertext produced by one backend must be rejected by another: the
+// bytes behind an FhnBuffer are backend-specific, and the owner tag is the
+// firewall that keeps them from reaching foreign kernels.
+TEST(FhnExternalBackend, RejectsForeignCiphertext) {
+  ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
+  auto param = ParameterGen::createCKKSParam(CKKSParamPreset::FGb);
+
+  Fhenon<int> a = 7;
+  Backend::getInstance().transform(a, *param); // encrypted by the singleton (Builtin)
+
+  EXPECT_THROW(backend.decrypt(a), std::runtime_error);
+}
+
+// Buffers must outlive the backend that allocated them: the library and
+// context are released only after the last buffer is freed.
+TEST(FhnExternalBackend, BufferOutlivesBackend) {
+  auto param = ParameterGen::createCKKSParam(CKKSParamPreset::FGb);
+  Fhenon<int> a = 41;
+  {
+    ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
+    backend.transform(a, *param);
+    EXPECT_EQ(std::any_cast<int>(backend.decrypt(a)), 41);
+  }
+  // Backend destroyed; releasing the entity's buffer must not crash (the
+  // deleter calls into the library, which the keepalive holds loaded).
+  a.ciphertext_.reset();
+  a.isEncrypted_ = false;
+  SUCCEED();
+}
