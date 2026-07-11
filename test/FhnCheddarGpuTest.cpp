@@ -18,11 +18,13 @@
 #include "core/Type.h"
 
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 
 #include <chrono>
 #include <cmath>
 #include <complex>
 #include <dlfcn.h>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -58,8 +60,20 @@ class CheddarGpuTest : public ::testing::Test {
     std::string lib = std::string(TEST_LIB_DIR) + "/libcheddar_fhn.so";
     std::string param = std::string(PARAM_DIR) + "/testparam_light.json";
 
+    // Splice the rotation-key request into the parameter config: the backend
+    // only prepares rotation keys listed under "rotation_keys", and its
+    // rotation kernels reject every other distance. The rotation tests use a
+    // 4-slot message rotated by +1 and -1; cheddar reduces distances modulo
+    // the ciphertext's slot count, so the required keys are 1 and 3
+    // (rotate(-1) == rotate(+3) on 4 slots).
+    std::ifstream param_file(param);
+    ASSERT_TRUE(param_file.is_open()) << "cannot open " << param;
+    nlohmann::json config = nlohmann::json::parse(param_file);
+    config["rotation_keys"] = {1, 3};
+    std::string config_str = config.dump();
+
     auto t0 = std::chrono::high_resolution_clock::now();
-    backend_ = std::make_unique<ExternalBackend>(lib, param.c_str());
+    backend_ = std::make_unique<ExternalBackend>(lib, config_str.c_str());
     auto t1 = std::chrono::high_resolution_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
     std::cout << "\n[  SETUP  ] Context + keys: " << ms << " ms (one-time cost)\n" << std::endl;
@@ -348,6 +362,64 @@ TEST_F(CheddarGpuTest, ChainedScalarOps) {
   double expected[] = {22, 24, 26, 28};
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], expected[i], 0.5) << "slot " << i;
+
+  fhn_program_free(prog);
+}
+
+// ---------------------------------------------------------------------------
+// Rotation tests — the rotation keys come from the "rotation_keys" config
+// entry passed in SetUpTestSuite. cheddar reduces rotation distances modulo
+// the ciphertext's slot count, so a 4-slot message rotated by +1 and -1
+// needs the keys for distances 1 and 3.
+// ---------------------------------------------------------------------------
+
+TEST_F(CheddarGpuTest, RotateBothDirections) {
+  // rotate([1,2,3,4], +1) = [2,3,4,1] ; rotate([1,2,3,4], -1) = [4,1,2,3]
+  const int N = 4;
+  auto bufs = allocBuffers(4);
+
+  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
+
+  auto *prog = fhn_program_alloc(2, 1, 2);
+  prog->input_ids[0] = 1;
+  prog->output_ids[0] = 2;
+  prog->output_ids[1] = 3;
+  prog->instructions[0] = {FHN_ROTATE, 2, {1, 0, 0, 0}, {1, 0, 0, 0}, {}};
+  prog->instructions[1] = {FHN_ROTATE, 3, {1, 0, 0, 0}, {-1, 0, 0, 0}, {}};
+
+  auto t0 = std::chrono::high_resolution_clock::now();
+  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  auto t1 = std::chrono::high_resolution_clock::now();
+
+  auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+  std::cout << "  ROTATE(+1)+ROTATE(-1) pipeline: " << us << " us" << std::endl;
+
+  std::vector<double> real, imag;
+  readResult(bufs[2], real, imag, N);
+  double expected_left[] = {2, 3, 4, 1};
+  for (int i = 0; i < N; i++)
+    EXPECT_NEAR(real[i], expected_left[i], 1e-2) << "slot " << i;
+
+  readResult(bufs[3], real, imag, N);
+  double expected_right[] = {4, 1, 2, 3};
+  for (int i = 0; i < N; i++)
+    EXPECT_NEAR(real[i], expected_right[i], 1e-2) << "slot " << i;
+
+  fhn_program_free(prog);
+}
+
+TEST_F(CheddarGpuTest, RotateUnpreparedDistanceFails) {
+  // No key was prepared for distance 2: the rotation kernel must reject it
+  // with a non-zero rc instead of reaching cheddar's AssertTrue/std::exit.
+  auto bufs = allocBuffers(3);
+
+  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
+
+  auto *prog = fhn_program_alloc(1, 1, 1);
+  prog->input_ids[0] = 1;
+  prog->output_ids[0] = 2;
+  prog->instructions[0] = {FHN_ROTATE, 2, {1, 0, 0, 0}, {2, 0, 0, 0}, {}};
+  EXPECT_NE(exec()->execute(ctx(), prog, bufs.data()), 0);
 
   fhn_program_free(prog);
 }
