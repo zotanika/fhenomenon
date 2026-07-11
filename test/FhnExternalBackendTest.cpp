@@ -37,7 +37,8 @@ TEST(FhnExternalBackend, ExecutorSupportsComputeOpsOnly) {
   ASSERT_NE(exec, nullptr);
   EXPECT_TRUE(exec->supports(FHN_ADD_CC));
   EXPECT_TRUE(exec->supports(FHN_HMULT));
-  EXPECT_FALSE(exec->supports(FHN_ROTATE));
+  EXPECT_TRUE(exec->supports(FHN_ROTATE));
+  EXPECT_FALSE(exec->supports(FHN_CONJUGATE));
 }
 
 TEST(FhnExternalBackend, ResolvesDataPlane) {

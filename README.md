@@ -232,6 +232,23 @@ Run examples:
 ./build/bin/session-basic
 ```
 
+Run the fused-vs-decomposed benchmark:
+
+```bash
+./build/bin/fhn-bench-matvec --n 64 --reps 5
+```
+
+This is the project's thesis in one program: an encrypted matrix–vector
+product (row method — n fused multiplies plus n·log₂(n) rotate-and-add
+reduction steps) is built once as a single FHN program, then executed two
+ways — against the backend's full kernel table (fused `FHN_HMULT` /
+`FHN_HROT_ADD` dispatch) and against a filtered table with the fused opcodes
+removed, forcing the default executor's decomposition rules. Both paths are
+checked against the plaintext result before anything is timed. On the ToyFHE
+reference backend the deltas reflect dispatch and memory-pass overhead only;
+the same program runs unchanged on a hardware backend, where the fusion win
+measures real kernel-launch and key-switch costs.
+
 The default build uses the ToyFHE backend. It is intentionally small and insecure. Its purpose is to make the architecture runnable from a fresh clone.
 
 ## Minimal User-Side Shape

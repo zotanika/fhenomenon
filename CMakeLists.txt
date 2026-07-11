@@ -183,6 +183,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}ConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_LIB_NAME})
 
+add_subdirectory(benchmarks)
+
 if(BUILD_TEST)
   enable_testing()
   add_subdirectory(test)

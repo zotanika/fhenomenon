@@ -51,6 +51,12 @@ add_executable(FhnIntegrationTest FhnIntegrationTest.cpp)
 target_link_libraries(FhnIntegrationTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(FhnIntegrationTest)
 
+# --- Flagship benchmark smoke test ---
+# fhn-bench-matvec (see benchmarks/) verifies M·v correctness on both the
+# fused and the decomposed dispatch paths before timing anything and exits
+# nonzero on mismatch, so the binary itself doubles as a CI test.
+add_test(NAME FhnMatvecBenchTest COMMAND fhn-bench-matvec --n 8 --reps 1)
+
 # --- Shared library for ExternalBackend testing ---
 # Build ToyFheKernels as a shared lib so ExternalBackend can dlopen it
 add_library(toyfhe_fhn SHARED ${CMAKE_SOURCE_DIR}/src/FHN/ToyFheKernels.cpp)
