@@ -1,8 +1,11 @@
+#include "FHN/FhnMovementPlan.h"
 #include "corpus_backend.h"
 #include "corpus_builder.h"
 #include "corpus_oracle.h"
+#include "corpus_shapes.h"
 
 #include <gtest/gtest.h>
+#include <set>
 
 using namespace fhenomenon::corpus;
 
@@ -123,4 +126,39 @@ TEST(CorpusBackend, MissingLibraryReportsError) {
   auto backend = CorpusBackend::load("/nonexistent/libnope.so", "toyfhe_", &error);
   EXPECT_FALSE(backend.has_value());
   EXPECT_FALSE(error.empty());
+}
+
+// Every shape must: (1) plan successfully with its outputs pinned,
+// (2) carry >= 30 instructions, (3) evaluate through the oracle with
+// non-empty output slots of the declared width, (4) have inputs of the
+// declared slot width, (5) plan with zero evictions at the liveness
+// high-water budget (per-spec sanity).
+TEST(CorpusShapes, AllShapesSatisfyInvariants) {
+  auto shapes = allShapes();
+  ASSERT_GE(shapes.size(), 6u); // Task 5 raises this to 12
+
+  std::set<std::string> names;
+  for (const auto &shape : shapes) {
+    SCOPED_TRACE(shape.name);
+    EXPECT_TRUE(names.insert(shape.name).second) << "duplicate shape name";
+    EXPECT_GE(shape.program->num_instructions, 30u);
+
+    for (const auto &[id, slots] : shape.inputs) {
+      (void)id;
+      EXPECT_EQ(slots.size(), shape.slot_count);
+    }
+
+    auto plan = fhenomenon::FhnMovementPlan::analyze(*shape.program, shape.output_ids, 0);
+    ASSERT_TRUE(plan.has_value());
+    auto at_hw = fhenomenon::FhnMovementPlan::analyze(*shape.program, shape.output_ids, plan->stats().high_water);
+    ASSERT_TRUE(at_hw.has_value());
+    EXPECT_EQ(at_hw->stats().evict_count, 0u);
+
+    auto vals = evaluate(*shape.program, shape.inputs);
+    ASSERT_TRUE(vals.has_value());
+    for (uint32_t out : shape.output_ids) {
+      ASSERT_TRUE(vals->count(out));
+      EXPECT_EQ(vals->at(out).size(), shape.slot_count);
+    }
+  }
 }
