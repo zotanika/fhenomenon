@@ -64,6 +64,10 @@ add_executable(FhnMovementPlanTest FhnMovementPlanTest.cpp)
 target_link_libraries(FhnMovementPlanTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(FhnMovementPlanTest)
 
+add_executable(CorpusUnitTest CorpusUnitTest.cpp)
+target_link_libraries(CorpusUnitTest PRIVATE fhn_corpus_lib gtest_main)
+add_gtest_target_to_ctest(CorpusUnitTest)
+
 # --- Flagship benchmark smoke test ---
 # fhn-bench-matvec (see benchmarks/) verifies M·v correctness on both the
 # fused and the decomposed dispatch paths before timing anything and exits
