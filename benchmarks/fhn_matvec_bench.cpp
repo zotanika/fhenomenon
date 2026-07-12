@@ -251,13 +251,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // --- Movement-plan stats (reporting only; execution above already ran
-  // through the executors' own paths). Both variants dispatch the same
-  // FhnProgram IR — fused vs decomposed is purely a kernel-table/executor
-  // distinction, not a program transformation — so both calls analyze the
-  // same `prog`, tagged with the labels used for the timing rows below.
-  report_movement_plan("fused", prog, budget);
-  report_movement_plan("decomposed", prog, budget);
+  // --- Movement-plan stats (reporting only). The movement plan operates on
+  // the program IR, which is identical for both dispatch paths.
+  report_movement_plan("program", prog, budget);
 
   // --- Timing.
   const TimingStats fused = time_path("fused", fused_executor, ctx, prog, bufs.data(), reps);
