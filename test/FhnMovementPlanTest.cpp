@@ -99,3 +99,81 @@ TEST(FhnMovementPlan, DuplicateDefIsRejected) {
                 .build();
   EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}).has_value());
 }
+
+// Budget 4, constructed so LRU and Belady disagree at the eviction point.
+// Ids: a1, b2, c8 are inputs; 3..7 are results.
+//   i0: 3 = b2 + b2   prefetch b2; resident {2,3}
+//   i1: 4 = 3 + a1    prefetch a1; resident {1,2,3,4} = 4 (fits); 3 dies -> {1,2,4}
+//   i2: 5 = 4 + c8    prefetch c8 + alloc 5 = 2 incoming, 3 resident -> over
+//       budget: candidates {a1, b2}. a1 is MORE recent (i1 > i0) so LRU
+//       would evict b2 — but a1's next use (i4) is farther than b2's (i3),
+//       so Belady must evict a1. 4 and c8 die after i2 -> {2,5}
+//   i3: 6 = 5 + b2    b2 still resident: no re-prefetch (Belady's win)
+//   i4: 7 = 6 + a1    a1 comes back just in time
+TEST(FhnMovementPlan, BeladyEvictsFarthestNextUseNotLru) {
+  auto prog = ProgramBuilder()
+                .input(1)                  // a1: used i1, i4
+                .input(2)                  // b2: used i0, i3
+                .input(8)                  // c8: used i2 only
+                .inst(FHN_ADD_CC, 3, 2, 2) // i0
+                .inst(FHN_ADD_CC, 4, 3, 1) // i1
+                .inst(FHN_ADD_CC, 5, 4, 8) // i2
+                .inst(FHN_ADD_CC, 6, 5, 2) // i3
+                .inst(FHN_ADD_CC, 7, 6, 1) // i4
+                .output(7)
+                .build();
+
+  auto plan = FhnMovementPlan::analyze(*prog, /*pinned=*/{7}, /*device_budget=*/4);
+  ASSERT_TRUE(plan.has_value());
+
+  // The eviction happens at i2 and Belady picks a1 (farthest next use),
+  // even though LRU would pick b2 (least recently used).
+  EXPECT_EQ(plan->at(2).evict, (std::vector<uint32_t>{1}));
+  // b2 stayed resident across i3: no re-prefetch there.
+  EXPECT_TRUE(plan->at(3).prefetch.empty());
+  // a1 comes back just in time.
+  EXPECT_EQ(plan->at(4).prefetch, (std::vector<uint32_t>{1}));
+  // Exactly one eviction; prefetches are b2@i0, a1@i1, c8@i2, a1@i4.
+  EXPECT_EQ(plan->stats().evict_count, 1u);
+  EXPECT_EQ(plan->stats().prefetch_count, 4u);
+  // Budget respected throughout.
+  EXPECT_LE(plan->stats().high_water, 4u);
+}
+
+// Ties on next-use distance break on the lower id (deterministic plans).
+TEST(FhnMovementPlan, BeladyTieBreaksOnLowerId) {
+  // a1 and b2 both have NO future use after i0 but are pinned (so not
+  // freed); at i1 one must be evicted to fit — the lower id (1) goes.
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .inst(FHN_ADD_CC, 3, 1, 2) // i0: live {1,2,3}
+                .inst(FHN_NEGATE, 4, 3)    // i1: working {3,4}
+                .output(4)
+                .build();
+
+  auto plan = FhnMovementPlan::analyze(*prog, /*pinned=*/{1, 2, 4}, /*device_budget=*/3);
+  ASSERT_TRUE(plan.has_value());
+  EXPECT_EQ(plan->at(1).evict, (std::vector<uint32_t>{1}));
+}
+
+// A budget smaller than one instruction's working set cannot be satisfied.
+TEST(FhnMovementPlan, InfeasibleBudgetIsRejected) {
+  auto prog = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, /*device_budget=*/2).has_value());
+}
+
+// Unlimited budget (0) plans no evictions regardless of pressure.
+TEST(FhnMovementPlan, UnlimitedBudgetNeverEvicts) {
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .inst(FHN_ADD_CC, 3, 1, 2)
+                .inst(FHN_ADD_CC, 4, 3, 1)
+                .inst(FHN_ADD_CC, 5, 4, 2)
+                .output(5)
+                .build();
+  auto plan = FhnMovementPlan::analyze(*prog, {5}, 0);
+  ASSERT_TRUE(plan.has_value());
+  EXPECT_EQ(plan->stats().evict_count, 0u);
+}
