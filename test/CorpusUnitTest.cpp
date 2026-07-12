@@ -1,3 +1,4 @@
+#include "corpus_backend.h"
 #include "corpus_builder.h"
 #include "corpus_oracle.h"
 
@@ -85,4 +86,41 @@ TEST(CorpusOracle, SlotSizeMismatchIsRejected) {
   const uint32_t s = b.cc(FHN_ADD_CC, x, y);
   Shape shape = b.finish("t", "test", 2, 0, {s});
   EXPECT_FALSE(evaluate(*shape.program, shape.inputs).has_value());
+}
+
+static std::string getTestLibPath() {
+#ifdef __APPLE__
+  return std::string(TEST_LIB_DIR) + "/libtoyfhe_fhn.dylib";
+#else
+  return std::string(TEST_LIB_DIR) + "/libtoyfhe_fhn.so";
+#endif
+}
+
+TEST(CorpusBackend, LoadsToyFheAndResolvesDataPlane) {
+  std::string error;
+  auto backend = CorpusBackend::load(getTestLibPath(), "toyfhe_", &error);
+  ASSERT_TRUE(backend.has_value()) << error;
+  EXPECT_NE(backend->ctx(), nullptr);
+  EXPECT_NE(backend->kernels(), nullptr);
+  EXPECT_NE(backend->encryptI64(), nullptr);
+  EXPECT_NE(backend->decryptI64(), nullptr);
+  // ToyFHE exports no movement hooks.
+  EXPECT_EQ(backend->prefetch(), nullptr);
+  EXPECT_EQ(backend->evict(), nullptr);
+
+  // Round-trip one value through the data plane.
+  FhnBuffer *buf = backend->bufferAlloc()(backend->ctx());
+  ASSERT_NE(buf, nullptr);
+  ASSERT_EQ(backend->encryptI64()(backend->ctx(), buf, 42), 0);
+  int64_t out = 0;
+  ASSERT_EQ(backend->decryptI64()(backend->ctx(), buf, &out), 0);
+  EXPECT_EQ(out, 42);
+  backend->bufferFree()(backend->ctx(), buf);
+}
+
+TEST(CorpusBackend, MissingLibraryReportsError) {
+  std::string error;
+  auto backend = CorpusBackend::load("/nonexistent/libnope.so", "toyfhe_", &error);
+  EXPECT_FALSE(backend.has_value());
+  EXPECT_FALSE(error.empty());
 }

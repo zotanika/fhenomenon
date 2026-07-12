@@ -5,6 +5,7 @@ target_link_libraries(fhn-bench-matvec PRIVATE ${PROJECT_LIB_NAME})
 
 # --- Corpus library (shapes, oracle, backend loader) ---
 add_library(fhn_corpus_lib STATIC
-  corpus/corpus_oracle.cpp)
+  corpus/corpus_oracle.cpp
+  corpus/corpus_backend.cpp)
 target_include_directories(fhn_corpus_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/corpus)
-target_link_libraries(fhn_corpus_lib PUBLIC ${PROJECT_LIB_NAME})
+target_link_libraries(fhn_corpus_lib PUBLIC ${PROJECT_LIB_NAME} dl)

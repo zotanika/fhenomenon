@@ -90,6 +90,10 @@ target_compile_definitions(FhnExternalBackendTest PRIVATE
 add_dependencies(FhnExternalBackendTest toyfhe_fhn)
 add_gtest_target_to_ctest(FhnExternalBackendTest)
 
+target_compile_definitions(CorpusUnitTest PRIVATE
+  TEST_LIB_DIR="${CMAKE_BINARY_DIR}/lib")
+add_dependencies(CorpusUnitTest toyfhe_fhn)
+
 # --- Cheddar FHN backend (GPU, optional) ---
 set(CHEDDAR_FHE_DIR "${CMAKE_SOURCE_DIR}/refs/cheddar-fhe")
 set(CHEDDAR_LIB_PATH "${CHEDDAR_FHE_DIR}/build/libcheddar.so")
