@@ -114,10 +114,18 @@ stresses. Slot counts are per-shape; `rot` marks rotate usage.
 | 11 | `weighted-sum` | shared-scalar CS-heavy | Σ wᵢ·xᵢ over 24 inputs, weights as fparams |
 | 12 | `diamond` | fork-join reuse, LRU-adversarial | 8-level diamond DAG, both forks reuse the root |
 
-ToyFHE executes the no-rotate, non-boolean subset (3, 5, 10, 11, 12)
-instantiated at `slot_count = 1`; rotate shapes execute on backends whose
-kernel table supports FHN_ROTATE (Cheddar); boolean shapes execute once a
-TFHE-class backend lands. Executability is decided at runtime by checking
+Each shape records its ciphertext-multiplication depth (`ct_mult_depth`):
+ToyFHE's noise budget only guarantees exactness up to ~3 chained ct*ct
+multiplies, so the runner takes `--max-depth <N>` (an operator-supplied
+exactness bound for the loaded backend; unlimited when absent) and skips
+execution — not planning — of deeper shapes. With `--max-depth 3`, ToyFHE
+executes the no-rotate, non-boolean subset {wide-front, iter-update,
+weighted-sum, diamond} at `slot_count = 1`; `horner15` (depth 15) is
+planned everywhere but executed only on backends with rescaling headroom.
+Rotate shapes execute on backends whose kernel table supports FHN_ROTATE
+(Cheddar); boolean shapes execute once a TFHE-class backend lands.
+Generators keep plaintext magnitudes small enough that int64 oracles never
+overflow and executable shapes stay within ToyFHE's plaintext modulus. Executability is decided at runtime by checking
 the shape's opcode set against the loaded executor's `supports()`;
 generators emit primitive opcodes only (no fused composites), so
 decomposition coverage is never involved and the check is exact. Nothing
