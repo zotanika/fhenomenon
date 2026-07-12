@@ -28,6 +28,7 @@
 **Files:**
 - Create: `include/FHN/FhnMovementPlan.h`
 - Create: `src/FHN/FhnMovementPlan.cpp`
+- Create: `test/FhnTestProgramBuilder.h` (shared test helper — header-only, no CMake entry)
 - Create: `test/FhnMovementPlanTest.cpp`
 - Modify: `test/CMakeLists.txt` (register the new test target)
 
@@ -42,20 +43,19 @@
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `test/FhnMovementPlanTest.cpp`:
+Create `test/FhnTestProgramBuilder.h` (shared by FhnMovementPlanTest and,
+in Task 4, FhnExecutorTest):
 
 ```cpp
-#include "FHN/FhnMovementPlan.h"
+#pragma once
 
-#include <gtest/gtest.h>
+#include "FHN/fhn_program.h"
 
-#include <algorithm>
 #include <memory>
 #include <vector>
 
-using namespace fhenomenon;
-
-namespace {
+namespace fhenomenon {
+namespace testutil {
 
 // Owning FhnProgram builder for hand-written test programs.
 struct ProgramBuilder {
@@ -93,7 +93,23 @@ struct ProgramBuilder {
   }
 };
 
-} // namespace
+} // namespace testutil
+} // namespace fhenomenon
+```
+
+Create `test/FhnMovementPlanTest.cpp`:
+
+```cpp
+#include "FHN/FhnMovementPlan.h"
+#include "FhnTestProgramBuilder.h"
+
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <vector>
+
+using namespace fhenomenon;
+using fhenomenon::testutil::ProgramBuilder;
 
 // r3 = a1 + b2: inputs prefetched at their first use, result allocated at
 // its def, dead operands freed after their last use, pinned result kept.
@@ -463,8 +479,8 @@ from iterating the ordered `working` set (ascending ids).
 
 ```bash
 ctest --test-dir build   # 14/14 green (13 existing + FhnMovementPlanTest)
-<clang-format> --dry-run --Werror include/FHN/FhnMovementPlan.h src/FHN/FhnMovementPlan.cpp test/FhnMovementPlanTest.cpp
-git add include/FHN/FhnMovementPlan.h src/FHN/FhnMovementPlan.cpp test/FhnMovementPlanTest.cpp test/CMakeLists.txt
+<clang-format> --dry-run --Werror include/FHN/FhnMovementPlan.h src/FHN/FhnMovementPlan.cpp test/FhnTestProgramBuilder.h test/FhnMovementPlanTest.cpp
+git add include/FHN/FhnMovementPlan.h src/FHN/FhnMovementPlan.cpp test/FhnTestProgramBuilder.h test/FhnMovementPlanTest.cpp test/CMakeLists.txt
 git commit -m "feat: FhnMovementPlan — liveness-driven runtime movement schedule"
 ```
 
@@ -940,10 +956,10 @@ TEST(FhnExecutorMovement, FailureFreesAllPlanAllocations) {
 }
 ```
 
-These tests use `ProgramBuilder`: copy the struct from
-`test/FhnMovementPlanTest.cpp` (Task 1) into this section's anonymous
-namespace verbatim — test helpers are not shared across targets in this
-repo.
+These tests use `ProgramBuilder` from the shared helper header created in
+Task 1: add `#include "FhnTestProgramBuilder.h"` and
+`using fhenomenon::testutil::ProgramBuilder;` at the top of the appended
+section.
 
 - [ ] **Step 2: Verify RED**
 
