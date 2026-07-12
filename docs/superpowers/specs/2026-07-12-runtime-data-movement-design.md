@@ -147,12 +147,24 @@ typedef int (*FhnBufferEvictFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 
 ## Component 3 — Plan-aware execution (`FhnDefaultExecutor`)
 
-The existing `execute(ctx, program, buffers)` stays unchanged. New overload:
+The existing `execute(ctx, program, buffers)` stays unchanged. New overload
+taking a small hooks struct rather than `FhnRuntime` (which lives in
+`Backend/Backend.h` and itself points at the executor — passing it into the
+executor's own header would invert the layering):
 
 ```cpp
-int execute(const FhnRuntime &runtime, const FhnProgram *program,
+struct FhnMovementHooks {
+  FhnBackendCtx *ctx = nullptr;
+  FhnBufferAllocFn buffer_alloc = nullptr; // required
+  FhnBufferFreeFn buffer_free = nullptr;   // required
+  FhnBufferPrefetchFn prefetch = nullptr;  // optional (null = skip)
+  FhnBufferEvictFn evict = nullptr;        // optional (null = skip)
+};
+int execute(const FhnMovementHooks &hooks, const FhnProgram *program,
             FhnBuffer **buffers, const FhnMovementPlan &plan);
 ```
+
+Session builds the hooks from its `FhnRuntime`.
 
 Per instruction i: apply `plan.at(i)` pre-actions in order evict → alloc →
 prefetch (evict/prefetch skipped when the runtime hooks are null), dispatch
@@ -176,8 +188,12 @@ post-actions via `runtime.buffer_free`.
 
 1. Fill input buffers from entity ciphertexts (as today; foreign-owner check
    unchanged).
-2. Pin set = input ids ∪ `program->output_ids` ∪ the latest-binding id per
-   entity (write-back targets).
+2. Pin set = input ids ∪ the latest-binding id per entity (write-back
+   targets). Program output ids are NOT pinned as such: an output superseded
+   by a later assignment is not any entity's latest binding, so nobody would
+   adopt it — pinning it would leak it, and freeing it at last use is
+   correct. Every output the caller actually needs IS some entity's latest
+   binding and gets pinned through that.
 3. `FhnMovementPlan::analyze(program, pinned, /*budget=*/0)`; on nullopt,
    throw (the program is malformed — this replaces today's silent null
    buffer path).
