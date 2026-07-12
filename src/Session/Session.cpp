@@ -1,5 +1,6 @@
 #include "Session/Session.h"
 #include "FHN/FhnDefaultExecutor.h"
+#include "FHN/FhnMovementPlan.h"
 #include "FHN/fhn_program.h"
 #include "Scheduler/MatMulRecognitionPass.h"
 
@@ -8,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -31,7 +33,33 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
     return false;
   }
 
-  // Buffer table sized by the largest id in play (id 0 means "unused").
+  // Walking the bindings forward, the last binding per entity wins — that
+  // id holds the value the entity must observe after the run.
+  std::unordered_map<Fhenon<int> *, std::pair<std::shared_ptr<Fhenon<int>>, uint32_t>> latest;
+  for (const auto &[id, entity] : bindings) {
+    if (entity) {
+      latest[entity.get()] = {entity, id};
+    }
+  }
+
+  // Pin what must survive execution: program inputs (entity-owned buffers
+  // the plan must not free) and every write-back target. Superseded
+  // intermediate results are deliberately NOT pinned — the plan frees them
+  // at their last use.
+  std::vector<uint32_t> pinned(program->input_ids, program->input_ids + program->num_inputs);
+  // Aliased entities (e.g. an input that is also a write-back target) can
+  // push the same id into `pinned` more than once; analyze() dedupes
+  // pinned ids internally, so no dedup is needed here.
+  for (const auto &[raw_entity, bound] : latest) {
+    (void)raw_entity;
+    pinned.push_back(bound.second);
+  }
+
+  const auto plan = FhnMovementPlan::analyze(*program, pinned, /*device_budget=*/0);
+  if (!plan) {
+    throw std::runtime_error("Session: FHN program failed movement analysis (operand used without a definition?)");
+  }
+
   uint32_t max_id = 0;
   for (uint32_t i = 0; i < program->num_instructions; ++i) {
     max_id = std::max(max_id, program->instructions[i].result_id);
@@ -43,71 +71,64 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
     max_id = std::max(max_id, binding.first);
   }
 
-  std::vector<std::shared_ptr<FhnBuffer>> owned(max_id + 1);
-
-  // First-wins fill: an id's first binding is its defining site. When that
-  // entity already holds an FHN ciphertext owned by this backend, use it in
-  // place (zero copy). A ciphertext owned by a different backend is an
-  // error, not a skip: its bytes are meaningless to this backend's kernels.
+  // Input provisioning only: every other id is allocated by the plan. An
+  // encrypted entity bound to an input id contributes its buffer in place
+  // (zero copy); a foreign owner is an error, not a skip.
+  const std::unordered_set<uint32_t> input_ids(program->input_ids, program->input_ids + program->num_inputs);
+  std::vector<std::shared_ptr<FhnBuffer>> input_hold(max_id + 1);
   for (const auto &[id, entity] : bindings) {
-    if (owned[id] || !entity || !entity->isEncrypted_) {
+    if (!input_ids.count(id) || input_hold[id] || !entity || !entity->isEncrypted_) {
       continue;
     }
     if (const auto *ct = std::any_cast<FhnCiphertext>(&entity->ciphertext_)) {
       if (ct->owner != &backend) {
         throw std::runtime_error("Session: operand was encrypted by a different backend");
       }
-      owned[id] = ct->buffer;
+      input_hold[id] = ct->buffer;
     }
   }
-
-  // Every program input must now be provisioned: an input id without a
-  // buffer means an operand entity that was never encrypted (no belong()),
-  // and executing would silently compute on an empty buffer.
   for (uint32_t i = 0; i < program->num_inputs; ++i) {
-    if (!owned[program->input_ids[i]]) {
+    if (!input_hold[program->input_ids[i]]) {
       throw std::runtime_error("Session: operand is not encrypted — call belong() before using it in a session");
     }
   }
 
-  for (uint32_t id = 1; id <= max_id; ++id) {
-    if (owned[id]) {
-      continue;
-    }
-    FhnBuffer *raw = runtime.buffer_alloc(runtime.ctx);
-    if (!raw) {
-      throw std::runtime_error("Session: FHN buffer allocation failed");
-    }
-    // The deleter shares the runtime keepalive so intermediate buffers can
-    // safely outlive the backend that allocated them.
-    auto *ctx = runtime.ctx;
-    auto free_fn = runtime.buffer_free;
-    auto keepalive = runtime.keepalive;
-    owned[id] = std::shared_ptr<FhnBuffer>(raw, [ctx, free_fn, keepalive](FhnBuffer *buffer) { free_fn(ctx, buffer); });
-  }
-
   std::vector<FhnBuffer *> buffers(max_id + 1, nullptr);
   for (uint32_t id = 1; id <= max_id; ++id) {
-    buffers[id] = owned[id].get();
+    if (input_hold[id]) {
+      buffers[id] = input_hold[id].get();
+    }
   }
 
-  const int rc = runtime.executor->execute(runtime.ctx, program.get(), buffers.data());
+  const FhnMovementHooks hooks{runtime.ctx, runtime.buffer_alloc, runtime.buffer_free, runtime.prefetch, runtime.evict};
+  const int rc = runtime.executor->execute(hooks, program.get(), buffers.data(), *plan);
   if (rc != 0) {
     throw std::runtime_error("Session: FHN executor failed with rc=" + std::to_string(rc));
   }
 
-  // Write-back: walking the bindings forward, the last binding per entity
-  // wins — that is the id holding the value the entity must observe after
-  // the run (assignment overwrite semantics).
-  std::unordered_map<Fhenon<int> *, std::pair<std::shared_ptr<Fhenon<int>>, uint32_t>> latest;
-  for (const auto &[id, entity] : bindings) {
-    if (entity) {
-      latest[entity.get()] = {entity, id};
+  // Adopt surviving pinned buffers and write back. Adoption is deduped by
+  // id: two entities bound to the same value id must share one shared_ptr,
+  // not wrap the same raw pointer twice (double free). Input ids reuse the
+  // entity-owned shared_ptr; plan-allocated ids get a deleter sharing the
+  // runtime keepalive, exactly like the old preallocation path.
+  auto *ctx = runtime.ctx;
+  auto free_fn = runtime.buffer_free;
+  auto keepalive = runtime.keepalive;
+  std::unordered_map<uint32_t, std::shared_ptr<FhnBuffer>> adopted;
+  auto adopt = [&](uint32_t id) -> std::shared_ptr<FhnBuffer> {
+    if (input_hold[id]) {
+      return input_hold[id];
     }
-  }
+    auto &slot = adopted[id];
+    if (!slot) {
+      slot =
+        std::shared_ptr<FhnBuffer>(buffers[id], [ctx, free_fn, keepalive](FhnBuffer *buffer) { free_fn(ctx, buffer); });
+    }
+    return slot;
+  };
   for (auto &[raw_entity, bound] : latest) {
     (void)raw_entity;
-    bound.first->ciphertext_ = FhnCiphertext{owned[bound.second], &backend};
+    bound.first->ciphertext_ = FhnCiphertext{adopt(bound.second), &backend};
     bound.first->isEncrypted_ = true;
   }
 

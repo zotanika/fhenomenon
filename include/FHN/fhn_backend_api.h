@@ -75,6 +75,23 @@ typedef FhnKernelTable *(*FhnGetKernelsFn)(FhnBackendCtx *ctx);
    ciphertexts then enter and leave through serialized buffers instead. */
 typedef FhnBuffer *(*FhnBufferAllocFn)(FhnBackendCtx *ctx);
 typedef void (*FhnBufferFreeFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
+
+/* ── Optional movement hooks (data plane) ──
+   Host-orchestrated residency transfers for backends with a distinct
+   compute memory space (e.g. GPU). Deliberately NOT kernel-table opcodes:
+   movement is not compute, and the public instruction stream stays
+   compute-only. Optional and additive — absent exports mean a single
+   memory space, and their addition does not bump FHN_ABI_VERSION because
+   every previously conformant backend remains conformant.
+
+   fhn_buffer_prefetch: ensure the buffer is resident in the backend's
+   compute space (H2D). No-op if already resident. 0 on success.
+   fhn_buffer_evict: demote the buffer to host memory (D2H), preserving
+   contents; a later prefetch restores compute residency. 0 on success.
+   fhn_buffer_free must accept a buffer in either residency state. */
+typedef int (*FhnBufferPrefetchFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
+typedef int (*FhnBufferEvictFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
+
 typedef int (*FhnEncryptInt64Fn)(FhnBackendCtx *ctx, FhnBuffer *out, int64_t value);
 typedef int (*FhnEncryptDoubleFn)(FhnBackendCtx *ctx, FhnBuffer *out, double value);
 typedef int (*FhnDecryptInt64Fn)(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out);
@@ -99,6 +116,9 @@ typedef struct FhnBackendVTable {
   /* Host-side data plane: buffers required, key operations optional */
   FhnBufferAllocFn buffer_alloc;
   FhnBufferFreeFn buffer_free;
+  /* Optional movement hooks (NULL if not provided by backend) */
+  FhnBufferPrefetchFn prefetch;
+  FhnBufferEvictFn evict;
   FhnEncryptInt64Fn encrypt_i64;
   FhnEncryptDoubleFn encrypt_f64;
   FhnDecryptInt64Fn decrypt_i64;

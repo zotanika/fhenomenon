@@ -35,6 +35,9 @@ struct FhnRuntime {
   FhnDefaultExecutor *executor = nullptr;
   FhnBufferAllocFn buffer_alloc = nullptr;
   FhnBufferFreeFn buffer_free = nullptr;
+  // Optional movement hooks; null = single memory space, movement skipped.
+  FhnBufferPrefetchFn prefetch = nullptr;
+  FhnBufferEvictFn evict = nullptr;
   // Keeps the backend context (and, for dlopened backends, the library
   // itself) alive for as long as any buffer allocated through this runtime
   // exists. Buffer deleters must capture it, or a Fhenon outliving its

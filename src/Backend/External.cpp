@@ -1,5 +1,6 @@
 #include "Backend/External.h"
 #include "Fhenon.h"
+#include "Utils/log.h"
 
 #include <dlfcn.h>
 #include <iostream>
@@ -61,6 +62,19 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   vtable_.encrypt_f64 = reinterpret_cast<FhnEncryptDoubleFn>(dlsym(dl_handle_, sym("fhn_encrypt_f64").c_str()));
   vtable_.decrypt_i64 = reinterpret_cast<FhnDecryptInt64Fn>(dlsym(dl_handle_, sym("fhn_decrypt_i64").c_str()));
   vtable_.decrypt_f64 = reinterpret_cast<FhnDecryptDoubleFn>(dlsym(dl_handle_, sym("fhn_decrypt_f64").c_str()));
+  // Optional movement hooks: absent means a single memory space.
+  vtable_.prefetch = reinterpret_cast<FhnBufferPrefetchFn>(dlsym(dl_handle_, sym("fhn_buffer_prefetch").c_str()));
+  vtable_.evict = reinterpret_cast<FhnBufferEvictFn>(dlsym(dl_handle_, sym("fhn_buffer_evict").c_str()));
+  // A half-pair is worse than neither: a lone evict would let buffers be
+  // demoted under a budget with nothing able to restore them (silent
+  // corruption on next use), and a lone prefetch is a no-op partner to an
+  // evict that never happens. Treat either partial export as absent.
+  if ((vtable_.prefetch != nullptr) != (vtable_.evict != nullptr)) {
+    LOG_MESSAGE("ExternalBackend: backend exports only one of fhn_buffer_prefetch/"
+                "fhn_buffer_evict; ignoring the half-pair (movement hooks disabled)");
+    vtable_.prefetch = nullptr;
+    vtable_.evict = nullptr;
+  }
 
   // 5. Resolve optional advanced symbols (NULL if absent)
   vtable_.submit = reinterpret_cast<FhnSubmitFn>(dlsym(dl_handle_, sym("fhn_submit").c_str()));
@@ -98,7 +112,8 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   core_->destroy = vtable_.destroy;
   core_->ctx = fhn_ctx_;
 
-  runtime_ = {fhn_ctx_, executor_.get(), vtable_.buffer_alloc, vtable_.buffer_free, core_};
+  runtime_ = {fhn_ctx_, executor_.get(), vtable_.buffer_alloc, vtable_.buffer_free, vtable_.prefetch, vtable_.evict,
+              core_};
 
   std::cout << "ExternalBackend loaded: " << info_->name << " v" << info_->version
             << " (device_type=" << static_cast<int>(info_->device_type) << ")" << std::endl;

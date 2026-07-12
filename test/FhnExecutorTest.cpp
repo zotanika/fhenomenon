@@ -447,3 +447,221 @@ TEST(FhnExecutor, DecomposeFailsWhenPrimitiveMissing) {
 
   fhn_program_free(prog);
 }
+
+#include "FHN/FhnMovementPlan.h"
+#include "FhnTestProgramBuilder.h"
+
+#include <algorithm>
+#include <map>
+#include <string>
+#include <vector>
+
+using namespace fhenomenon;
+using fhenomenon::testutil::ProgramBuilder;
+
+namespace {
+
+// A fake single-int "ciphertext" space. Buffers live in device_vals while
+// resident; evict moves the value to host_vals (clearing the device slot),
+// prefetch moves it back. The kernel reads/writes device_vals only, so a
+// missed prefetch computes garbage and fails the value assertions.
+struct MovementWorld {
+  std::map<FhnBuffer *, long> device_vals;
+  std::map<FhnBuffer *, long> host_vals;
+  std::vector<std::string> log; // "alloc#N"/"free#N"/"evict#N"/"prefetch#N"/"kernel ADD r"
+  std::map<FhnBuffer *, int> names;
+  int next_name = 1;
+  int allocs = 0, frees = 0;
+  int fail_kernel_at_call = -1; // when >=0, the Nth kernel call returns -1
+  int kernel_calls = 0;
+};
+MovementWorld *g_world = nullptr;
+
+FhnBuffer *movementAlloc(FhnBackendCtx *) {
+  auto *b = reinterpret_cast<FhnBuffer *>(new char[1]);
+  g_world->names[b] = g_world->next_name++;
+  g_world->device_vals[b] = 0;
+  g_world->allocs++;
+  g_world->log.push_back("alloc#" + std::to_string(g_world->names[b]));
+  return b;
+}
+void movementFree(FhnBackendCtx *, FhnBuffer *b) {
+  g_world->frees++;
+  g_world->log.push_back("free#" + std::to_string(g_world->names[b]));
+  g_world->device_vals.erase(b);
+  g_world->host_vals.erase(b);
+  delete[] reinterpret_cast<char *>(b);
+}
+int movementEvict(FhnBackendCtx *, FhnBuffer *b) {
+  g_world->log.push_back("evict#" + std::to_string(g_world->names[b]));
+  g_world->host_vals[b] = g_world->device_vals.at(b);
+  g_world->device_vals.erase(b); // physically gone from the device
+  return 0;
+}
+int movementPrefetch(FhnBackendCtx *, FhnBuffer *b) {
+  g_world->log.push_back("prefetch#" + std::to_string(g_world->names[b]));
+  if (g_world->device_vals.count(b))
+    return 0; // already resident
+  g_world->device_vals[b] = g_world->host_vals.at(b);
+  g_world->host_vals.erase(b);
+  return 0;
+}
+int movementAddKernel(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops, const int64_t *,
+                      const double *) {
+  g_world->kernel_calls++;
+  if (g_world->fail_kernel_at_call >= 0 && g_world->kernel_calls == g_world->fail_kernel_at_call)
+    return -1;
+  // .at() throws if an operand is not device-resident: movement bugs fail loudly.
+  const long a = g_world->device_vals.at(const_cast<FhnBuffer *>(ops[0]));
+  const long b = g_world->device_vals.at(const_cast<FhnBuffer *>(ops[1]));
+  g_world->device_vals.at(result) = a + b;
+  g_world->log.push_back("kernel ADD");
+  return 0;
+}
+
+FhnKernelEntry movementEntries[] = {{FHN_ADD_CC, movementAddKernel, "add_cc"}};
+FhnKernelTable movementTable{1, movementEntries};
+
+} // namespace
+
+// Full interleaving on the Belady program from FhnMovementPlanTest:
+// values must come out right even though a1 physically leaves the device.
+TEST(FhnExecutorMovement, BudgetedExecutionComputesCorrectValues) {
+  MovementWorld world;
+  g_world = &world;
+
+  // Same program as FhnMovementPlan.BeladyEvictsFarthestNextUseNotLru.
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .input(8)
+                .inst(FHN_ADD_CC, 3, 2, 2)
+                .inst(FHN_ADD_CC, 4, 3, 1)
+                .inst(FHN_ADD_CC, 5, 4, 8)
+                .inst(FHN_ADD_CC, 6, 5, 2)
+                .inst(FHN_ADD_CC, 7, 6, 1)
+                .output(7)
+                .build();
+  auto plan = FhnMovementPlan::analyze(*prog, {7}, 4);
+  ASSERT_TRUE(plan.has_value());
+
+  // Caller-provided inputs: a1=10, b2=1, c8=100. The caller deliberately
+  // does not pin them, so the plan frees them after their last use.
+  FhnBuffer *a1 = movementAlloc(nullptr);
+  FhnBuffer *b2 = movementAlloc(nullptr);
+  FhnBuffer *c8 = movementAlloc(nullptr);
+  world.device_vals[a1] = 10;
+  world.device_vals[b2] = 1;
+  world.device_vals[c8] = 100;
+
+  std::vector<FhnBuffer *> buffers(9, nullptr);
+  buffers[1] = a1;
+  buffers[2] = b2;
+  buffers[8] = c8;
+
+  FhnDefaultExecutor executor(&movementTable);
+  FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, movementPrefetch, movementEvict};
+  ASSERT_EQ(executor.execute(hooks, prog.get(), buffers.data(), *plan), 0);
+
+  // 3=1+1=2; 4=2+10=12; 5=12+100=112; 6=112+1=113; 7=113+10=123.
+  EXPECT_EQ(world.device_vals.at(buffers[7]), 123);
+  // a1 (buffer name #1) was evicted then prefetched back.
+  EXPECT_NE(std::find(world.log.begin(), world.log.end(), "evict#1"), world.log.end());
+  // Everything except the pinned output was freed — including the unpinned
+  // caller inputs, whose lifetime the plan owns by contract.
+  EXPECT_EQ(world.allocs - world.frees, 1); // only pinned id 7 survives
+  EXPECT_NE(buffers[7], nullptr);
+  movementFree(nullptr, buffers[7]); // adopt-and-release: the pinned output survives for the caller
+}
+
+// Null hooks skip movement actions but execution still works when
+// everything shares one memory space (host==device in the mock: seed
+// device_vals directly and use null prefetch/evict).
+TEST(FhnExecutorMovement, NullHooksSkipMovement) {
+  MovementWorld world;
+  g_world = &world;
+
+  auto prog = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  auto plan = FhnMovementPlan::analyze(*prog, {3}, 0);
+  ASSERT_TRUE(plan.has_value());
+
+  FhnBuffer *a = movementAlloc(nullptr);
+  FhnBuffer *b = movementAlloc(nullptr);
+  world.device_vals[a] = 4;
+  world.device_vals[b] = 5;
+  std::vector<FhnBuffer *> buffers(4, nullptr);
+  buffers[1] = a;
+  buffers[2] = b;
+
+  FhnDefaultExecutor executor(&movementTable);
+  FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, nullptr, nullptr};
+  ASSERT_EQ(executor.execute(hooks, prog.get(), buffers.data(), *plan), 0);
+  EXPECT_EQ(world.device_vals.at(buffers[3]), 9);
+  for (const auto &line : world.log) {
+    EXPECT_EQ(line.find("prefetch"), std::string::npos);
+    EXPECT_EQ(line.find("evict"), std::string::npos);
+  }
+  movementFree(nullptr, buffers[3]); // pinned output; inputs a,b are plan-freed
+}
+
+// A mid-program kernel failure must free every plan-allocated buffer —
+// pinned included — and null their entries. Caller inputs stay untouched.
+TEST(FhnExecutorMovement, FailureFreesAllPlanAllocations) {
+  MovementWorld world;
+  g_world = &world;
+  world.fail_kernel_at_call = 2;
+
+  auto prog = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).inst(FHN_ADD_CC, 4, 3, 3).output(4).build();
+  // Inputs are pinned here: this test's caller keeps ownership of a and b,
+  // and asserts below that the failure path leaves them untouched.
+  auto plan = FhnMovementPlan::analyze(*prog, {1, 2, 4}, 0);
+  ASSERT_TRUE(plan.has_value());
+
+  FhnBuffer *a = movementAlloc(nullptr);
+  FhnBuffer *b = movementAlloc(nullptr);
+  world.device_vals[a] = 1;
+  world.device_vals[b] = 2;
+  std::vector<FhnBuffer *> buffers(5, nullptr);
+  buffers[1] = a;
+  buffers[2] = b;
+
+  FhnDefaultExecutor executor(&movementTable);
+  FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, nullptr, nullptr};
+  EXPECT_NE(executor.execute(hooks, prog.get(), buffers.data(), *plan), 0);
+
+  // Every plan alloc (ids 3,4) was freed on the failure path.
+  EXPECT_EQ(world.allocs - world.frees, 2); // only caller's a,b remain
+  EXPECT_EQ(buffers[3], nullptr);
+  EXPECT_EQ(buffers[4], nullptr);
+  // Caller-owned inputs untouched.
+  EXPECT_EQ(world.device_vals.at(a), 1);
+  movementFree(nullptr, a); // caller-owned inputs, pinned and untouched by failure
+  movementFree(nullptr, b);
+}
+
+// A plan analyzed for a different program must be rejected, not let its
+// action ids index the buffer table out of bounds.
+TEST(FhnExecutorMovement, MismatchedPlanIsRejected) {
+  MovementWorld world;
+  g_world = &world;
+
+  auto prog1 = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  auto prog2 = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).inst(FHN_ADD_CC, 4, 3, 3).output(4).build();
+  auto plan1 = FhnMovementPlan::analyze(*prog1, {3}, 0);
+  ASSERT_TRUE(plan1.has_value());
+
+  FhnBuffer *a = movementAlloc(nullptr);
+  FhnBuffer *b = movementAlloc(nullptr);
+  world.device_vals[a] = 1;
+  world.device_vals[b] = 2;
+  std::vector<FhnBuffer *> buffers(5, nullptr);
+  buffers[1] = a;
+  buffers[2] = b;
+
+  FhnDefaultExecutor executor(&movementTable);
+  FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, nullptr, nullptr};
+  EXPECT_NE(executor.execute(hooks, prog2.get(), buffers.data(), *plan1), 0);
+
+  movementFree(nullptr, a);
+  movementFree(nullptr, b);
+}

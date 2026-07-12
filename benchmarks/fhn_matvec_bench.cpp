@@ -23,6 +23,7 @@
 // 2^25 ~ 3.4e7.
 
 #include "FHN/FhnDefaultExecutor.h"
+#include "FHN/FhnMovementPlan.h"
 #include "FHN/ToyFheKernels.h"
 #include "FHN/fhn_program.h"
 
@@ -89,7 +90,27 @@ bool check_outputs(const char *label, FhnBackendCtx *ctx, const FhnProgram *prog
 }
 
 void usage(const char *argv0) {
-  std::fprintf(stderr, "usage: %s [--n <size, power of two, default 64>] [--reps <default 5>]\n", argv0);
+  std::fprintf(stderr,
+               "usage: %s [--n <size, power of two, default 64>] [--reps <default 5>] "
+               "[--budget <max resident buffers, default 0 = unlimited>]\n",
+               argv0);
+}
+
+// Analyze the movement plan for `prog`, pinning its outputs, and print one
+// stats line for the program's movement plan (the plan is per-program IR,
+// identical for both dispatch paths).
+// Reporting only: exits the process on infeasible-budget analysis failure so
+// the caller need not check a return value.
+void report_movement_plan(const char *label, const FhnProgram *prog, uint32_t budget) {
+  std::vector<uint32_t> pinned(prog->output_ids, prog->output_ids + prog->num_outputs);
+  const auto plan = fhenomenon::FhnMovementPlan::analyze(*prog, pinned, budget);
+  if (!plan) {
+    std::fprintf(stderr, "error: movement analysis failed (budget %u infeasible?)\n", budget);
+    std::exit(1);
+  }
+  std::printf("movement[%s]: high_water=%u allocs=%u prefetches=%u evicts=%u (budget %u)\n", label,
+              plan->stats().high_water, plan->stats().alloc_count, plan->stats().prefetch_count,
+              plan->stats().evict_count, budget);
 }
 
 } // namespace
@@ -97,12 +118,15 @@ void usage(const char *argv0) {
 int main(int argc, char **argv) {
   uint32_t n = 64;
   uint32_t reps = 5;
+  uint32_t budget = 0;
 
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--n") == 0 && i + 1 < argc) {
       n = static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
     } else if (std::strcmp(argv[i], "--reps") == 0 && i + 1 < argc) {
       reps = static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
+    } else if (std::strcmp(argv[i], "--budget") == 0 && i + 1 < argc) {
+      budget = static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
     } else {
       usage(argv[0]);
       return 1;
@@ -227,6 +251,10 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "FATAL: decomposed path failed correctness check\n");
     return 1;
   }
+
+  // --- Movement-plan stats (reporting only). The movement plan operates on
+  // the program IR, which is identical for both dispatch paths.
+  report_movement_plan("program", prog, budget);
 
   // --- Timing.
   const TimingStats fused = time_path("fused", fused_executor, ctx, prog, bufs.data(), reps);
