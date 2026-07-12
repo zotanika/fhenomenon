@@ -70,9 +70,8 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   // corruption on next use), and a lone prefetch is a no-op partner to an
   // evict that never happens. Treat either partial export as absent.
   if ((vtable_.prefetch != nullptr) != (vtable_.evict != nullptr)) {
-    LOG_MESSAGE("ExternalBackend: backend exports only one of "
-                << "fhn_buffer_prefetch/fhn_buffer_evict; ignoring the half-pair "
-                << "(movement hooks disabled)");
+    LOG_MESSAGE("ExternalBackend: backend exports only one of fhn_buffer_prefetch/"
+                "fhn_buffer_evict; ignoring the half-pair (movement hooks disabled)");
     vtable_.prefetch = nullptr;
     vtable_.evict = nullptr;
   }

@@ -45,7 +45,7 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
   const std::unordered_set<uint32_t> pinned_set(pinned.begin(), pinned.end());
 
   // First use strictly after position `pos` (kNever if none).
-  auto next_use_after = [&uses, kNever](uint32_t id, int64_t pos) -> int64_t {
+  auto next_use_after = [&uses](uint32_t id, int64_t pos) -> int64_t {
     auto it = uses.find(id);
     if (it == uses.end())
       return kNever;
