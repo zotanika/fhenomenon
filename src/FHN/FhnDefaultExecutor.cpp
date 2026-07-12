@@ -1,5 +1,8 @@
 #include "FHN/FhnDefaultExecutor.h"
 
+#include <algorithm>
+#include <vector>
+
 namespace fhenomenon {
 
 FhnDefaultExecutor::FhnDefaultExecutor(FhnKernelTable *table) {
@@ -48,6 +51,68 @@ int FhnDefaultExecutor::execute(FhnBackendCtx *ctx, const FhnProgram *program, F
     int rc = fn(ctx, buffers[inst.result_id], ops, inst.params, inst.fparams);
     if (rc != 0)
       return rc;
+  }
+
+  return 0;
+}
+
+int FhnDefaultExecutor::execute(const FhnMovementHooks &hooks, const FhnProgram *program, FhnBuffer **buffers,
+                                const FhnMovementPlan &plan) {
+  if (!program || !buffers || !hooks.buffer_alloc || !hooks.buffer_free)
+    return -1;
+  if (program->version != FHN_ABI_VERSION)
+    return -1;
+
+  std::vector<uint32_t> owned; // plan-allocated ids not yet freed
+  auto fail = [&](int rc) {
+    for (uint32_t id : owned) {
+      if (buffers[id]) {
+        hooks.buffer_free(hooks.ctx, buffers[id]);
+        buffers[id] = nullptr;
+      }
+    }
+    return rc;
+  };
+
+  for (uint32_t i = 0; i < program->num_instructions; ++i) {
+    const FhnMovementActions &act = plan.at(i);
+
+    for (uint32_t id : act.evict) {
+      if (hooks.evict && hooks.evict(hooks.ctx, buffers[id]) != 0)
+        return fail(-1);
+    }
+    for (uint32_t id : act.alloc) {
+      buffers[id] = hooks.buffer_alloc(hooks.ctx);
+      if (!buffers[id])
+        return fail(-1);
+      owned.push_back(id);
+    }
+    for (uint32_t id : act.prefetch) {
+      if (hooks.prefetch && hooks.prefetch(hooks.ctx, buffers[id]) != 0)
+        return fail(-1);
+    }
+
+    const FhnInstruction &inst = program->instructions[i];
+    auto it = dispatch_.find(static_cast<int>(inst.opcode));
+    if (it == dispatch_.end()) {
+      if (!decompose(hooks.ctx, inst, buffers))
+        return fail(-1);
+    } else {
+      const FhnBuffer *ops[4] = {nullptr, nullptr, nullptr, nullptr};
+      for (int j = 0; j < 4; ++j) {
+        if (inst.operands[j] != 0)
+          ops[j] = buffers[inst.operands[j]];
+      }
+      const int rc = it->second(hooks.ctx, buffers[inst.result_id], ops, inst.params, inst.fparams);
+      if (rc != 0)
+        return fail(rc);
+    }
+
+    for (uint32_t id : act.free) {
+      hooks.buffer_free(hooks.ctx, buffers[id]);
+      buffers[id] = nullptr;
+      owned.erase(std::remove(owned.begin(), owned.end(), id), owned.end());
+    }
   }
 
   return 0;
