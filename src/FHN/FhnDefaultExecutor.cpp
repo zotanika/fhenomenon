@@ -62,6 +62,11 @@ int FhnDefaultExecutor::execute(const FhnMovementHooks &hooks, const FhnProgram 
     return -1;
   if (program->version != FHN_ABI_VERSION)
     return -1;
+  // A stale plan analyzed against a different (e.g. re-lowered) program
+  // would index this buffer table out of bounds; reject the mismatch
+  // instead of dispatching against it.
+  if (plan.instructionCount() != program->num_instructions)
+    return -1;
 
   std::vector<uint32_t> owned; // plan-allocated ids not yet freed
   auto fail = [&](int rc) {

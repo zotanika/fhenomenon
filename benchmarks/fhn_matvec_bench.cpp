@@ -96,8 +96,9 @@ void usage(const char *argv0) {
                argv0);
 }
 
-// Analyze the movement plan for `prog`, pinning its outputs, and print a
-// stats line tagged with `label` (the same tag used for the timing rows).
+// Analyze the movement plan for `prog`, pinning its outputs, and print one
+// stats line for the program's movement plan (the plan is per-program IR,
+// identical for both dispatch paths).
 // Reporting only: exits the process on infeasible-budget analysis failure so
 // the caller need not check a return value.
 void report_movement_plan(const char *label, const FhnProgram *prog, uint32_t budget) {

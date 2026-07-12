@@ -47,6 +47,9 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
   // intermediate results are deliberately NOT pinned — the plan frees them
   // at their last use.
   std::vector<uint32_t> pinned(program->input_ids, program->input_ids + program->num_inputs);
+  // Aliased entities (e.g. an input that is also a write-back target) can
+  // push the same id into `pinned` more than once; analyze() dedupes
+  // pinned ids internally, so no dedup is needed here.
   for (const auto &[raw_entity, bound] : latest) {
     (void)raw_entity;
     pinned.push_back(bound.second);

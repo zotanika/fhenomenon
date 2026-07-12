@@ -42,11 +42,16 @@ class FhnMovementPlan {
   // nullopt: invalid program (zero/duplicate defs, operand used before or
   // without a def) or infeasible budget (one instruction's working set
   // exceeds it).
+  // A zero-instruction program has no action slots, so unused unpinned
+  // inputs are not freed in that (degenerate) case; callers that can
+  // produce such programs must pin or free their inputs themselves.
   static std::optional<FhnMovementPlan> analyze(const FhnProgram &program, const std::vector<uint32_t> &pinned,
                                                 uint32_t device_budget = 0);
 
   const FhnMovementActions &at(uint32_t inst_index) const { return actions_[inst_index]; }
   const Stats &stats() const { return stats_; }
+  // Used to reject executing a plan against a different program.
+  uint32_t instructionCount() const { return static_cast<uint32_t>(actions_.size()); }
 
   private:
   FhnMovementPlan() = default;

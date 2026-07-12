@@ -1,5 +1,6 @@
 #include "Backend/External.h"
 #include "Fhenon.h"
+#include "Utils/log.h"
 
 #include <dlfcn.h>
 #include <iostream>
@@ -64,6 +65,17 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   // Optional movement hooks: absent means a single memory space.
   vtable_.prefetch = reinterpret_cast<FhnBufferPrefetchFn>(dlsym(dl_handle_, sym("fhn_buffer_prefetch").c_str()));
   vtable_.evict = reinterpret_cast<FhnBufferEvictFn>(dlsym(dl_handle_, sym("fhn_buffer_evict").c_str()));
+  // A half-pair is worse than neither: a lone evict would let buffers be
+  // demoted under a budget with nothing able to restore them (silent
+  // corruption on next use), and a lone prefetch is a no-op partner to an
+  // evict that never happens. Treat either partial export as absent.
+  if ((vtable_.prefetch != nullptr) != (vtable_.evict != nullptr)) {
+    LOG_MESSAGE("ExternalBackend: backend exports only one of "
+                << "fhn_buffer_prefetch/fhn_buffer_evict; ignoring the half-pair "
+                << "(movement hooks disabled)");
+    vtable_.prefetch = nullptr;
+    vtable_.evict = nullptr;
+  }
 
   // 5. Resolve optional advanced symbols (NULL if absent)
   vtable_.submit = reinterpret_cast<FhnSubmitFn>(dlsym(dl_handle_, sym("fhn_submit").c_str()));

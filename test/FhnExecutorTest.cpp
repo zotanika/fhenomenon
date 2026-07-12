@@ -638,3 +638,30 @@ TEST(FhnExecutorMovement, FailureFreesAllPlanAllocations) {
   movementFree(nullptr, a); // caller-owned inputs, pinned and untouched by failure
   movementFree(nullptr, b);
 }
+
+// A plan analyzed for a different program must be rejected, not let its
+// action ids index the buffer table out of bounds.
+TEST(FhnExecutorMovement, MismatchedPlanIsRejected) {
+  MovementWorld world;
+  g_world = &world;
+
+  auto prog1 = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  auto prog2 = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).inst(FHN_ADD_CC, 4, 3, 3).output(4).build();
+  auto plan1 = FhnMovementPlan::analyze(*prog1, {3}, 0);
+  ASSERT_TRUE(plan1.has_value());
+
+  FhnBuffer *a = movementAlloc(nullptr);
+  FhnBuffer *b = movementAlloc(nullptr);
+  world.device_vals[a] = 1;
+  world.device_vals[b] = 2;
+  std::vector<FhnBuffer *> buffers(5, nullptr);
+  buffers[1] = a;
+  buffers[2] = b;
+
+  FhnDefaultExecutor executor(&movementTable);
+  FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, nullptr, nullptr};
+  EXPECT_NE(executor.execute(hooks, prog2.get(), buffers.data(), *plan1), 0);
+
+  movementFree(nullptr, a);
+  movementFree(nullptr, b);
+}
