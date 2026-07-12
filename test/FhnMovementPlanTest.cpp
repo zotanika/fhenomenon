@@ -177,3 +177,73 @@ TEST(FhnMovementPlan, UnlimitedBudgetNeverEvicts) {
   ASSERT_TRUE(plan.has_value());
   EXPECT_EQ(plan->stats().evict_count, 0u);
 }
+
+// Same program as BeladyEvictsFarthestNextUseNotLru, planned under the
+// benchmarking-only LRU baseline: at i2 the least-recently-touched
+// candidate is b2 (last touch i0; a1 was touched at i1), so LRU evicts b2
+// where Belady evicts a1 — and pays a re-prefetch at i3 that Belady never
+// pays. This pins that the two policies genuinely diverge.
+TEST(FhnMovementPlan, LruEvictsLeastRecentlyUsedNotBelady) {
+  auto prog = ProgramBuilder()
+                .input(1)                  // a1: used i1, i4
+                .input(2)                  // b2: used i0, i3
+                .input(8)                  // c8: used i2 only
+                .inst(FHN_ADD_CC, 3, 2, 2) // i0
+                .inst(FHN_ADD_CC, 4, 3, 1) // i1
+                .inst(FHN_ADD_CC, 5, 4, 8) // i2
+                .inst(FHN_ADD_CC, 6, 5, 2) // i3
+                .inst(FHN_ADD_CC, 7, 6, 1) // i4
+                .output(7)
+                .build();
+
+  auto plan = FhnMovementPlan::analyze(*prog, /*pinned=*/{7}, /*device_budget=*/4, FhnEvictionPolicy::Lru);
+  ASSERT_TRUE(plan.has_value());
+
+  EXPECT_EQ(plan->at(2).evict, (std::vector<uint32_t>{2}));
+  // b2 must come back just in time at i3 (the cost LRU pays here).
+  EXPECT_EQ(plan->at(3).prefetch, (std::vector<uint32_t>{2}));
+  // a1 was never evicted: no re-prefetch at i4.
+  EXPECT_TRUE(plan->at(4).prefetch.empty());
+  EXPECT_EQ(plan->stats().evict_count, 1u);
+  // prefetches: b2@i0, a1@i1, c8@i2, b2 again @i3.
+  EXPECT_EQ(plan->stats().prefetch_count, 4u);
+}
+
+// LRU ties (equal last touch) break on the lower id, like Belady's ties.
+TEST(FhnMovementPlan, LruTieBreaksOnLowerId) {
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .inst(FHN_ADD_CC, 3, 1, 2) // i0: touches 1 and 2 equally
+                .inst(FHN_NEGATE, 4, 3)    // i1
+                .output(4)
+                .build();
+
+  auto plan = FhnMovementPlan::analyze(*prog, /*pinned=*/{1, 2, 4}, /*device_budget=*/3, FhnEvictionPolicy::Lru);
+  ASSERT_TRUE(plan.has_value());
+  EXPECT_EQ(plan->at(1).evict, (std::vector<uint32_t>{1}));
+}
+
+// The default policy is Belady: a 3-arg call and an explicit Belady call
+// produce identical plans.
+TEST(FhnMovementPlan, DefaultPolicyIsBelady) {
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .input(8)
+                .inst(FHN_ADD_CC, 3, 2, 2)
+                .inst(FHN_ADD_CC, 4, 3, 1)
+                .inst(FHN_ADD_CC, 5, 4, 8)
+                .inst(FHN_ADD_CC, 6, 5, 2)
+                .inst(FHN_ADD_CC, 7, 6, 1)
+                .output(7)
+                .build();
+  auto a = FhnMovementPlan::analyze(*prog, {7}, 4);
+  auto b = FhnMovementPlan::analyze(*prog, {7}, 4, FhnEvictionPolicy::Belady);
+  ASSERT_TRUE(a.has_value());
+  ASSERT_TRUE(b.has_value());
+  for (uint32_t i = 0; i < 5; ++i) {
+    EXPECT_EQ(a->at(i).evict, b->at(i).evict);
+    EXPECT_EQ(a->at(i).prefetch, b->at(i).prefetch);
+  }
+}

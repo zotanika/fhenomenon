@@ -665,3 +665,45 @@ TEST(FhnExecutorMovement, MismatchedPlanIsRejected) {
   movementFree(nullptr, a);
   movementFree(nullptr, b);
 }
+
+// An LRU-planned program must execute to the same values as Belady — the
+// policies move buffers differently but never change results.
+TEST(FhnExecutorMovement, BudgetedExecutionCorrectUnderLru) {
+  MovementWorld world;
+  g_world = &world;
+
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .input(8)
+                .inst(FHN_ADD_CC, 3, 2, 2)
+                .inst(FHN_ADD_CC, 4, 3, 1)
+                .inst(FHN_ADD_CC, 5, 4, 8)
+                .inst(FHN_ADD_CC, 6, 5, 2)
+                .inst(FHN_ADD_CC, 7, 6, 1)
+                .output(7)
+                .build();
+  auto plan = FhnMovementPlan::analyze(*prog, {7}, 4, FhnEvictionPolicy::Lru);
+  ASSERT_TRUE(plan.has_value());
+
+  FhnBuffer *a1 = movementAlloc(nullptr);
+  FhnBuffer *b2 = movementAlloc(nullptr);
+  FhnBuffer *c8 = movementAlloc(nullptr);
+  world.device_vals[a1] = 10;
+  world.device_vals[b2] = 1;
+  world.device_vals[c8] = 100;
+  std::vector<FhnBuffer *> buffers(9, nullptr);
+  buffers[1] = a1;
+  buffers[2] = b2;
+  buffers[8] = c8;
+
+  FhnDefaultExecutor executor(&movementTable);
+  FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, movementPrefetch, movementEvict};
+  ASSERT_EQ(executor.execute(hooks, prog.get(), buffers.data(), *plan), 0);
+
+  // 3=2; 4=12; 5=112; 6=113; 7=123 — same as the Belady run.
+  EXPECT_EQ(world.device_vals.at(buffers[7]), 123);
+  // LRU's distinguishing move: b2 (buffer name #2) was evicted.
+  EXPECT_NE(std::find(world.log.begin(), world.log.end(), "evict#2"), world.log.end());
+  movementFree(nullptr, buffers[7]);
+}

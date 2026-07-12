@@ -9,7 +9,7 @@
 namespace fhenomenon {
 
 std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &program, const std::vector<uint32_t> &pinned,
-                                                        uint32_t device_budget) {
+                                                        uint32_t device_budget, FhnEvictionPolicy policy) {
   constexpr int64_t kBeforeProgram = -1;
   constexpr int64_t kNever = std::numeric_limits<int64_t>::max();
 
@@ -56,7 +56,8 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
 
   FhnMovementPlan plan;
   plan.actions_.resize(program.num_instructions);
-  std::set<uint32_t> resident; // ordered: deterministic Belady tie-break on lower id
+  std::set<uint32_t> resident;                      // ordered: deterministic Belady tie-break on lower id
+  std::unordered_map<uint32_t, int64_t> last_touch; // position of most recent def/prefetch/use
 
   for (uint32_t i = 0; i < program.num_instructions; ++i) {
     const FhnInstruction &inst = program.instructions[i];
@@ -88,15 +89,24 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
       while (resident.size() + incoming > device_budget) {
         bool found = false;
         uint32_t victim = 0;
-        int64_t victim_next = -1;
+        int64_t victim_key = 0;
         for (uint32_t id : resident) {
           if (working.count(id))
             continue;
-          const int64_t nu = next_use_after(id, pos - 1);
-          if (!found || nu > victim_next) {
-            found = true;
-            victim = id;
-            victim_next = nu;
+          if (policy == FhnEvictionPolicy::Belady) {
+            const int64_t nu = next_use_after(id, pos - 1);
+            if (!found || nu > victim_key) {
+              found = true;
+              victim = id;
+              victim_key = nu;
+            }
+          } else { // Lru: oldest last touch wins; strict < keeps the lower id on ties
+            const int64_t lt = last_touch.count(id) ? last_touch.at(id) : -1;
+            if (!found || lt < victim_key) {
+              found = true;
+              victim = id;
+              victim_key = lt;
+            }
           }
         }
         if (!found)
@@ -109,15 +119,21 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
 
     act.alloc.push_back(inst.result_id);
     resident.insert(inst.result_id);
+    last_touch[inst.result_id] = pos;
     plan.stats_.alloc_count++;
 
     for (uint32_t id : to_prefetch) {
       act.prefetch.push_back(id);
       resident.insert(id);
+      last_touch[id] = pos;
       plan.stats_.prefetch_count++;
     }
 
     plan.stats_.high_water = std::max(plan.stats_.high_water, static_cast<uint32_t>(resident.size()));
+
+    // Touch every operand for LRU tracking.
+    for (uint32_t id : operand_set)
+      last_touch[id] = pos;
 
     // Free everything whose last use has passed: operands with no later
     // use, and a result nothing ever reads.

@@ -8,6 +8,12 @@
 
 namespace fhenomenon {
 
+// Eviction policy for budgeted planning. Belady (exact optimal, enabled by
+// the data-oblivious IR's perfect future knowledge) is the default and the
+// only policy production paths use. Lru exists SOLELY as a benchmarking
+// baseline so the corpus can quantify what exact future knowledge saves.
+enum class FhnEvictionPolicy { Belady, Lru };
+
 // One instruction slot's data movement actions.
 // Pre-instruction order is evict -> alloc -> prefetch: evictions make room
 // before allocations and transfers claim it. free applies post-instruction.
@@ -46,7 +52,8 @@ class FhnMovementPlan {
   // inputs are not freed in that (degenerate) case; callers that can
   // produce such programs must pin or free their inputs themselves.
   static std::optional<FhnMovementPlan> analyze(const FhnProgram &program, const std::vector<uint32_t> &pinned,
-                                                uint32_t device_budget = 0);
+                                                uint32_t device_budget = 0,
+                                                FhnEvictionPolicy policy = FhnEvictionPolicy::Belady);
 
   const FhnMovementActions &at(uint32_t inst_index) const { return actions_[inst_index]; }
   const Stats &stats() const { return stats_; }
