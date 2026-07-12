@@ -228,3 +228,24 @@ TEST(SessionTest, SessionlessAssignmentCarriesCiphertext) {
   Fhenon<int> c = a * b; // eager ct*ct multiply, copy-initialization
   EXPECT_EQ(c.decrypt(), 30);
 }
+
+// Two entities can end the session bound to the SAME value id (b = a).
+// Adoption of plan-allocated buffers must dedupe by id, or the two
+// write-backs would double-free one buffer when both entities die.
+TEST(SessionTest, AliasedWriteBackTargetsShareOneBuffer) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+
+  Fhenon<int> a = 0;
+  Fhenon<int> b = 0;
+  a.belong(profile);
+  b.belong(profile);
+
+  session->run([&]() {
+    a = a + 7;
+    b = a; // b's latest binding is a's value id
+  });
+
+  EXPECT_EQ(a.decrypt(), 7);
+  EXPECT_EQ(b.decrypt(), 7);
+}
