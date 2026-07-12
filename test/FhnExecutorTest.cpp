@@ -571,6 +571,7 @@ TEST(FhnExecutorMovement, BudgetedExecutionComputesCorrectValues) {
   // caller inputs, whose lifetime the plan owns by contract.
   EXPECT_EQ(world.allocs - world.frees, 1); // only pinned id 7 survives
   EXPECT_NE(buffers[7], nullptr);
+  movementFree(nullptr, buffers[7]); // adopt-and-release: the pinned output survives for the caller
 }
 
 // Null hooks skip movement actions but execution still works when
@@ -600,6 +601,7 @@ TEST(FhnExecutorMovement, NullHooksSkipMovement) {
     EXPECT_EQ(line.find("prefetch"), std::string::npos);
     EXPECT_EQ(line.find("evict"), std::string::npos);
   }
+  movementFree(nullptr, buffers[3]); // pinned output; inputs a,b are plan-freed
 }
 
 // A mid-program kernel failure must free every plan-allocated buffer —
@@ -633,4 +635,6 @@ TEST(FhnExecutorMovement, FailureFreesAllPlanAllocations) {
   EXPECT_EQ(buffers[4], nullptr);
   // Caller-owned inputs untouched.
   EXPECT_EQ(world.device_vals.at(a), 1);
+  movementFree(nullptr, a); // caller-owned inputs, pinned and untouched by failure
+  movementFree(nullptr, b);
 }
