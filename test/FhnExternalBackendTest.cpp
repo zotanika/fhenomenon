@@ -137,3 +137,13 @@ TEST(FhnExternalBackend, BufferOutlivesBackend) {
   a.isEncrypted_ = false;
   SUCCEED();
 }
+
+// ToyFHE has a single memory space and exports no movement hooks; the
+// runtime must surface them as null so plan execution skips the actions.
+TEST(FhnExternalBackend, MovementHooksAbsentResolveToNull) {
+  ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
+  const FhnRuntime *rt = backend.fhnRuntime();
+  ASSERT_NE(rt, nullptr);
+  EXPECT_EQ(rt->prefetch, nullptr);
+  EXPECT_EQ(rt->evict, nullptr);
+}

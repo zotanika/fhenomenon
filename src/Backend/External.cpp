@@ -61,6 +61,9 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   vtable_.encrypt_f64 = reinterpret_cast<FhnEncryptDoubleFn>(dlsym(dl_handle_, sym("fhn_encrypt_f64").c_str()));
   vtable_.decrypt_i64 = reinterpret_cast<FhnDecryptInt64Fn>(dlsym(dl_handle_, sym("fhn_decrypt_i64").c_str()));
   vtable_.decrypt_f64 = reinterpret_cast<FhnDecryptDoubleFn>(dlsym(dl_handle_, sym("fhn_decrypt_f64").c_str()));
+  // Optional movement hooks: absent means a single memory space.
+  vtable_.prefetch = reinterpret_cast<FhnBufferPrefetchFn>(dlsym(dl_handle_, sym("fhn_buffer_prefetch").c_str()));
+  vtable_.evict = reinterpret_cast<FhnBufferEvictFn>(dlsym(dl_handle_, sym("fhn_buffer_evict").c_str()));
 
   // 5. Resolve optional advanced symbols (NULL if absent)
   vtable_.submit = reinterpret_cast<FhnSubmitFn>(dlsym(dl_handle_, sym("fhn_submit").c_str()));
@@ -98,7 +101,8 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   core_->destroy = vtable_.destroy;
   core_->ctx = fhn_ctx_;
 
-  runtime_ = {fhn_ctx_, executor_.get(), vtable_.buffer_alloc, vtable_.buffer_free, core_};
+  runtime_ = {fhn_ctx_, executor_.get(), vtable_.buffer_alloc, vtable_.buffer_free, vtable_.prefetch, vtable_.evict,
+              core_};
 
   std::cout << "ExternalBackend loaded: " << info_->name << " v" << info_->version
             << " (device_type=" << static_cast<int>(info_->device_type) << ")" << std::endl;
