@@ -107,6 +107,90 @@ Shape shapeLogreg() {
   return b.finish("logreg", "shared-weight dot products + polynomial", 32, 3, {combined});
 }
 
+Shape shapeConv1d() {
+  ShapeBuilder b;
+  uint32_t p = b.input(vec(64, 30));
+  for (uint32_t layer = 0; layer < 3; ++layer) {
+    uint32_t acc = b.cs(FHN_MULT_CS, p, 2); // center tap
+    const int64_t taps[4] = {-2, -1, 1, 2};
+    for (int64_t t : taps) {
+      const uint32_t m = b.cs(FHN_MULT_CS, b.rot(p, t), (t % 3) + 1);
+      acc = b.cc(FHN_ADD_CC, acc, m);
+    }
+    p = acc;
+  }
+  return b.finish("conv1d", "overlapping stencil window reuse x3 layers", 64, 0, {p});
+}
+
+Shape shapeStats() {
+  ShapeBuilder b;
+  std::vector<uint32_t> outs;
+  for (uint32_t j = 0; j < 2; ++j) {
+    const uint32_t x = b.input(vec(64, 40 + j));
+    const uint32_t s = reduceTree(b, x, 64);
+    const uint32_t s2 = reduceTree(b, b.cc(FHN_MULT_CC, x, x), 64);
+    // 64*Var proxy: 64*sum(x^2) - sum(x)^2
+    const uint32_t v = b.cc(FHN_SUB_CC, b.cs(FHN_MULT_CS, s2, 64), b.cc(FHN_MULT_CC, s, s));
+    outs.push_back(s);
+    outs.push_back(v);
+  }
+  return b.finish("stats", "two datasets, four live outputs", 64, 2, outs);
+}
+
+Shape shapePsiEq() {
+  ShapeBuilder b;
+  std::vector<uint32_t> bits;
+  for (uint32_t i = 0; i < 32; ++i) {
+    const uint32_t a = b.input({val(500 + i)});
+    const uint32_t c = b.input({(i % 4 == 0) ? val(500 + i) : val(700 + i)});
+    bits.push_back(b.cc(FHN_EQ, a, c));
+  }
+  while (bits.size() > 1) {
+    std::vector<uint32_t> next;
+    for (size_t i = 0; i + 1 < bits.size(); i += 2)
+      next.push_back(b.cc(FHN_AND, bits[i], bits[i + 1]));
+    if (bits.size() % 2 == 1)
+      next.push_back(bits.back());
+    bits = next;
+  }
+  return b.finish("psi-eq", "boolean equality-AND tree (plan-only today)", 1, 0, {bits[0]});
+}
+
+Shape shapeIterUpdate() {
+  ShapeBuilder b;
+  uint32_t x = b.input({1});
+  for (uint32_t k = 0; k < 32; ++k)
+    x = (k % 2 == 0) ? b.cs(FHN_MULT_CS, x, 2) : b.cs(FHN_ADD_CS, x, 3);
+  return b.finish("iter-update", "rebinding-heavy sequential chain", 1, 0, {x});
+}
+
+Shape shapeWeightedSum() {
+  ShapeBuilder b;
+  uint32_t acc = 0;
+  for (uint32_t i = 0; i < 24; ++i) {
+    const uint32_t x = b.input({val(600 + i)});
+    const uint32_t m = b.cs(FHN_MULT_CS, x, ((static_cast<int64_t>(i) * 5) % 7) - 3);
+    acc = (i == 0) ? m : b.cc(FHN_ADD_CC, acc, m);
+  }
+  return b.finish("weighted-sum", "scalar-multiply accumulate", 1, 0, {acc});
+}
+
+Shape shapeDiamond() {
+  ShapeBuilder b;
+  const uint32_t root = b.input({5});
+  std::vector<uint32_t> tips;
+  for (uint32_t d = 0; d < 2; ++d) {
+    uint32_t p = root;
+    for (uint32_t level = 0; level < 8; ++level) {
+      const uint32_t l = b.cs(FHN_ADD_CS, p, static_cast<int64_t>(level) + 1);
+      const uint32_t r = b.cc(FHN_ADD_CC, p, root); // long-gap root reuse
+      p = b.cc(FHN_ADD_CC, l, r);
+    }
+    tips.push_back(p);
+  }
+  return b.finish("diamond", "fork-join with long-gap root reuse", 1, 0, {b.cc(FHN_ADD_CC, tips[0], tips[1])});
+}
+
 } // namespace
 
 std::vector<Shape> allShapes() {
@@ -117,6 +201,12 @@ std::vector<Shape> allShapes() {
   shapes.push_back(shapeReduceTree());
   shapes.push_back(shapeWideFront());
   shapes.push_back(shapeLogreg());
+  shapes.push_back(shapeConv1d());
+  shapes.push_back(shapeStats());
+  shapes.push_back(shapePsiEq());
+  shapes.push_back(shapeIterUpdate());
+  shapes.push_back(shapeWeightedSum());
+  shapes.push_back(shapeDiamond());
   return shapes;
 }
 

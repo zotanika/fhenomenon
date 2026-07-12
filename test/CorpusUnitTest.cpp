@@ -135,7 +135,7 @@ TEST(CorpusBackend, MissingLibraryReportsError) {
 // high-water budget (per-spec sanity).
 TEST(CorpusShapes, AllShapesSatisfyInvariants) {
   auto shapes = allShapes();
-  ASSERT_GE(shapes.size(), 6u); // Task 5 raises this to 12
+  ASSERT_EQ(shapes.size(), 12u);
 
   std::set<std::string> names;
   for (const auto &shape : shapes) {
@@ -159,6 +159,25 @@ TEST(CorpusShapes, AllShapesSatisfyInvariants) {
     for (uint32_t out : shape.output_ids) {
       ASSERT_TRUE(vals->count(out));
       EXPECT_EQ(vals->at(out).size(), shape.slot_count);
+    }
+  }
+}
+
+// The ToyFHE-executable subset must stay depth-safe and rotate-free:
+// slot_count 1, ct_mult_depth <= 3, no FHN_ROTATE or boolean opcodes.
+TEST(CorpusShapes, ExecutableSubsetIsDepthSafe) {
+  const std::set<std::string> executable = {"wide-front", "iter-update", "weighted-sum", "diamond"};
+  for (const auto &shape : allShapes()) {
+    if (!executable.count(shape.name))
+      continue;
+    SCOPED_TRACE(shape.name);
+    EXPECT_EQ(shape.slot_count, 1u);
+    EXPECT_LE(shape.ct_mult_depth, 3u);
+    for (uint32_t i = 0; i < shape.program->num_instructions; ++i) {
+      const FhnOpCode op = shape.program->instructions[i].opcode;
+      EXPECT_NE(op, FHN_ROTATE);
+      EXPECT_TRUE(op == FHN_ADD_CC || op == FHN_SUB_CC || op == FHN_MULT_CC || op == FHN_ADD_CS || op == FHN_MULT_CS ||
+                  op == FHN_NEGATE);
     }
   }
 }
