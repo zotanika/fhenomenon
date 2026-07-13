@@ -78,7 +78,7 @@ add_test(NAME FhnMatvecBenchTest COMMAND fhn-bench-matvec --n 8 --reps 1)
 # execution of the depth-safe subset on ToyFHE) and exits nonzero on any
 # failure, so it doubles as a CI test.
 add_test(NAME FhnCorpusTest
-         COMMAND fhn-corpus --backend $<TARGET_FILE:toyfhe_fhn> --prefix toyfhe_ --max-depth 3)
+         COMMAND fhn-corpus --backend $<TARGET_FILE:toyfhe_fhn> --prefix toyfhe_ --max-depth 3 --budget-bytes min)
 
 # --- Shared library for ExternalBackend testing ---
 # Build ToyFheKernels as a shared lib so ExternalBackend can dlopen it
@@ -99,6 +99,15 @@ add_gtest_target_to_ctest(FhnExternalBackendTest)
 target_compile_definitions(CorpusUnitTest PRIVATE
   TEST_LIB_DIR="${CMAKE_BINARY_DIR}/lib")
 add_dependencies(CorpusUnitTest toyfhe_fhn)
+
+# Deliberately exports a PARTIAL level-model trio: loaders must ignore it.
+add_library(partial_fhn SHARED partial_fhn_backend.cpp)
+target_include_directories(partial_fhn PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
+set_target_properties(partial_fhn PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+add_dependencies(FhnExternalBackendTest partial_fhn)
+add_dependencies(CorpusUnitTest partial_fhn)
 
 # --- Cheddar FHN backend (GPU, optional) ---
 set(CHEDDAR_FHE_DIR "${CMAKE_SOURCE_DIR}/refs/cheddar-fhe")

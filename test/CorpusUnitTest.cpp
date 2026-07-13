@@ -99,6 +99,14 @@ static std::string getTestLibPath() {
 #endif
 }
 
+static std::string getPartialTestLibPath() {
+#ifdef __APPLE__
+  return std::string(TEST_LIB_DIR) + "/libpartial_fhn.dylib";
+#else
+  return std::string(TEST_LIB_DIR) + "/libpartial_fhn.so";
+#endif
+}
+
 TEST(CorpusBackend, LoadsToyFheAndResolvesDataPlane) {
   std::string error;
   auto backend = CorpusBackend::load(getTestLibPath(), "toyfhe_", &error);
@@ -126,6 +134,28 @@ TEST(CorpusBackend, MissingLibraryReportsError) {
   auto backend = CorpusBackend::load("/nonexistent/libnope.so", "toyfhe_", &error);
   EXPECT_FALSE(backend.has_value());
   EXPECT_FALSE(error.empty());
+}
+
+// A backend exporting only part of the level-model trio has the whole
+// group ignored (all-or-nothing), like the movement-hook half-pair rule.
+TEST(CorpusBackend, PartialLevelModelIsIgnoredWhole) {
+  std::string error;
+  auto backend = CorpusBackend::load(getPartialTestLibPath(), "ptl_", &error);
+  ASSERT_TRUE(backend.has_value()) << error;
+  EXPECT_EQ(backend->freshLevel(), nullptr);
+  EXPECT_EQ(backend->levelBytes(), nullptr);
+  EXPECT_EQ(backend->opcodeLevelEffect(), nullptr);
+}
+
+TEST(CorpusBackend, ToyFheLevelModelResolves) {
+  std::string error;
+  auto backend = CorpusBackend::load(getTestLibPath(), "toyfhe_", &error);
+  ASSERT_TRUE(backend.has_value()) << error;
+  ASSERT_NE(backend->freshLevel(), nullptr);
+  ASSERT_NE(backend->levelBytes(), nullptr);
+  ASSERT_NE(backend->opcodeLevelEffect(), nullptr);
+  EXPECT_EQ(backend->freshLevel()(backend->ctx()), 0);
+  EXPECT_GT(backend->levelBytes()(backend->ctx(), 0), 0u);
 }
 
 // Every shape must: (1) plan successfully with its outputs pinned,

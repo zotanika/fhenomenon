@@ -247,3 +247,160 @@ TEST(FhnMovementPlan, DefaultPolicyIsBelady) {
     EXPECT_EQ(a->at(i).prefetch, b->at(i).prefetch);
   }
 }
+
+namespace {
+
+// Synthetic CKKS-ish model for plan tests: fresh level 2, sizes chosen so
+// levels are observable through byte accounting (level 2 = 100 bytes,
+// level 1 = 60, level 0 = 30).
+FhnLevelModel testModel() {
+  FhnLevelModel model;
+  model.fresh_level = 2;
+  model.bytes_by_level = {30, 60, 100};
+  model.effects[FHN_ADD_CC] = FHN_LEVEL_PRESERVE;
+  model.effects[FHN_MULT_CC] = FHN_LEVEL_CONSUME;
+  model.effects[FHN_NEGATE] = FHN_LEVEL_PRESERVE;
+  model.effects[FHN_LEVEL_DOWN] = FHN_LEVEL_SET_PARAM0;
+  return model;
+}
+
+} // namespace
+
+// Byte accounting reflects inferred levels: inputs at fresh level (100B),
+// a CONSUME result one level down (60B), PRESERVE keeps the min level.
+TEST(FhnMovementPlan, ByteHighWaterFollowsLevelInference) {
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .inst(FHN_MULT_CC, 3, 1, 2) // level 1 (60B)
+                .inst(FHN_ADD_CC, 4, 3, 3)  // level 1 (60B)
+                .output(4)
+                .build();
+  const FhnLevelModel model = testModel();
+  auto plan = FhnMovementPlan::analyze(*prog, {4}, 0, FhnEvictionPolicy::Belady, &model);
+  ASSERT_TRUE(plan.has_value());
+  // Peak residency: i0 holds inputs 1,2 (100+100) + result 3 (60) = 260;
+  // after i0 frees nothing yet pinned-wise: 1,2 die at i0 -> {3}=60;
+  // i1 adds 4 (60) -> 120. Peak is 260.
+  EXPECT_EQ(plan->stats().high_water_bytes, 260u);
+  // Count-based high_water keeps meaning in byte mode.
+  EXPECT_EQ(plan->stats().high_water, 3u);
+}
+
+// Slot mode reports no byte high-water.
+TEST(FhnMovementPlan, SlotModeHasZeroByteHighWater) {
+  auto prog = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  auto plan = FhnMovementPlan::analyze(*prog, {3});
+  ASSERT_TRUE(plan.has_value());
+  EXPECT_EQ(plan->stats().high_water_bytes, 0u);
+}
+
+// A CONSUME chain deeper than the parameter chain underflows -> nullopt.
+TEST(FhnMovementPlan, LevelUnderflowIsRejected) {
+  auto prog = ProgramBuilder()
+                .input(1)
+                .inst(FHN_MULT_CC, 3, 1, 1) // level 1
+                .inst(FHN_MULT_CC, 4, 3, 3) // level 0
+                .inst(FHN_MULT_CC, 5, 4, 4) // level -1: underflow
+                .output(5)
+                .build();
+  const FhnLevelModel model = testModel();
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {5}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+}
+
+// SET_PARAM0 must not raise the level (v1 bug-catcher; FHN_LEVEL_REFRESH
+// is the future additive escape hatch for bootstrap).
+TEST(FhnMovementPlan, LevelRaiseIsRejected) {
+  auto prog = ProgramBuilder()
+                .input(1)
+                .inst(FHN_MULT_CC, 3, 1, 1)       // level 1
+                .inst_p0(FHN_LEVEL_DOWN, 4, 3, 2) // target 2 > 1: raise
+                .output(4)
+                .build();
+  const FhnLevelModel model = testModel();
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {4}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+}
+
+// An opcode the model does not declare is rejected.
+TEST(FhnMovementPlan, MissingEffectIsRejected) {
+  auto prog = ProgramBuilder().input(1).inst(FHN_SUB_CC, 3, 1, 1).output(3).build();
+  const FhnLevelModel model = testModel(); // no FHN_SUB_CC entry
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+}
+
+// Malformed models are rejected: table shorter than fresh_level+1 or a
+// zero byte size.
+TEST(FhnMovementPlan, MalformedModelIsRejected) {
+  auto prog = ProgramBuilder().input(1).inst(FHN_ADD_CC, 3, 1, 1).output(3).build();
+  FhnLevelModel short_model = testModel();
+  short_model.bytes_by_level = {30, 60}; // fresh_level 2 needs 3 entries
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &short_model).has_value());
+  FhnLevelModel zero_model = testModel();
+  zero_model.bytes_by_level[1] = 0;
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &zero_model).has_value());
+}
+
+// Feasibility and admission are byte-denominated: a budget equal to the
+// peak working set is feasible with zero evictions, one byte less is not.
+TEST(FhnMovementPlan, ByteBudgetFeasibilityIsByteDenominated) {
+  // ids: inputs a1,b2 (level 2, 100B each). i0: 3=1*2 (60B). i1: 4=3*3
+  // (30B). i2: 5=3+3 (60B). i3: 6=5+1 -> needs a1 (100B) back.
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .inst(FHN_MULT_CC, 3, 1, 2) // 60B; a1,b2 die after? a1 used at i3
+                .inst(FHN_MULT_CC, 4, 3, 3) // 30B
+                .inst(FHN_ADD_CC, 5, 3, 3)  // 60B; 3 dies here
+                .inst(FHN_ADD_CC, 6, 5, 1)  // needs a1 again
+                .output(6)
+                .build();
+  const FhnLevelModel model = testModel();
+  // Peak working set is i0: inputs 1,2 (100+100) + result 3 (60) = 260.
+  auto plan = FhnMovementPlan::analyze(*prog, {6}, 260, FhnEvictionPolicy::Belady, &model);
+  ASSERT_TRUE(plan.has_value());
+  // At 260 everything fits at every step (traced in plan review):
+  EXPECT_EQ(plan->stats().evict_count, 0u);
+  // ...and at 220 the i0 working set (260) is infeasible:
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {6}, 220, FhnEvictionPolicy::Belady, &model).has_value());
+}
+
+// Under byte pressure the eviction loop must free enough BYTES, evicting
+// TWO small residents to admit a big working set — count-based logic
+// would never evict two in one pre-step here.
+TEST(FhnMovementPlan, ByteBudgetEvictsMultipleSmallForBigWorkingSet) {
+  // Levels/sizes per testModel(): fresh 2=100B, 1=60B, 0=30B.
+  // i0: 3=1*1 (60B), 1 dies.        i1: 4=3*3 (30B), 3 dies; 4 used @i5.
+  // i2: 5=2*2 (60B), 2 dies.        i3: 6=5*5 (30B), 5 dies; 6 used @i5.
+  // i4: 8=7+7 (100B) — working {7,8} = 200B exactly; residents {4,6}
+  //     (30+30) are idle with future uses, so budget 200 forces BOTH out.
+  // i5: 9=4+6 — both come back (prefetch {4,6}).
+  auto prog = ProgramBuilder()
+                .input(1)
+                .input(2)
+                .input(7)
+                .inst(FHN_MULT_CC, 3, 1, 1) // i0
+                .inst(FHN_MULT_CC, 4, 3, 3) // i1
+                .inst(FHN_MULT_CC, 5, 2, 2) // i2
+                .inst(FHN_MULT_CC, 6, 5, 5) // i3
+                .inst(FHN_ADD_CC, 8, 7, 7)  // i4: pressure generator
+                .inst(FHN_ADD_CC, 9, 4, 6)  // i5
+                .output(9)
+                .build();
+  const FhnLevelModel model = testModel();
+  auto plan = FhnMovementPlan::analyze(*prog, {9}, 200, FhnEvictionPolicy::Belady, &model);
+  ASSERT_TRUE(plan.has_value());
+  // Both 30-byte residents leave in one pre-step (Belady tie on next use
+  // i5 breaks to the lower id first).
+  EXPECT_EQ(plan->at(4).evict, (std::vector<uint32_t>{4, 6}));
+  EXPECT_EQ(plan->stats().evict_count, 2u);
+  EXPECT_EQ(plan->at(5).prefetch, (std::vector<uint32_t>{4, 6}));
+}
+
+// A garbage effect value from a buggy backend must reject the model, not
+// silently plan as PRESERVE.
+TEST(FhnMovementPlan, OutOfRangeEffectIsRejected) {
+  auto prog = ProgramBuilder().input(1).inst(FHN_ADD_CC, 3, 1, 1).output(3).build();
+  FhnLevelModel model = testModel();
+  model.effects[FHN_ADD_CC] = static_cast<FhnLevelEffect>(42);
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+}

@@ -328,3 +328,18 @@ double toyfhe_fhn_buffer_read_double(FhnBackendCtx *ctx, FhnBuffer *buf) {
     return ctx->engine.decryptDouble(buf->ct);
   return 0.0;
 }
+
+// --- Level model (data plane) -----------------------------------------------
+// ToyFHE is flat: multiply relinearizes and rescales internally, so a
+// ciphertext's size and every opcode's effect are level-independent. There
+// is exactly one valid level (0); anything else has no defined size.
+
+int64_t toyfhe_fhn_fresh_level(FhnBackendCtx * /*ctx*/) { return 0; }
+
+uint64_t toyfhe_fhn_level_bytes(FhnBackendCtx * /*ctx*/, int64_t level) {
+  return level == 0 ? sizeof(fhenomenon::toyfhe::Ciphertext) : 0;
+}
+
+FhnLevelEffect toyfhe_fhn_opcode_level_effect(FhnBackendCtx * /*ctx*/, FhnOpCode /*opcode*/) {
+  return FHN_LEVEL_PRESERVE;
+}

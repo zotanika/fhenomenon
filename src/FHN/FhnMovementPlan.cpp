@@ -9,7 +9,8 @@
 namespace fhenomenon {
 
 std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &program, const std::vector<uint32_t> &pinned,
-                                                        uint32_t device_budget, FhnEvictionPolicy policy) {
+                                                        uint64_t device_budget, FhnEvictionPolicy policy,
+                                                        const FhnLevelModel *model) {
   constexpr int64_t kBeforeProgram = -1;
   constexpr int64_t kNever = std::numeric_limits<int64_t>::max();
 
@@ -42,6 +43,56 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
     }
   }
 
+  // Level inference: ids are single-assignment, so every id's level is
+  // static and can be computed once, up front. Only runs in byte mode.
+  std::unordered_map<uint32_t, int64_t> level_of;
+  if (model) {
+    if (model->fresh_level < 0 || model->bytes_by_level.size() < static_cast<size_t>(model->fresh_level) + 1)
+      return std::nullopt;
+    for (uint64_t b : model->bytes_by_level)
+      if (b == 0)
+        return std::nullopt;
+    for (uint32_t i = 0; i < program.num_inputs; ++i)
+      level_of[program.input_ids[i]] = model->fresh_level;
+    for (uint32_t i = 0; i < program.num_instructions; ++i) {
+      const FhnInstruction &inst = program.instructions[i];
+      auto eff = model->effects.find(static_cast<int>(inst.opcode));
+      if (eff == model->effects.end())
+        return std::nullopt;
+      int64_t min_level = model->fresh_level;
+      for (int j = 0; j < 4; ++j)
+        if (inst.operands[j] != 0)
+          min_level = std::min(min_level, level_of.at(inst.operands[j]));
+      int64_t result_level = min_level;
+      switch (eff->second) {
+      case FHN_LEVEL_PRESERVE:
+        break;
+      case FHN_LEVEL_CONSUME:
+        result_level = min_level - 1;
+        break;
+      case FHN_LEVEL_SET_PARAM0:
+        result_level = inst.params[0];
+        if (result_level > min_level)
+          return std::nullopt; // levels never rise (v1 bug-catcher)
+        break;
+      default:
+        // An out-of-range FhnLevelEffect from a buggy/future backend must
+        // reject the model, not silently plan as PRESERVE. A future
+        // FHN_LEVEL_REFRESH lands as an explicit case above.
+        return std::nullopt;
+      }
+      if (result_level < 0 || result_level > model->fresh_level)
+        return std::nullopt; // underflow / out of declared range
+      level_of[inst.result_id] = result_level;
+    }
+  }
+
+  // Unit cost of holding an id resident: bytes in byte mode, 1 in slot
+  // mode — this single function keeps the no-model path bit-identical.
+  auto cost = [&](uint32_t id) -> uint64_t {
+    return model ? model->bytes_by_level[static_cast<size_t>(level_of.at(id))] : 1;
+  };
+
   const std::unordered_set<uint32_t> pinned_set(pinned.begin(), pinned.end());
 
   // First use strictly after position `pos` (kNever if none).
@@ -57,6 +108,7 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
   FhnMovementPlan plan;
   plan.actions_.resize(program.num_instructions);
   std::set<uint32_t> resident;                      // ordered: deterministic Belady tie-break on lower id
+  uint64_t resident_units = 0;                      // Σ cost(id) for id in resident — bytes in byte mode, else count
   std::unordered_map<uint32_t, int64_t> last_touch; // position of most recent def/prefetch/use
 
   for (uint32_t i = 0; i < program.num_instructions; ++i) {
@@ -79,14 +131,19 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
         to_prefetch.push_back(id);
 
     if (device_budget > 0) {
-      if (working.size() > device_budget)
+      uint64_t working_units = 0;
+      for (uint32_t id : working)
+        working_units += cost(id);
+      if (working_units > device_budget)
         return std::nullopt; // one instruction cannot fit — infeasible
       // Belady: make room for the result alloc + missing operands by
       // evicting residents (outside the working set) whose next use is
       // farthest; kNever (no future use) sorts farthest of all, and the
       // ordered set breaks ties on the lower id.
-      const uint64_t incoming = 1 /*result alloc*/ + to_prefetch.size();
-      while (resident.size() + incoming > device_budget) {
+      uint64_t incoming_units = cost(inst.result_id);
+      for (uint32_t id : to_prefetch)
+        incoming_units += cost(id);
+      while (resident_units + incoming_units > device_budget) {
         bool found = false;
         uint32_t victim = 0;
         int64_t victim_key = 0;
@@ -113,23 +170,28 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
           return std::nullopt; // working set already fills the device
         act.evict.push_back(victim);
         resident.erase(victim);
+        resident_units -= cost(victim);
         plan.stats_.evict_count++;
       }
     }
 
     act.alloc.push_back(inst.result_id);
     resident.insert(inst.result_id);
+    resident_units += cost(inst.result_id);
     last_touch[inst.result_id] = pos;
     plan.stats_.alloc_count++;
 
     for (uint32_t id : to_prefetch) {
       act.prefetch.push_back(id);
       resident.insert(id);
+      resident_units += cost(id);
       last_touch[id] = pos;
       plan.stats_.prefetch_count++;
     }
 
     plan.stats_.high_water = std::max(plan.stats_.high_water, static_cast<uint32_t>(resident.size()));
+    if (model)
+      plan.stats_.high_water_bytes = std::max(plan.stats_.high_water_bytes, resident_units);
 
     // Touch every operand for LRU tracking.
     for (uint32_t id : operand_set)
@@ -144,6 +206,7 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
       if (dead) {
         act.free.push_back(id);
         resident.erase(id);
+        resident_units -= cost(id);
       }
     }
   }

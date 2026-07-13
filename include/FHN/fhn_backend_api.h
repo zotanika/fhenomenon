@@ -92,6 +92,23 @@ typedef void (*FhnBufferFreeFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 typedef int (*FhnBufferPrefetchFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 typedef int (*FhnBufferEvictFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 
+/* Level effect of a compute opcode, declared by CKKS-family backends for
+   byte-accurate movement planning (see fhn_fresh_level/fhn_level_bytes/
+   fhn_opcode_level_effect, resolved as an all-or-nothing trio). */
+typedef enum FhnLevelEffect {
+  FHN_LEVEL_PRESERVE = 0,   /* result level = min over operand levels    */
+  FHN_LEVEL_CONSUME = 1,    /* result level = (min over operands) - 1    */
+  FHN_LEVEL_SET_PARAM0 = 2, /* result level = params[0] (must not raise) */
+} FhnLevelEffect;
+
+/* ── Optional level model (data plane) ──
+   All three exports appear TOGETHER or the group is ignored with a
+   warning (mirroring the movement-hook half-pair rule). Additive and
+   optional: no FHN_ABI_VERSION bump; existing backends stay conformant. */
+typedef int64_t (*FhnFreshLevelFn)(FhnBackendCtx *ctx);
+typedef uint64_t (*FhnLevelBytesFn)(FhnBackendCtx *ctx, int64_t level);
+typedef FhnLevelEffect (*FhnOpcodeLevelEffectFn)(FhnBackendCtx *ctx, FhnOpCode opcode);
+
 typedef int (*FhnEncryptInt64Fn)(FhnBackendCtx *ctx, FhnBuffer *out, int64_t value);
 typedef int (*FhnEncryptDoubleFn)(FhnBackendCtx *ctx, FhnBuffer *out, double value);
 typedef int (*FhnDecryptInt64Fn)(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out);
@@ -130,6 +147,11 @@ typedef struct FhnBackendVTable {
   FhnWaitFn wait;
   FhnGetOutputsFn get_outputs;
   FhnExecFreeFn exec_free;
+
+  /* Optional level model trio (NULL if not provided by backend) */
+  FhnFreshLevelFn fresh_level;
+  FhnLevelBytesFn level_bytes;
+  FhnOpcodeLevelEffectFn opcode_level_effect;
 } FhnBackendVTable;
 
 #ifdef __cplusplus

@@ -38,6 +38,10 @@ struct FhnRuntime {
   // Optional movement hooks; null = single memory space, movement skipped.
   FhnBufferPrefetchFn prefetch = nullptr;
   FhnBufferEvictFn evict = nullptr;
+  // Optional level model (all-or-nothing trio); null = no byte budgets.
+  FhnFreshLevelFn fresh_level = nullptr;
+  FhnLevelBytesFn level_bytes = nullptr;
+  FhnOpcodeLevelEffectFn opcode_level_effect = nullptr;
   // Keeps the backend context (and, for dlopened backends, the library
   // itself) alive for as long as any buffer allocated through this runtime
   // exists. Buffer deleters must capture it, or a Fhenon outliving its

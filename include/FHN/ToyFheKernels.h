@@ -32,6 +32,13 @@ int toyfhe_fhn_decrypt_vec_i64(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t 
 int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf);
 double toyfhe_fhn_buffer_read_double(FhnBackendCtx *ctx, FhnBuffer *buf);
 
+// Level model (data plane, all-or-nothing trio). ToyFHE is flat: its Engine
+// rescales internally, so ciphertext size and opcode effect never vary with
+// level. There is exactly one valid level (0), sized at a fresh ciphertext.
+int64_t toyfhe_fhn_fresh_level(FhnBackendCtx *ctx);
+uint64_t toyfhe_fhn_level_bytes(FhnBackendCtx *ctx, int64_t level);
+FhnLevelEffect toyfhe_fhn_opcode_level_effect(FhnBackendCtx *ctx, FhnOpCode opcode);
+
 #ifdef __cplusplus
 }
 #endif

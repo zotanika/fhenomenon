@@ -33,6 +33,10 @@ class CorpusBackend {
   FhnDecryptInt64Fn decryptI64() const { return decrypt_i64_; }
   FhnBufferPrefetchFn prefetch() const { return prefetch_; } // nullable
   FhnBufferEvictFn evict() const { return evict_; }          // nullable
+  // Optional level model trio, resolved all-or-nothing (see load()).
+  FhnFreshLevelFn freshLevel() const { return fresh_level_; }                       // nullable
+  FhnLevelBytesFn levelBytes() const { return level_bytes_; }                       // nullable
+  FhnOpcodeLevelEffectFn opcodeLevelEffect() const { return opcode_level_effect_; } // nullable
 
   private:
   CorpusBackend() = default;
@@ -47,6 +51,9 @@ class CorpusBackend {
   FhnDecryptInt64Fn decrypt_i64_ = nullptr;
   FhnBufferPrefetchFn prefetch_ = nullptr;
   FhnBufferEvictFn evict_ = nullptr;
+  FhnFreshLevelFn fresh_level_ = nullptr;
+  FhnLevelBytesFn level_bytes_ = nullptr;
+  FhnOpcodeLevelEffectFn opcode_level_effect_ = nullptr;
 };
 
 } // namespace corpus

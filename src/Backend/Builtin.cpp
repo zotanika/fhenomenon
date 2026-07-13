@@ -62,9 +62,10 @@ BuiltinBackend::BuiltinBackend() {
   fhn_table_ = toyfhe_fhn_get_kernels(fhn_ctx_);
   fhn_executor_ = std::make_unique<FhnDefaultExecutor>(fhn_table_);
 #ifndef FHENOMENON_USE_TFHE
-  // ToyFHE has a single memory space and exports no movement hooks.
-  runtime_ = {fhn_ctx_, fhn_executor_.get(), toyfhe_fhn_buffer_alloc, toyfhe_fhn_buffer_free, nullptr, nullptr,
-              ctx_core_};
+  // ToyFHE has a single memory space and exports no movement hooks, but it
+  // does declare a flat level model directly (no dlsym resolution needed).
+  runtime_ = {fhn_ctx_, fhn_executor_.get(),    toyfhe_fhn_buffer_alloc, toyfhe_fhn_buffer_free,         nullptr,
+              nullptr,  toyfhe_fhn_fresh_level, toyfhe_fhn_level_bytes,  toyfhe_fhn_opcode_level_effect, ctx_core_};
 #endif
 }
 
