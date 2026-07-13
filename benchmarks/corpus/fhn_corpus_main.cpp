@@ -39,8 +39,20 @@ uint32_t maxWorkingSet(const FhnProgram &program) {
 void usage(const char *argv0) {
   std::fprintf(stderr,
                "usage: %s [--backend <lib.so>] [--prefix <sym, default toyfhe_>] "
-               "[--shape <name>] [--max-depth <N>] [--list]\n",
+               "[--shape <name>] [--max-depth <N>] [--list] [--budget-bytes <N|min>]\n",
                argv0);
+}
+
+// Queries a backend's level model once via its trio getters. Requires the
+// caller to have already confirmed all three are non-null (all-or-nothing).
+FhnLevelModel queryLevelModel(const CorpusBackend &backend) {
+  FhnLevelModel model;
+  model.fresh_level = backend.freshLevel()(backend.ctx());
+  for (int64_t l = 0; l <= model.fresh_level; ++l)
+    model.bytes_by_level.push_back(backend.levelBytes()(backend.ctx(), l));
+  for (int op = FHN_NOP; op < FHN_OPCODE_COUNT; ++op)
+    model.effects[op] = backend.opcodeLevelEffect()(backend.ctx(), static_cast<FhnOpCode>(op));
+  return model;
 }
 
 } // namespace
@@ -51,6 +63,9 @@ int main(int argc, char **argv) {
   std::string only_shape;
   uint32_t max_depth = UINT32_MAX;
   bool list_only = false;
+  bool budget_bytes_given = false;
+  bool budget_bytes_min = false;
+  uint64_t budget_bytes = 0;
 
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--backend") == 0 && i + 1 < argc) {
@@ -63,6 +78,13 @@ int main(int argc, char **argv) {
       max_depth = static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
     } else if (std::strcmp(argv[i], "--list") == 0) {
       list_only = true;
+    } else if (std::strcmp(argv[i], "--budget-bytes") == 0 && i + 1 < argc) {
+      budget_bytes_given = true;
+      const char *arg = argv[++i];
+      if (std::strcmp(arg, "min") == 0)
+        budget_bytes_min = true;
+      else
+        budget_bytes = std::strtoull(arg, nullptr, 10);
     } else {
       usage(argv[0]);
       return 2;
@@ -95,6 +117,21 @@ int main(int argc, char **argv) {
       std::fprintf(stderr, "error: cannot load backend: %s\n", error.c_str());
       return 1;
     }
+  }
+
+  FhnLevelModel model;
+  if (budget_bytes_given) {
+    if (!backend || !backend->freshLevel() || !backend->levelBytes() || !backend->opcodeLevelEffect()) {
+      std::fprintf(stderr, "error: --budget-bytes requires a backend with a level model\n");
+      return 2;
+    }
+    model = queryLevelModel(*backend);
+    // min = 3 * bytes at the fresh level: the corpus generators are all
+    // unary/binary primitives, so no instruction's working set (result +
+    // operands) ever exceeds 3 buffers — this is the smallest budget every
+    // shape can feasibly plan under.
+    if (budget_bytes_min)
+      budget_bytes = 3 * model.bytes_by_level[static_cast<size_t>(model.fresh_level)];
   }
 
   bool failed = false;
@@ -159,6 +196,28 @@ int main(int argc, char **argv) {
         total_lru += tl;
         shape_savings.push_back(saved);
         counted = true;
+      }
+    }
+
+    // Byte-mode report: hw_bytes from an unlimited byte-mode analysis, then
+    // both policies at budget_bytes. Pinned set matches the slot sweep
+    // above (outputs only) — not the execution pass's inputs∪outputs.
+    if (budget_bytes_given) {
+      auto hw_bytes_plan =
+        FhnMovementPlan::analyze(*shape.program, shape.output_ids, 0, FhnEvictionPolicy::Belady, &model);
+      auto belady_bytes =
+        FhnMovementPlan::analyze(*shape.program, shape.output_ids, budget_bytes, FhnEvictionPolicy::Belady, &model);
+      auto lru_bytes =
+        FhnMovementPlan::analyze(*shape.program, shape.output_ids, budget_bytes, FhnEvictionPolicy::Lru, &model);
+      if (!hw_bytes_plan || !belady_bytes || !lru_bytes) {
+        std::fprintf(stderr, "FAIL %s: byte-budget infeasible/model invalid\n", shape.name.c_str());
+        failed = true;
+      } else {
+        std::printf("movement-bytes[%s]: hw_bytes=%" PRIu64 " belady p/e=%u/%u lru p/e=%u/%u (budget-bytes %" PRIu64
+                    ")\n",
+                    shape.name.c_str(), hw_bytes_plan->stats().high_water_bytes, belady_bytes->stats().prefetch_count,
+                    belady_bytes->stats().evict_count, lru_bytes->stats().prefetch_count,
+                    lru_bytes->stats().evict_count, budget_bytes);
       }
     }
 
