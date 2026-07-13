@@ -181,9 +181,17 @@ Semantics with `model != nullptr`:
 
 ## Risks / honest limits
 
-- The 3-value effect enum cannot express exotic kernels (multi-level
-  drops, level-raising bootstrap). Additive enum growth is the escape
-  hatch; bootstrap semantics are explicitly future work.
+- Bootstrap, precisely: the enum could mechanically express it
+  (SET_PARAM0 with a raised target, or an additive FHN_LEVEL_REFRESH
+  value — no version bump either way), but this spec deliberately
+  outlaws level raises as a plan-time bug-catcher, correct for the
+  bootstrap-free CKKS-leveled scope. The real prerequisites for
+  bootstrap support live elsewhere: (1) FhnOpCode has no BOOTSTRAP
+  opcode (adding one renumbers → FHN_ABI_VERSION bump), and (2) this
+  model accounts only operand/result buffer bytes — bootstrap's
+  footprint is dominated by kernel-internal scratch peaks, which need a
+  per-kernel scratch-bytes field in a later kernel-catalog slice.
+  Multi-level drops (CONSUME by k) would be additive enum growth.
 - PRESERVE-with-min quietly models cross-level operands that a strict
   backend might reject at execution; the planner's job is memory
   accounting, not scheme legality — execution remains the authority.
