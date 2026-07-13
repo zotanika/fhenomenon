@@ -76,6 +76,25 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
     vtable_.evict = nullptr;
   }
 
+  // Optional level model trio: fhn_fresh_level/fhn_level_bytes/
+  // fhn_opcode_level_effect. Byte-accurate movement planning needs all
+  // three or none of them — a partial subset can't size a fresh buffer or
+  // classify an opcode's effect on the buffers it already has. Treat any
+  // count other than 0 or 3 as absent.
+  vtable_.fresh_level = reinterpret_cast<FhnFreshLevelFn>(dlsym(dl_handle_, sym("fhn_fresh_level").c_str()));
+  vtable_.level_bytes = reinterpret_cast<FhnLevelBytesFn>(dlsym(dl_handle_, sym("fhn_level_bytes").c_str()));
+  vtable_.opcode_level_effect =
+    reinterpret_cast<FhnOpcodeLevelEffectFn>(dlsym(dl_handle_, sym("fhn_opcode_level_effect").c_str()));
+  const int level_model_count =
+    (vtable_.fresh_level != nullptr) + (vtable_.level_bytes != nullptr) + (vtable_.opcode_level_effect != nullptr);
+  if (level_model_count != 0 && level_model_count != 3) {
+    LOG_MESSAGE("ExternalBackend: backend exports only part of the fhn_fresh_level/fhn_level_bytes/"
+                "fhn_opcode_level_effect trio; ignoring the group (level model disabled)");
+    vtable_.fresh_level = nullptr;
+    vtable_.level_bytes = nullptr;
+    vtable_.opcode_level_effect = nullptr;
+  }
+
   // 5. Resolve optional advanced symbols (NULL if absent)
   vtable_.submit = reinterpret_cast<FhnSubmitFn>(dlsym(dl_handle_, sym("fhn_submit").c_str()));
   vtable_.poll = reinterpret_cast<FhnPollFn>(dlsym(dl_handle_, sym("fhn_poll").c_str()));
@@ -112,8 +131,8 @@ ExternalBackend::ExternalBackend(const std::string &libraryPath, const char *con
   core_->destroy = vtable_.destroy;
   core_->ctx = fhn_ctx_;
 
-  runtime_ = {fhn_ctx_, executor_.get(), vtable_.buffer_alloc, vtable_.buffer_free, vtable_.prefetch, vtable_.evict,
-              core_};
+  runtime_ = {fhn_ctx_,      executor_.get(),     vtable_.buffer_alloc, vtable_.buffer_free,         vtable_.prefetch,
+              vtable_.evict, vtable_.fresh_level, vtable_.level_bytes,  vtable_.opcode_level_effect, core_};
 
   std::cout << "ExternalBackend loaded: " << info_->name << " v" << info_->version
             << " (device_type=" << static_cast<int>(info_->device_type) << ")" << std::endl;

@@ -147,3 +147,19 @@ TEST(FhnExternalBackend, MovementHooksAbsentResolveToNull) {
   EXPECT_EQ(rt->prefetch, nullptr);
   EXPECT_EQ(rt->evict, nullptr);
 }
+
+// ToyFHE declares a flat level model: the trio resolves (positive dlsym
+// coverage), fresh level 0, a nonzero flat size, PRESERVE everywhere.
+TEST(FhnExternalBackend, LevelModelResolvesFlatForToyFhe) {
+  ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
+  const FhnRuntime *rt = backend.fhnRuntime();
+  ASSERT_NE(rt, nullptr);
+  ASSERT_NE(rt->fresh_level, nullptr);
+  ASSERT_NE(rt->level_bytes, nullptr);
+  ASSERT_NE(rt->opcode_level_effect, nullptr);
+  EXPECT_EQ(rt->fresh_level(rt->ctx), 0);
+  EXPECT_GT(rt->level_bytes(rt->ctx, 0), 0u);
+  EXPECT_EQ(rt->level_bytes(rt->ctx, 1), 0u); // invalid level
+  EXPECT_EQ(rt->opcode_level_effect(rt->ctx, FHN_ADD_CC), FHN_LEVEL_PRESERVE);
+  EXPECT_EQ(rt->opcode_level_effect(rt->ctx, FHN_HMULT), FHN_LEVEL_PRESERVE);
+}
