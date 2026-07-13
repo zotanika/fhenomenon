@@ -64,11 +64,21 @@ add_executable(FhnMovementPlanTest FhnMovementPlanTest.cpp)
 target_link_libraries(FhnMovementPlanTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(FhnMovementPlanTest)
 
+add_executable(CorpusUnitTest CorpusUnitTest.cpp)
+target_link_libraries(CorpusUnitTest PRIVATE fhn_corpus_lib gtest_main)
+add_gtest_target_to_ctest(CorpusUnitTest)
+
 # --- Flagship benchmark smoke test ---
 # fhn-bench-matvec (see benchmarks/) verifies M·v correctness on both the
 # fused and the decomposed dispatch paths before timing anything and exits
 # nonzero on mismatch, so the binary itself doubles as a CI test.
 add_test(NAME FhnMatvecBenchTest COMMAND fhn-bench-matvec --n 8 --reps 1)
+
+# The corpus binary self-checks (plan sanity per shape, oracle-verified
+# execution of the depth-safe subset on ToyFHE) and exits nonzero on any
+# failure, so it doubles as a CI test.
+add_test(NAME FhnCorpusTest
+         COMMAND fhn-corpus --backend $<TARGET_FILE:toyfhe_fhn> --prefix toyfhe_ --max-depth 3)
 
 # --- Shared library for ExternalBackend testing ---
 # Build ToyFheKernels as a shared lib so ExternalBackend can dlopen it
@@ -85,6 +95,10 @@ target_compile_definitions(FhnExternalBackendTest PRIVATE
   TEST_LIB_DIR="${CMAKE_BINARY_DIR}/lib")
 add_dependencies(FhnExternalBackendTest toyfhe_fhn)
 add_gtest_target_to_ctest(FhnExternalBackendTest)
+
+target_compile_definitions(CorpusUnitTest PRIVATE
+  TEST_LIB_DIR="${CMAKE_BINARY_DIR}/lib")
+add_dependencies(CorpusUnitTest toyfhe_fhn)
 
 # --- Cheddar FHN backend (GPU, optional) ---
 set(CHEDDAR_FHE_DIR "${CMAKE_SOURCE_DIR}/refs/cheddar-fhe")
