@@ -70,6 +70,16 @@ int main(int argc, char **argv) {
   }
 
   auto shapes = allShapes();
+  if (!only_shape.empty()) {
+    bool exists = false;
+    for (const auto &s : shapes)
+      exists = exists || s.name == only_shape;
+    if (!exists) {
+      std::fprintf(stderr, "error: unknown shape '%s' (use --list)\n", only_shape.c_str());
+      return 2;
+    }
+  }
+
   if (list_only) {
     for (const auto &s : shapes)
       std::printf("%-14s slots=%-3u depth=%-2u insts=%-4u %s\n", s.name.c_str(), s.slot_count, s.ct_mult_depth,
@@ -90,7 +100,9 @@ int main(int argc, char **argv) {
   bool failed = false;
   uint64_t total_belady = 0;
   uint64_t total_lru = 0;
-  std::printf("%-14s %6s | %8s %14s %14s %8s\n", "shape", "budget", "hw", "belady p/e", "lru p/e", "saved");
+  std::vector<double> shape_savings;
+  std::printf("%-14s %6s %-11s | %8s %14s %14s %8s\n", "shape", "budget", "point", "hw", "belady p/e", "lru p/e",
+              "saved");
 
   for (const auto &shape : shapes) {
     if (!only_shape.empty() && shape.name != only_shape)
@@ -105,7 +117,9 @@ int main(int argc, char **argv) {
     const uint32_t hw = unlimited->stats().high_water;
     const uint32_t b_min = maxWorkingSet(*shape.program);
     const uint32_t b_mid = std::max(b_min, static_cast<uint32_t>((hw * 6 + 9) / 10));
-    const uint32_t points[3] = {b_min, b_mid, hw};
+    std::vector<uint32_t> points{b_min, b_mid, hw};
+    std::sort(points.begin(), points.end());
+    points.erase(std::unique(points.begin(), points.end()), points.end());
     bool counted = false;
 
     for (uint32_t budget : points) {
@@ -124,12 +138,26 @@ int main(int argc, char **argv) {
       const uint64_t tl = transfers(lru->stats());
       const double saved =
         tl == 0 ? 0.0 : 100.0 * (static_cast<double>(tl) - static_cast<double>(tb)) / static_cast<double>(tl);
-      std::printf("%-14s %6u | %8u %7u/%-6u %7u/%-6u %7.1f%%\n", shape.name.c_str(), budget, hw,
+      std::string tag;
+      if (budget == b_min)
+        tag += "min";
+      if (budget == b_mid) {
+        if (!tag.empty())
+          tag += "=";
+        tag += "mid";
+      }
+      if (budget == hw) {
+        if (!tag.empty())
+          tag += "=";
+        tag += "hw";
+      }
+      std::printf("%-14s %6u %-11s | %8u %7u/%-6u %7u/%-6u %7.1f%%\n", shape.name.c_str(), budget, tag.c_str(), hw,
                   belady->stats().prefetch_count, belady->stats().evict_count, lru->stats().prefetch_count,
                   lru->stats().evict_count, saved);
       if (budget == b_mid && !counted) {
         total_belady += tb;
         total_lru += tl;
+        shape_savings.push_back(saved);
         counted = true;
       }
     }
@@ -205,6 +233,12 @@ int main(int argc, char **argv) {
                 total_lru,
                 100.0 * (static_cast<double>(total_lru) - static_cast<double>(total_belady)) /
                   static_cast<double>(total_lru));
+    std::vector<double> sorted_savings = shape_savings;
+    std::sort(sorted_savings.begin(), sorted_savings.end());
+    const size_t n = sorted_savings.size();
+    const double median =
+      (n % 2 == 1) ? sorted_savings[n / 2] : (sorted_savings[n / 2 - 1] + sorted_savings[n / 2]) / 2.0;
+    std::printf("median per-shape savings @B_mid: %.1f%%\n", median);
   }
   return failed ? 1 : 0;
 }

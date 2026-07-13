@@ -157,9 +157,10 @@ Determinism: fixed-seed value generation; identical output across runs.
 
 `test/CMakeLists.txt` registers `FhnCorpusTest` the same way it registers
 `FhnMatvecBenchTest`: `add_test(... COMMAND fhn-corpus --backend
-$<TARGET_FILE:toyfhe_fhn> --prefix toyfhe_)` with a dependency on the
-`toyfhe_fhn` target. It exercises: all 12 plan-stat
-sweeps + LRU/Belady comparison + the 5 executable shapes end-to-end.
+$<TARGET_FILE:toyfhe_fhn> --prefix toyfhe_ --max-depth 3)` with a dependency
+on the `toyfhe_fhn` target. It exercises: all 12 plan-stat
+sweeps + LRU/Belady comparison + the 4 depth-safe executable shapes
+end-to-end.
 
 ## Verification summary
 
