@@ -191,6 +191,7 @@ TEST(FhnMovementPlan, ByteBudgetEvictsMultipleSmallForBigWorkingSet) {
   EXPECT_EQ(plan->stats().evict_count, 2u);
   EXPECT_EQ(plan->at(5).prefetch, (std::vector<uint32_t>{4, 6}));
 }
+```
 
 NOTE to the implementer: `ProgramBuilder` (test/FhnTestProgramBuilder.h)
 has no LEVEL_DOWN helper. Add one to the shared header as part of Step 1:
