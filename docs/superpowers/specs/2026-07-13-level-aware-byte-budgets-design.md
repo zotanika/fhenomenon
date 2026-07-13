@@ -181,17 +181,29 @@ Semantics with `model != nullptr`:
 
 ## Risks / honest limits
 
-- Bootstrap, precisely: the enum could mechanically express it
-  (SET_PARAM0 with a raised target, or an additive FHN_LEVEL_REFRESH
-  value — no version bump either way), but this spec deliberately
-  outlaws level raises as a plan-time bug-catcher, correct for the
-  bootstrap-free CKKS-leveled scope. The real prerequisites for
-  bootstrap support live elsewhere: (1) FhnOpCode has no BOOTSTRAP
-  opcode (adding one renumbers → FHN_ABI_VERSION bump), and (2) this
-  model accounts only operand/result buffer bytes — bootstrap's
-  footprint is dominated by kernel-internal scratch peaks, which need a
-  per-kernel scratch-bytes field in a later kernel-catalog slice.
-  Multi-level drops (CONSUME by k) would be additive enum growth.
+- Bootstrap: v1 outlaws level raises as a plan-time bug-catcher,
+  correct for the bootstrap-free scope — but the path to bootstrap is
+  concrete and cheap (user-confirmed direction, 2026-07-13). Target
+  strategy: keep levels minimal throughout a scoped program and refresh
+  to exactly what the end node needs (decryption headroom); since the
+  whole program is visible, bootstrap placement is plannable like any
+  other op. Enabling changes when that lands: (1) append a unary
+  `FHN_BOOTSTRAP` opcode with `params[0] = target level` at the END of
+  FhnOpCode — appending preserves existing numbering, so it is additive
+  (old backends reject it as unsupported); document append-is-no-bump in
+  the ABI compatibility policy (open backlog item). (2) add an additive
+  `FHN_LEVEL_REFRESH` effect value (= SET_PARAM0 with raises allowed):
+  backends declare BOOTSTRAP→REFRESH while LEVEL_DOWN keeps no-raise
+  SET_PARAM0, so accidental raises stay caught and raise-legality lives
+  in the backend declaration, matching this spec's philosophy. The
+  remaining genuine gap is cost accuracy, not expressibility:
+  bootstrap's footprint is dominated by kernel-internal scratch peaks,
+  needing a per-kernel scratch-bytes field in a later kernel-catalog
+  slice. Multi-level drops (CONSUME by k) would likewise be additive
+  enum growth. Longer-term, the same data-oblivious argument that made
+  movement a runtime pass makes LEVEL MANAGEMENT a runtime pass
+  (aggressive level-down insertion + optimal bootstrap placement); this
+  spec's level inference is exactly the analysis that pass would need.
 - PRESERVE-with-min quietly models cross-level operands that a strict
   backend might reject at execution; the planner's job is memory
   accounting, not scheme legality — execution remains the authority.
