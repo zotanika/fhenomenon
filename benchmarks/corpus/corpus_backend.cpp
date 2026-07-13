@@ -8,7 +8,9 @@ namespace corpus {
 CorpusBackend::CorpusBackend(CorpusBackend &&other) noexcept
   : dl_(other.dl_), ctx_(other.ctx_), kernels_(other.kernels_), destroy_(other.destroy_),
     buffer_alloc_(other.buffer_alloc_), buffer_free_(other.buffer_free_), encrypt_i64_(other.encrypt_i64_),
-    decrypt_i64_(other.decrypt_i64_), prefetch_(other.prefetch_), evict_(other.evict_) {
+    decrypt_i64_(other.decrypt_i64_), prefetch_(other.prefetch_), evict_(other.evict_),
+    fresh_level_(other.fresh_level_), level_bytes_(other.level_bytes_),
+    opcode_level_effect_(other.opcode_level_effect_) {
   other.dl_ = nullptr;
   other.ctx_ = nullptr;
   other.kernels_ = nullptr;
@@ -19,6 +21,9 @@ CorpusBackend::CorpusBackend(CorpusBackend &&other) noexcept
   other.decrypt_i64_ = nullptr;
   other.prefetch_ = nullptr;
   other.evict_ = nullptr;
+  other.fresh_level_ = nullptr;
+  other.level_bytes_ = nullptr;
+  other.opcode_level_effect_ = nullptr;
 }
 
 CorpusBackend &CorpusBackend::operator=(CorpusBackend &&other) noexcept {
@@ -45,6 +50,9 @@ CorpusBackend &CorpusBackend::operator=(CorpusBackend &&other) noexcept {
   decrypt_i64_ = other.decrypt_i64_;
   prefetch_ = other.prefetch_;
   evict_ = other.evict_;
+  fresh_level_ = other.fresh_level_;
+  level_bytes_ = other.level_bytes_;
+  opcode_level_effect_ = other.opcode_level_effect_;
 
   other.dl_ = nullptr;
   other.ctx_ = nullptr;
@@ -56,6 +64,9 @@ CorpusBackend &CorpusBackend::operator=(CorpusBackend &&other) noexcept {
   other.decrypt_i64_ = nullptr;
   other.prefetch_ = nullptr;
   other.evict_ = nullptr;
+  other.fresh_level_ = nullptr;
+  other.level_bytes_ = nullptr;
+  other.opcode_level_effect_ = nullptr;
 
   return *this;
 }
@@ -132,7 +143,22 @@ std::optional<CorpusBackend> CorpusBackend::load(const std::string &library_path
     evict = nullptr;
   }
 
-  // 4. Create the backend context and resolve its kernel table.
+  // 4. Optional level model trio: fhn_fresh_level/fhn_level_bytes/
+  //    fhn_opcode_level_effect. All three or none (see ExternalBackend) — a
+  //    partial subset can't size a fresh buffer or classify an opcode's
+  //    effect on the buffers it already has.
+  auto fresh_level = reinterpret_cast<FhnFreshLevelFn>(dlsym(dl, sym("fhn_fresh_level").c_str()));
+  auto level_bytes = reinterpret_cast<FhnLevelBytesFn>(dlsym(dl, sym("fhn_level_bytes").c_str()));
+  auto opcode_level_effect =
+    reinterpret_cast<FhnOpcodeLevelEffectFn>(dlsym(dl, sym("fhn_opcode_level_effect").c_str()));
+  const int level_model_count = (fresh_level != nullptr) + (level_bytes != nullptr) + (opcode_level_effect != nullptr);
+  if (level_model_count != 0 && level_model_count != 3) {
+    fresh_level = nullptr;
+    level_bytes = nullptr;
+    opcode_level_effect = nullptr;
+  }
+
+  // 5. Create the backend context and resolve its kernel table.
   FhnBackendCtx *ctx = create(nullptr);
   if (!ctx) {
     if (error) {
@@ -163,6 +189,9 @@ std::optional<CorpusBackend> CorpusBackend::load(const std::string &library_path
   backend.decrypt_i64_ = decrypt_i64;
   backend.prefetch_ = prefetch;
   backend.evict_ = evict;
+  backend.fresh_level_ = fresh_level;
+  backend.level_bytes_ = level_bytes;
+  backend.opcode_level_effect_ = opcode_level_effect;
   return backend;
 }
 

@@ -100,6 +100,15 @@ target_compile_definitions(CorpusUnitTest PRIVATE
   TEST_LIB_DIR="${CMAKE_BINARY_DIR}/lib")
 add_dependencies(CorpusUnitTest toyfhe_fhn)
 
+# Deliberately exports a PARTIAL level-model trio: loaders must ignore it.
+add_library(partial_fhn SHARED partial_fhn_backend.cpp)
+target_include_directories(partial_fhn PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
+set_target_properties(partial_fhn PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+add_dependencies(FhnExternalBackendTest partial_fhn)
+add_dependencies(CorpusUnitTest partial_fhn)
+
 # --- Cheddar FHN backend (GPU, optional) ---
 set(CHEDDAR_FHE_DIR "${CMAKE_SOURCE_DIR}/refs/cheddar-fhe")
 set(CHEDDAR_LIB_PATH "${CHEDDAR_FHE_DIR}/build/libcheddar.so")

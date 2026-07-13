@@ -21,6 +21,14 @@ static std::string getTestLibPath() {
 #endif
 }
 
+static std::string getPartialTestLibPath() {
+#ifdef __APPLE__
+  return std::string(TEST_LIB_DIR) + "/libpartial_fhn.dylib";
+#else
+  return std::string(TEST_LIB_DIR) + "/libpartial_fhn.so";
+#endif
+}
+
 TEST(FhnExternalBackend, LoadAndQueryInfo) {
   ExternalBackend backend(getTestLibPath(), nullptr, "toyfhe_");
 
@@ -162,4 +170,15 @@ TEST(FhnExternalBackend, LevelModelResolvesFlatForToyFhe) {
   EXPECT_EQ(rt->level_bytes(rt->ctx, 1), 0u); // invalid level
   EXPECT_EQ(rt->opcode_level_effect(rt->ctx, FHN_ADD_CC), FHN_LEVEL_PRESERVE);
   EXPECT_EQ(rt->opcode_level_effect(rt->ctx, FHN_HMULT), FHN_LEVEL_PRESERVE);
+}
+
+// A backend exporting only part of the level-model trio has the whole
+// group ignored (all-or-nothing), like the movement-hook half-pair rule.
+TEST(FhnExternalBackend, PartialLevelModelIsIgnoredWhole) {
+  ExternalBackend backend(getPartialTestLibPath(), nullptr, "ptl_");
+  const FhnRuntime *rt = backend.fhnRuntime();
+  ASSERT_NE(rt, nullptr);
+  EXPECT_EQ(rt->fresh_level, nullptr);
+  EXPECT_EQ(rt->level_bytes, nullptr);
+  EXPECT_EQ(rt->opcode_level_effect, nullptr);
 }
