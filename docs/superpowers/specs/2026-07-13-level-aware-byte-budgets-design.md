@@ -136,8 +136,10 @@ Semantics with `model != nullptr`:
   `fresh_level` from its parameter chain, per-level RNS sizes from its
   own layout (formula implementation-defined by the backend — that is
   the point of the export), CONSUME on rescale-class ops per its kernel
-  behavior. Compile-guarded like the rest of the file; validated manually
-  on a GPU machine (no CI).
+  behavior. DEFERRED to a GPU-capable session: this environment cannot
+  even compile the cheddar-guarded file (no CUDA/headers), and
+  unverifiable code does not ship. The ABI exports land now; Cheddar
+  implements them when it can be built and run.
 - **Partial-export fixture** (`test/`): a tiny stub library exporting the
   ABI handshake + required data plane + ONLY `fhn_fresh_level` — pins the
   all-or-nothing rule end-to-end in both loaders (this also retires part
