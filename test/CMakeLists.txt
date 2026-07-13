@@ -74,6 +74,12 @@ add_gtest_target_to_ctest(CorpusUnitTest)
 # nonzero on mismatch, so the binary itself doubles as a CI test.
 add_test(NAME FhnMatvecBenchTest COMMAND fhn-bench-matvec --n 8 --reps 1)
 
+# The corpus binary self-checks (plan sanity per shape, oracle-verified
+# execution of the depth-safe subset on ToyFHE) and exits nonzero on any
+# failure, so it doubles as a CI test.
+add_test(NAME FhnCorpusTest
+         COMMAND fhn-corpus --backend $<TARGET_FILE:toyfhe_fhn> --prefix toyfhe_ --max-depth 3)
+
 # --- Shared library for ExternalBackend testing ---
 # Build ToyFheKernels as a shared lib so ExternalBackend can dlopen it
 add_library(toyfhe_fhn SHARED ${CMAKE_SOURCE_DIR}/src/FHN/ToyFheKernels.cpp)

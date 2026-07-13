@@ -10,3 +10,7 @@ add_library(fhn_corpus_lib STATIC
   corpus/corpus_shapes.cpp)
 target_include_directories(fhn_corpus_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/corpus)
 target_link_libraries(fhn_corpus_lib PUBLIC ${PROJECT_LIB_NAME} dl)
+
+add_executable(fhn-corpus corpus/fhn_corpus_main.cpp)
+target_link_libraries(fhn-corpus PRIVATE fhn_corpus_lib)
+add_dependencies(fhn-corpus toyfhe_fhn)
