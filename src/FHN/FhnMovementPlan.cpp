@@ -75,6 +75,11 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
         if (result_level > min_level)
           return std::nullopt; // levels never rise (v1 bug-catcher)
         break;
+      default:
+        // An out-of-range FhnLevelEffect from a buggy/future backend must
+        // reject the model, not silently plan as PRESERVE. A future
+        // FHN_LEVEL_REFRESH lands as an explicit case above.
+        return std::nullopt;
       }
       if (result_level < 0 || result_level > model->fresh_level)
         return std::nullopt; // underflow / out of declared range

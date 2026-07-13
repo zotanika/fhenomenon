@@ -395,3 +395,12 @@ TEST(FhnMovementPlan, ByteBudgetEvictsMultipleSmallForBigWorkingSet) {
   EXPECT_EQ(plan->stats().evict_count, 2u);
   EXPECT_EQ(plan->at(5).prefetch, (std::vector<uint32_t>{4, 6}));
 }
+
+// A garbage effect value from a buggy backend must reject the model, not
+// silently plan as PRESERVE.
+TEST(FhnMovementPlan, OutOfRangeEffectIsRejected) {
+  auto prog = ProgramBuilder().input(1).inst(FHN_ADD_CC, 3, 1, 1).output(3).build();
+  FhnLevelModel model = testModel();
+  model.effects[FHN_ADD_CC] = static_cast<FhnLevelEffect>(42);
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+}

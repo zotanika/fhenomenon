@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 // A deliberately minimal FHN backend: valid handshake, empty kernel
-// table, malloc-backed buffers, identity "encryption" of one int64 —
+// table, new/delete-backed buffers, identity "encryption" of one int64 —
 // and, the point of the fixture, a PARTIAL level-model trio (only
 // fhn_fresh_level), which conformant loaders must ignore whole.
 namespace {

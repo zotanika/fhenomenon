@@ -48,6 +48,13 @@ void usage(const char *argv0) {
 FhnLevelModel queryLevelModel(const CorpusBackend &backend) {
   FhnLevelModel model;
   model.fresh_level = backend.freshLevel()(backend.ctx());
+  // A full-trio backend can declare a nonsensical fresh_level (negative, or
+  // absurdly large). Guard here, before the bytes loop, so a huge value
+  // can't hang the loop and a negative one doesn't reach the call site's
+  // min-indexing before analyze()'s own model validation gets a chance to
+  // reject it — that ordering previously segfaulted.
+  if (model.fresh_level < 0 || model.fresh_level > 4096)
+    return model;
   for (int64_t l = 0; l <= model.fresh_level; ++l)
     model.bytes_by_level.push_back(backend.levelBytes()(backend.ctx(), l));
   for (int op = FHN_NOP; op < FHN_OPCODE_COUNT; ++op)
@@ -126,6 +133,13 @@ int main(int argc, char **argv) {
       return 2;
     }
     model = queryLevelModel(*backend);
+    // A negative or absurdly large fresh_level, or an empty level table
+    // (the queryLevelModel guard above returns early on either), must not
+    // reach the min-indexing below: that's the segfault this guard closes.
+    if (model.fresh_level < 0 || model.fresh_level > 4096 || model.bytes_by_level.empty()) {
+      std::fprintf(stderr, "error: backend declared an invalid level model (fresh_level out of range)\n");
+      return 2;
+    }
     // min = 3 * bytes at the fresh level: the corpus generators are all
     // unary/binary primitives, so no instruction's working set (result +
     // operands) ever exceeds 3 buffers — this is the smallest budget every
