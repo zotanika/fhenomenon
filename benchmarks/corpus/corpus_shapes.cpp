@@ -134,7 +134,7 @@ Shape shapeStats() {
     outs.push_back(s);
     outs.push_back(v);
   }
-  return b.finish("stats", "two datasets, four live outputs", 64, 2, outs);
+  return b.finish("stats", "two datasets, four live outputs", 64, 1, outs);
 }
 
 Shape shapePsiEq() {
