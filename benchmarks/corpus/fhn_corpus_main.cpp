@@ -17,12 +17,6 @@ using namespace fhenomenon::corpus;
 
 namespace {
 
-struct SweepPoint {
-  uint32_t budget;
-  FhnMovementPlan::Stats belady;
-  FhnMovementPlan::Stats lru;
-};
-
 uint64_t transfers(const FhnMovementPlan::Stats &s) {
   return static_cast<uint64_t>(s.prefetch_count) + static_cast<uint64_t>(s.evict_count);
 }
@@ -112,6 +106,7 @@ int main(int argc, char **argv) {
     const uint32_t b_min = maxWorkingSet(*shape.program);
     const uint32_t b_mid = std::max(b_min, static_cast<uint32_t>((hw * 6 + 9) / 10));
     const uint32_t points[3] = {b_min, b_mid, hw};
+    bool counted = false;
 
     for (uint32_t budget : points) {
       auto belady = FhnMovementPlan::analyze(*shape.program, shape.output_ids, budget, FhnEvictionPolicy::Belady);
@@ -132,9 +127,10 @@ int main(int argc, char **argv) {
       std::printf("%-14s %6u | %8u %7u/%-6u %7u/%-6u %7.1f%%\n", shape.name.c_str(), budget, hw,
                   belady->stats().prefetch_count, belady->stats().evict_count, lru->stats().prefetch_count,
                   lru->stats().evict_count, saved);
-      if (budget == b_mid) {
+      if (budget == b_mid && !counted) {
         total_belady += tb;
         total_lru += tl;
+        counted = true;
       }
     }
 
