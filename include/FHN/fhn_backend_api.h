@@ -92,6 +92,15 @@ typedef void (*FhnBufferFreeFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 typedef int (*FhnBufferPrefetchFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 typedef int (*FhnBufferEvictFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 
+/* Level effect of a compute opcode, declared by CKKS-family backends for
+   byte-accurate movement planning (see fhn_fresh_level/fhn_level_bytes/
+   fhn_opcode_level_effect, resolved as an all-or-nothing trio). */
+typedef enum FhnLevelEffect {
+  FHN_LEVEL_PRESERVE = 0,   /* result level = min over operand levels    */
+  FHN_LEVEL_CONSUME = 1,    /* result level = (min over operands) - 1    */
+  FHN_LEVEL_SET_PARAM0 = 2, /* result level = params[0] (must not raise) */
+} FhnLevelEffect;
+
 typedef int (*FhnEncryptInt64Fn)(FhnBackendCtx *ctx, FhnBuffer *out, int64_t value);
 typedef int (*FhnEncryptDoubleFn)(FhnBackendCtx *ctx, FhnBuffer *out, double value);
 typedef int (*FhnDecryptInt64Fn)(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out);

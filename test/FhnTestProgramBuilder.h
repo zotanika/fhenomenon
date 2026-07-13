@@ -31,6 +31,15 @@ struct ProgramBuilder {
     outputs.push_back(id);
     return *this;
   }
+  ProgramBuilder &inst_p0(FhnOpCode op, uint32_t result, uint32_t a, int64_t p0) {
+    FhnInstruction in{};
+    in.opcode = op;
+    in.result_id = result;
+    in.operands[0] = a;
+    in.params[0] = p0;
+    insts.push_back(in);
+    return *this;
+  }
   std::unique_ptr<FhnProgram, decltype(&fhn_program_free)> build() {
     auto *p = fhn_program_alloc(static_cast<uint32_t>(insts.size()), static_cast<uint32_t>(inputs.size()),
                                 static_cast<uint32_t>(outputs.size()));
