@@ -1,0 +1,70 @@
+[20260715-060307-gpu-test] 2026-07-15T06:03:07Z
+cmd: ctest --test-dir /home/zotanika/workspace/fhenomenon/build -R FhnCheddarGpuTest -V
+env: {"host":"spark-0faa","arch":"aarch64","kernel":"6.17.0-1014-nvidia","cpus":20,"mem_gib":122,"gpu":"NVIDIA GB10","gpu_cc":"12.1","driver":"580.142","cuda":"13.0","gcc":"13.3.0","cmake":"3.28.3","fhn_sha":"cfec1b6","fhn_dirty":true,"cheddar_sha":"c428a13","cheddar_dirty":true}
+---
+Internal ctest changing into directory: /home/zotanika/workspace/fhenomenon/build
+UpdateCTestConfiguration  from :/home/zotanika/workspace/fhenomenon/build/DartConfiguration.tcl
+Parse Config file:/home/zotanika/workspace/fhenomenon/build/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/zotanika/workspace/fhenomenon/build/DartConfiguration.tcl
+Parse Config file:/home/zotanika/workspace/fhenomenon/build/DartConfiguration.tcl
+Test project /home/zotanika/workspace/fhenomenon/build
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 17
+    Start 17: FhnCheddarGpuTest
+
+17: Test command: /home/zotanika/workspace/fhenomenon/build/bin/FhnCheddarGpuTest "--gtest_output=xml:FhnCheddarGpuTest.xml"
+17: Working Directory: /home/zotanika/workspace/fhenomenon/build/test
+17: Test timeout computed to be: 1500
+17: Running main() from /home/zotanika/workspace/fhenomenon/build/_deps/googletest-src/googletest/src/gtest_main.cc
+17: [==========] Running 10 tests from 1 test suite.
+17: [----------] Global test environment set-up.
+17: [----------] 10 tests from CheddarGpuTest
+17: WARN: UserInterface is for testing purposes only. Do not use in production.
+17: ExternalBackend loaded: cheddar-ckks v1.0 (device_type=1)
+17: 
+17: [  SETUP  ] Context + keys: 1062 ms (one-time cost)
+17: 
+17: [ RUN      ] CheddarGpuTest.BackendInfo
+17: [       OK ] CheddarGpuTest.BackendInfo (0 ms)
+17: [ RUN      ] CheddarGpuTest.SupportsAllCKKSOps
+17: [       OK ] CheddarGpuTest.SupportsAllCKKSOps (0 ms)
+17: [ RUN      ] CheddarGpuTest.DataPlaneRoundTrip
+17: [       OK ] CheddarGpuTest.DataPlaneRoundTrip (1 ms)
+17: [ RUN      ] CheddarGpuTest.AddVectors
+17:   ADD_CC pipeline: 10 us
+17: [       OK ] CheddarGpuTest.AddVectors (2 ms)
+17: [ RUN      ] CheddarGpuTest.HMultGpu
+17:   HMULT pipeline: 163 us
+17: [       OK ] CheddarGpuTest.HMultGpu (2 ms)
+17: [ RUN      ] CheddarGpuTest.AddScalar
+17:   ADD_CS pipeline: 25 us
+17: [       OK ] CheddarGpuTest.AddScalar (1 ms)
+17: [ RUN      ] CheddarGpuTest.MultScalar
+17:   MULT_CS pipeline: 17 us
+17: [       OK ] CheddarGpuTest.MultScalar (1 ms)
+17: [ RUN      ] CheddarGpuTest.ChainedScalarOps
+17:   Chained ADD_CS+MULT_CS: 18 us
+17: [       OK ] CheddarGpuTest.ChainedScalarOps (1 ms)
+17: [ RUN      ] CheddarGpuTest.RotateBothDirections
+17:   ROTATE(+1)+ROTATE(-1) pipeline: 152 us
+17: [       OK ] CheddarGpuTest.RotateBothDirections (1 ms)
+17: [ RUN      ] CheddarGpuTest.RotateUnpreparedDistanceFails
+17: [       OK ] CheddarGpuTest.RotateUnpreparedDistanceFails (0 ms)
+17: [----------] 10 tests from CheddarGpuTest (12 ms total)
+17: 
+17: [----------] Global test environment tear-down
+17: [==========] 10 tests from 1 test suite ran. (1448 ms total)
+17: [  PASSED  ] 10 tests.
+1/1 Test #17: FhnCheddarGpuTest ................   Passed    1.56 sec
+
+The following tests passed:
+	FhnCheddarGpuTest
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   1.56 sec

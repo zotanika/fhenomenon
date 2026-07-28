@@ -1,0 +1,5 @@
+[20260715-060724-corpus] 2026-07-15T06:07:24Z
+cmd: /home/zotanika/workspace/fhenomenon/build/bin/fhn-corpus --backend /home/zotanika/workspace/fhenomenon/build/lib/libcheddar_fhn.so --prefix  --shape weighted-sum
+env: {"host":"spark-0faa","arch":"aarch64","kernel":"6.17.0-1014-nvidia","cpus":20,"mem_gib":122,"gpu":"NVIDIA GB10","gpu_cc":"12.1","driver":"580.142","cuda":"13.0","gcc":"13.3.0","cmake":"3.28.3","fhn_sha":"cfec1b6","fhn_dirty":true,"cheddar_sha":"c428a13","cheddar_dirty":true}
+---
+error: cannot load backend: CorpusBackend: library missing required fhn_* symbols
