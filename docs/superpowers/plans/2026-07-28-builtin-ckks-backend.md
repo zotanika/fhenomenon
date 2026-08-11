@@ -229,6 +229,19 @@ unblocks the corpus independently of the three Cheddar-side blockers above.
 
 **Read in this order:** the spec → this file → `experiments/README.md`.
 
+**Open branches as of 2026-08-11** (none merged to `main` yet; `main` is still
+at the level-aware byte budgets commit):
+
+| Branch | Contents | Note |
+|---|---|---|
+| `feat/gpu-experiment-track` | `experiments/` + the `.gpu-deps/` gitignore entry | **Merge this first.** This file links `experiments/README.md`; that link dangles until it lands. |
+| `feat/real-builtin` | This file, the architecture spec, the scheme decision, and the L0/L3 layer skeleton | 4 commits |
+| `docs/readme-scoped-execution` | Restores the README's Scoped Execution section and corrects the "legacy session execution path" claim | Independent of the other two |
+
+Each branch is self-contained and rebased onto `origin/main`, so they can be
+reviewed and merged in any order — the only ordering that matters is the link
+noted above.
+
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
 + Cortex-A725 with SVE2, 20 cores; 122 GiB unified memory; GCC 13.3, CMake 3.28.
