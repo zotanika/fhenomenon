@@ -67,6 +67,38 @@ not be reopened without new evidence.
    indirectly. Where a lesson came from somewhere unciteable, state it as a
    design decision justified on its own merits.
 
+7. **The scheme is CKKS. TFHE was considered and declined** (2026-08-11).
+   This confirms the standing decision already recorded in
+   [`../specs/2026-07-13-level-aware-byte-budgets-design.md`](../specs/2026-07-13-level-aware-byte-budgets-design.md)
+   ("CKKS-first (TFHE deferred) — the model targets leveled arithmetic
+   schemes"), reached independently a second time.
+
+   The decisive argument is not that TFHE is a crowded field. It is that
+   **everything this runtime has built only has meaning on a leveled
+   scheme.** Level-varying ciphertext size, the level/scale ledger,
+   rotation-based data movement, slot layout, byte-budgeted residency, and
+   fused-opcode decomposition are all properties CKKS has and TFHE does
+   not: TFHE ciphertexts are fixed-size, programmable bootstrapping resets
+   noise so there is no level to track, there are no slots to rotate, LWE
+   samples are small enough that residency is not the bottleneck, and
+   performance is dominated by one primitive rather than by composition.
+   A runtime whose thesis is *planning composition, movement, and memory
+   across a program* would not be validated by winning on TFHE, because
+   TFHE offers almost nothing to plan.
+
+   Two honest counterweights, recorded so this is not re-litigated from a
+   half-memory: TFHE has exact integer semantics, which the corpus verify
+   path (`fhn_encrypt_i64`/`fhn_decrypt_i64`) wants natively while CKKS
+   needs a rounding adapter; and TFHE has no leveled-vs-bootstrapping
+   dilemma, since PBS is in every operation. The second is the same fact
+   as "nothing to plan", seen from the other side.
+
+   Nothing is discarded. `TfheBackend.{h,cpp}` (284 lines) and the Rust
+   crate stay quarantined behind `FHENOMENON_USE_TFHE`; the boolean
+   opcodes `FHN_AND/OR/XOR/EQ/LT/LE` exist in the enum with no
+   implementation anywhere, so the door to a TFHE-class *external* backend
+   stays open at zero carrying cost.
+
 ### Decisions pending
 
 Ordered by how expensive they are to reverse. **(1) and (2) block the first
