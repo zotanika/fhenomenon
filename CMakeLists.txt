@@ -66,6 +66,12 @@ if(NOT BUILTIN_BACKEND STREQUAL "TFHE")
 endif()
 # CheddarFhnBackend is built separately as a shared library
 list(FILTER FHENOMENON_SOURCES EXCLUDE REGEX "CheddarFhnBackend\\.cpp$")
+# The built-in CKKS backend is built as one static library per layer, not
+# folded into the monolithic library. add_fhenomenon_sources() globs src/
+# recursively, so the separation only survives if it is filtered back out
+# here. That separation IS the enforcement of invariant I5 — see
+# cmake/FhnCkksLayer.cmake.
+list(FILTER FHENOMENON_SOURCES EXCLUDE REGEX "/CKKS/")
 
 message(STATUS "SOURCES ${FHENOMENON_SOURCES}")
 

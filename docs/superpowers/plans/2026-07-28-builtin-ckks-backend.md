@@ -12,15 +12,19 @@ This file assumes it.
 
 ## Where things stand
 
-`main` currently contains:
+Described by artifact rather than by commit hash, so this survives a rebase:
 
-| Commit | What |
+| Artifact | State |
 |---|---|
-| `2f725c5` | GPU experiment track (`experiments/`) — build script, env fingerprint, runner, journal, machine-readable log, run evidence |
-| `4224600` | The architecture spec — requirements R1–R5, invariants I1–I5, layers L0–L6 |
+| `experiments/` | GPU experiment track — build script, env fingerprint, runner, journal, machine-readable log, run evidence |
+| `../specs/2026-07-26-builtin-ckks-backend-design.md` | The architecture spec — R1–R5, I1–I5, L0–L6 |
+| `cmake/FhnCkksLayer.cmake` | Layer-target enforcement for invariant I5 |
+| `src/CKKS/params/` | **L0 `Params`** — validated, immutable, hashable |
+| `src/CKKS/arena/` | **L3 `Arena`** — caller-owned bump allocator with `Scope` and high-water tracking |
+| `test/CKKS/` | One test executable per layer, each linking only its own layer target |
 
-Nothing of the CKKS backend is implemented. The built-in backend is still
-ToyFHE and remains fully functional; nothing in this plan degrades it.
+Everything above L0/L3 is unimplemented. The built-in backend is still ToyFHE
+and remains fully functional; nothing here degrades it.
 
 Two threads are live. **A** is the primary one; **B** is running and has one
 recorded blocker that A happens to unblock.
@@ -99,23 +103,32 @@ not be reopened without new evidence.
    implementation anywhere, so the door to a TFHE-class *external* backend
    stays open at zero carrying cost.
 
+8. **Key switching is hybrid, parameterised by `dnum`** (2026-08-11). Rather
+   than choosing one of BV / GHS / hybrid, the implementation takes `dnum` —
+   the number of digits the main chain is split into — as an explicit
+   parameter, because the three are endpoints of one continuum: `dnum == 1`
+   is GHS (a single digit, so `P` must cover all of `Q`), `dnum ==
+   levelCount()` is a BV-style decomposition, everything between is hybrid.
+   One implementation covers all three, which turns what the plan called the
+   most expensive decision to reverse into a number to measure.
+
+   `dnum` is an explicit field of `Params` with no default that hides it.
+   What is genuinely expensive to reverse is not the value but four
+   structural facts, and they are settled now: keys are stored per-digit
+   rather than as one pair; precomputation tables are keyed by the
+   (digit basis → `PQ` basis) pair; `Params` keeps the special primes `P` in
+   a list separate from the main chain; and level accounting knows that key
+   switching raises to `PQ` and comes back. Get those right and `dnum` is
+   just a number.
+
+   Honest cost: the generalised path carries slightly more index arithmetic
+   than a hardcoded one, and `dnum == levelCount()` is representable without
+   necessarily being an *efficient* BV implementation.
+
 ### Decisions pending
 
-Ordered by how expensive they are to reverse. **(1) and (2) block the first
-line of implementation; (3)–(5) do not.**
-
----
-
-**(1) Key-switching variant — blocking, most expensive to reverse.**
-
-Assumed in the spec: hybrid key switching (GHS + RNS digit decomposition,
-special primes `P`, `dnum` digits). Starting with BV or GHS-only and
-retrofitting hybrid means rewriting `ModUp`/`ModDown`, the key format, the
-`Tables` layer's base-conversion identities, and every level-accounting
-rule — effectively the whole backend.
-
-Needs: explicit confirmation of hybrid, and a `dnum` policy (fixed, or
-derived from the prime chain).
+Ordered by how expensive they are to reverse. None of them now block the
+first slice.
 
 ---
 
@@ -146,28 +159,47 @@ Affects L1 `NttTables` and L4 kernels; does not affect the layering.
 `eval::scratch_bytes(op, params, level)` at L4, with the program-level
 maximum computed by the caller. The alternative is to fold it into
 `FhnMovementPlan`, which already walks the instruction stream and infers
-levels. Deferrable until L3 and L4 exist.
+levels. Deferrable until L4 exists.
+
+**(6) Whether an empty key-switching digit should be rejected.** `Params`
+currently accepts a `dnum` that leaves a trailing digit empty — 4 main primes
+over `dnum = 3` gives `alpha = 2` and digits `[0,2) [2,4) [4,4)`, so the
+caller's 3 behaves as 2. The partition stays exact and nothing miscomputes,
+but a `dnum` that silently means something else is the kind of hidden
+discrepancy invariant I4 exists to prevent. Rejecting it is a one-line
+change; it was left permissive rather than decided quietly.
 
 ### First implementable slice
 
-Independent of every open decision, three things are invariant across all
-branches and can be built first:
+Three things are invariant across every open decision, so they were built
+first.
 
-1. **Layer skeleton** — one CMake target per layer (L0…L6), linked strictly
-   downward, plus a test per layer that links *only* that layer's target.
-   This is invariant I5, and neither this repository nor the libraries
-   surveyed have it today (`src/CMakeLists.txt` gathers every source into a
-   single `add_library`). Building it first means the layering cannot rot
-   while the rest is written.
-2. **`Params` (L0) and `Arena` (L3)** — the immutable parameter value type
-   and the caller-owned bump allocator, plus the `eval::scratch_bytes`
-   signature as a contract with no implementations yet.
-3. **`NttTables` + negacyclic NTT (L1/L4)**, tested standalone — no keys, no
-   allocator singleton, no layer above. If that test needs anything from L5,
-   the layering has already failed and CI should say so.
+1. **Layer skeleton — done.** `cmake/FhnCkksLayer.cmake` declares one static
+   library per layer. Two mechanisms enforce I5, and both are verified rather
+   than asserted: each layer owns a private include root, so a wrong
+   `#include` does not compile; and a layer may only depend on a strictly
+   lower index, so an upward or sideways edge is a configure-time error. The
+   CKKS tree is filtered out of `add_fhenomenon_sources()`'s glob in the root
+   `CMakeLists.txt` — without that filter the layers would be silently
+   swallowed back into the monolithic library and the enforcement would
+   evaporate. **Do not remove that filter.**
+2. **`Params` (L0) and `Arena` (L3) — done.** `Params` validates the whole
+   spec (NTT-friendliness `q ≡ 1 mod 2N`, prime width, duplicates, `dnum`
+   range, and that `P` exceeds the widest key-switching digit) and reports
+   the first reason as a string; `ciphertextBytes(level)` is the R5 level
+   model reduced to a pure function. `Arena` refuses to grow when exhausted,
+   tracks a high-water mark so a caller can check the size it planned was the
+   size it needed, and offers `Scope` for nested temporaries.
+3. **`NttTables` + negacyclic NTT (L1/L4) — next**, tested standalone: no
+   keys, no allocator singleton, no layer above. If that test needs anything
+   from L5, the layering has already failed and CI will say so.
 
-Then, gated on decision (1): RNS base conversion → `ModUp`/`ModDown` →
-hybrid key switching → the FHN kernel table.
+`eval::scratch_bytes` was deliberately *not* added yet. A declared function
+with no definition is a footgun, and the contract only becomes meaningful
+once one opcode implements it — it lands with L4.
+
+Then: RNS base conversion → `ModUp`/`ModDown` → hybrid key switching (per
+locked decision 8) → the FHN kernel table.
 
 ## Thread B — GPU experiment track (Cheddar on the DGX Spark)
 
@@ -212,6 +244,18 @@ NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X92
   prevent (see the spec's Cheddar evidence table).
 - assert a performance comparison without a recorded run in `experiments/`.
 - cite non-open-source code as design evidence.
+- remove `list(FILTER FHENOMENON_SOURCES EXCLUDE REGEX "/CKKS/")` from the
+  root `CMakeLists.txt`, or link `${PROJECT_LIB_NAME}` into a layer test.
+  Either one silently folds the layers back into the monolith and the I5
+  enforcement stops enforcing anything.
+
+**Verifying the enforcement still works** (both should fail):
+
+```bash
+# 1. a layer must not see another layer's headers
+echo '#include "CKKS/Params.h"' | g++ -std=c++17 -x c++ -fsyntax-only -I src/CKKS/arena/include -
+# 2. temporarily give a layer an equal-or-higher DEPENDS, then configure
+```
 
 **Open the conversation with:** decision (1), key switching. It is the most
 expensive to reverse and gates everything after the first slice.
