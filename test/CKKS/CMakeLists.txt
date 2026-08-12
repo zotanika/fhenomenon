@@ -9,6 +9,10 @@ add_executable(CkksParamsTest ParamsTest.cpp)
 target_link_libraries(CkksParamsTest PRIVATE fhn_ckks_params gtest_main)
 add_gtest_target_to_ctest(CkksParamsTest)
 
+add_executable(CkksNttTest NttTest.cpp)
+target_link_libraries(CkksNttTest PRIVATE fhn_ckks_tables gtest_main)
+add_gtest_target_to_ctest(CkksNttTest)
+
 add_executable(CkksArenaTest ArenaTest.cpp)
 target_link_libraries(CkksArenaTest PRIVATE fhn_ckks_arena gtest_main)
 add_gtest_target_to_ctest(CkksArenaTest)

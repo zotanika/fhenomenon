@@ -20,11 +20,12 @@ Described by artifact rather than by commit hash, so this survives a rebase:
 | `../specs/2026-07-26-builtin-ckks-backend-design.md` | The architecture spec — R1–R5, I1–I5, L0–L6 |
 | `cmake/FhnCkksLayer.cmake` | Layer-target enforcement for invariant I5 |
 | `src/CKKS/params/` | **L0 `Params`** — validated, immutable, hashable |
+| `src/CKKS/tables/` | **L1 `NttTables` + `ntt::forward`/`ntt::inverse`** — negacyclic transform, Harvey lazy butterflies; `ModArith.h` is the one place that names `__int128` |
 | `src/CKKS/arena/` | **L3 `Arena`** — caller-owned bump allocator with `Scope` and high-water tracking |
 | `test/CKKS/` | One test executable per layer, each linking only its own layer target |
 
-Everything above L0/L3 is unimplemented. The built-in backend is still ToyFHE
-and remains fully functional; nothing here degrades it.
+Everything above L0/L1/L3 is unimplemented. The built-in backend is still
+ToyFHE and remains fully functional; nothing here degrades it.
 
 Two threads are live. **A** is the primary one; **B** is running and has one
 recorded blocker that A happens to unblock.
@@ -149,11 +150,25 @@ behind the FHN ABI as correctness oracle and speed reference. Not blocking —
 but it should exist before the first performance number, or decision 5 above
 cannot be honoured.
 
-**(4) Prime width and modmul strategy.** 50–60-bit primes are conventional
-on CPU; Cheddar uses ~30-bit for GPU. On this machine (aarch64, Cortex-X925
-+ A725, SVE2, no AVX-512) the natural path is `umulh`-based Shoup/Barrett
-with lazy reduction and a scalar kernel written first, vectorised later.
-Affects L1 `NttTables` and L4 kernels; does not affect the layering.
+**(4) Prime width and modmul strategy — settled 2026-08-12, and it split in
+two.** The *strategy* half is decided and implemented: scalar Shoup
+multiplication with Harvey lazy reduction, in `src/CKKS/tables/`. The *width*
+half turned out not to be a decision at all. `Params` and `NttTables` both
+accept any prime below 62 bits that is `1 mod 2N`, so a 30-bit chain and a
+60-bit chain are already representable without touching code — width is a
+property of a parameter set, not of the build. What remains is measurement
+on real parameter sets, not a choice to make.
+
+The 62-bit ceiling is Harvey's bound rather than a preference: lazy
+butterflies carry intermediates up to `4q`, which fits a `uint64` only while
+`q < 2^62`. `Params::kMaxPrimeBits` and `NttTables::kMaxModulusBits` are
+therefore the same number derived twice, stated independently because L1 does
+not see L0. `test/CKKS/NttTest.cpp` exercises a 62-bit modulus specifically so
+that an off-by-one in a lazy window fails there.
+
+Vectorisation (SVE2 on the Spark, AVX2/AVX-512 elsewhere) stays open and is a
+local change behind `ModArith.h`, which is the only place in the tree that
+names `__int128`.
 
 **(5) Where arena sizing lives.** The spec proposes
 `eval::scratch_bytes(op, params, level)` at L4, with the program-level
@@ -190,9 +205,23 @@ first.
    model reduced to a pure function. `Arena` refuses to grow when exhausted,
    tracks a high-water mark so a caller can check the size it planned was the
    size it needed, and offers `Scope` for nested temporaries.
-3. **`NttTables` + negacyclic NTT (L1/L4) — next**, tested standalone: no
-   keys, no allocator singleton, no layer above. If that test needs anything
-   from L5, the layering has already failed and CI will say so.
+3. **`NttTables` + negacyclic NTT (L1) — done**, tested standalone: no keys,
+   no allocator singleton, no layer above. `CkksNttTest` links
+   `fhn_ckks_tables` and nothing else, so if that test ever needs a layer
+   above it, the link fails and CI says so.
+
+   This slice was planned as "L1/L4" and built as L1 alone. Putting the
+   transform at L4 was wrong: L4 is `eval::`, the layer of CKKS operations
+   over ciphertexts and keys, and a negacyclic NTT over a single prime has
+   none of those inputs — it is arithmetic on a span of residues given
+   tables. It also needs no scratch, because in-place Cooley-Tukey and
+   Gentleman-Sande butterflies allocate nothing, so it sits below L3 rather
+   than above it. Placing it at L4 would have forced this layer's test to
+   reach upward for something it does not use, which is the erosion I5
+   exists to catch. `NttTables` is keyed by `(modulus, log_degree)` and not
+   by `Params` for the same reason, which leaves L1 depending on nothing at
+   all — the spec already said `NttTables(prime, logN)`; it was this plan's
+   prose that drifted.
 
 `eval::scratch_bytes` was deliberately *not* added yet. A declared function
 with no definition is a footgun, and the contract only becomes meaningful
@@ -321,9 +350,17 @@ echo '#include "CKKS/Params.h"' | g++ -std=c++17 -x c++ -fsyntax-only -I src/CKK
 # 2. temporarily give a layer an equal-or-higher DEPENDS, then configure
 ```
 
-**Open the conversation with:** decision (4), prime width and modmul strategy.
-It is the only pending decision that touches the next slice (L1 `NttTables` +
-the negacyclic transform).
+**Open the conversation with:** decision (6), whether an empty key-switching
+digit should be rejected. The next slice after L1 is RNS base conversion →
+`ModUp`/`ModDown` → hybrid key switching, and (6) is the one pending decision
+that touches it: a `dnum` that silently means something smaller than the
+caller asked for is exactly the hidden discrepancy I4 exists to prevent, and
+rejecting it is a one-line change that gets harder to make once key switching
+reads `digitRange()` in anger.
+
+Decisions (2) and (3) — cryptographic scope, and which open-source library
+gets wrapped as the baseline — remain open and neither blocks that slice.
+(3) does block the first performance number, per locked decision 5.
 
 Note that (4) is narrower than it looks, and can largely be deferred rather
 than answered. Prime *width* is already a per-parameter-set choice, not a
