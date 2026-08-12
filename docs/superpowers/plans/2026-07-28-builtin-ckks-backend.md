@@ -270,5 +270,22 @@ echo '#include "CKKS/Params.h"' | g++ -std=c++17 -x c++ -fsyntax-only -I src/CKK
 # 2. temporarily give a layer an equal-or-higher DEPENDS, then configure
 ```
 
-**Open the conversation with:** decision (1), key switching. It is the most
-expensive to reverse and gates everything after the first slice.
+**Open the conversation with:** decision (4), prime width and modmul strategy.
+It is the only pending decision that touches the next slice (L1 `NttTables` +
+the negacyclic transform).
+
+Note that (4) is narrower than it looks, and can largely be deferred rather
+than answered. Prime *width* is already a per-parameter-set choice, not a
+build-wide one: `Params` accepts any prime below `kMaxPrimeBits` (62) that is
+`1 mod 2N`, so a 30-bit chain and a 60-bit chain are both representable
+without touching code. What actually has to be chosen now is the modmul
+*strategy*, and a scalar Shoup-with-lazy-reduction transform written against
+a `< 2^62` modulus keeps every width on the table while staying portable —
+vectorisation (SVE2 here, AVX2/AVX-512 elsewhere) is a later, local change.
+
+Watch one landmine: the build is `-Wpedantic -Werror`, and GCC's `-Wpedantic`
+objects to `__int128`. Any 128-bit intermediate needs its suppression confined
+to a single small header rather than sprinkled through the arithmetic.
+
+(This paragraph replaced a stale line pointing at decision (1), key switching,
+which locked decision 8 the same day the pending list was renumbered.)
