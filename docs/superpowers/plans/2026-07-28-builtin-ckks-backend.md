@@ -229,18 +229,69 @@ unblocks the corpus independently of the three Cheddar-side blockers above.
 
 **Read in this order:** the spec → this file → `experiments/README.md`.
 
-**Open branches as of 2026-08-11** (none merged to `main` yet; `main` is still
+**Open branches as of 2026-08-20** (none merged to `main` yet; `main` is still
 at the level-aware byte budgets commit):
 
-| Branch | Contents | Note |
+| Branch | PR base | Contents |
 |---|---|---|
-| `feat/gpu-experiment-track` | `experiments/` + the `.gpu-deps/` gitignore entry | **Merge this first.** This file links `experiments/README.md`; that link dangles until it lands. |
-| `feat/real-builtin` | This file, the architecture spec, the scheme decision, and the L0/L3 layer skeleton | 4 commits |
-| `docs/readme-scoped-execution` | Restores the README's Scoped Execution section and corrects the "legacy session execution path" claim | Independent of the other two |
+| `feat/gpu-experiment-track` | `main` | `experiments/` + the `.gpu-deps/` gitignore entry |
+| `feat/real-builtin` | `main` | This file, the architecture spec, the scheme decision, the I5 enforcement, and the L0/L3 layer skeleton |
+| `feat/ckks-ntt` | **`feat/real-builtin`** | L1 `NttTables`, the negacyclic transform, `ModArith.h` |
+| `docs/readme-scoped-execution` | `main` | Restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
+| `docs/open-questions` | `main` | `docs/open-questions/` and question 001 |
 
-Each branch is self-contained and rebased onto `origin/main`, so they can be
-reviewed and merged in any order — the only ordering that matters is the link
-noted above.
+### Opening the PRs
+
+`gh` is deliberately not authenticated on the Spark box — it is a shared
+office machine and a GitHub token should not live there. PRs are opened from
+the WSL box instead.
+
+Three things are easy to get wrong:
+
+1. **`feat/ckks-ntt` must target `feat/real-builtin`, not `main`.** It is
+   stacked. Based on `main` its PR shows seven commits and re-reviews the
+   whole layer skeleton. `gh pr create --base feat/real-builtin`. GitHub
+   retargets it to `main` automatically once the base PR merges.
+2. **Merge `feat/gpu-experiment-track` before `feat/real-builtin`.** This
+   file links `experiments/README.md`; that link dangles until it lands.
+   Nothing else has an ordering constraint — no two branches touch the same
+   file.
+3. **Every code PR should state that Clang has never compiled it.** Both
+   sessions build with GCC 13.3 only, so the macOS CI leg is the first Clang
+   exposure. See "The Clang gap" below.
+
+Verification to state honestly in each PR body:
+
+| Branch | Verified | Not verified |
+|---|---|---|
+| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation | Clang, any version |
+| `feat/ckks-ntt` | Same two platforms, **20/20** and **19/19** with `CkksNttTest` added; 10 NTT tests; mutation-tested independently by both sessions; layer isolation reconfirmed rather than taken on trust | Clang, any version |
+| `feat/gpu-experiment-track` | No compiled code — scripts, logs, markdown. Outside the clang-format path | — |
+| `docs/*` | Markdown only | — |
+
+The commit messages were written to be usable as PR bodies; prefer quoting
+them over paraphrasing.
+
+### The Clang gap
+
+The one untested front end, and the specific question is narrow: does
+`#pragma GCC diagnostic ignored "-Wpedantic"` around the `__int128` alias in
+`ModArith.h` suppress Clang **at the alias**, or does Clang warn at every
+**use site**? The latter means redesigning that header, and it gets more
+expensive the more code stacks on it.
+
+This does **not** need the Spark box. It is a compiler question, not a
+machine question — any Linux box with `clang` answers it, WSL included:
+
+```bash
+sudo apt install -y clang     # clang 18 is the right version family
+cmake -S . -B build-clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_TEST=ON -DBUILD_DOCUMENTATION=OFF
+cmake --build build-clang --target CkksParamsTest CkksArenaTest CkksNttTest -j
+```
+
+With that, the only thing left needing physical access to the Spark is the
+network fix (see the access notes), and even that is better raised as an IT
+request to route the full `/23`.
 
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
