@@ -10,4 +10,4 @@
 # prime has none of those inputs and needs no scratch (in-place Cooley-Tukey
 # and Gentleman-Sande butterflies allocate nothing), so placing it above would
 # force this layer's test to reach upward for something it does not use.
-fhn_ckks_layer(fhn_ckks_tables LAYER 1 SOURCES NttTables.cpp)
+fhn_ckks_layer(fhn_ckks_tables LAYER 1 SOURCES NttTables.cpp BConvTables.cpp)
