@@ -20,7 +20,7 @@ Described by artifact rather than by commit hash, so this survives a rebase:
 | `../specs/2026-07-26-builtin-ckks-backend-design.md` | The architecture spec — R1–R5, I1–I5, L0–L6 |
 | `cmake/FhnCkksLayer.cmake` | Layer-target enforcement for invariant I5 |
 | `src/CKKS/params/` | **L0 `Params`** — validated, immutable, hashable |
-| `src/CKKS/tables/` | **L1 `NttTables` + `ntt::forward`/`ntt::inverse`** — negacyclic transform, Harvey lazy butterflies; `ModArith.h` is the one place that names `__int128` |
+| `src/CKKS/tables/` | **L1 `NttTables` + `ntt::forward`/`ntt::inverse`** — negacyclic transform, Harvey lazy butterflies; **L1 `BConvTables` + `bconv::convert`** — fast RNS base conversion; `ModArith.h` is the one place that names `__int128` |
 | `src/CKKS/arena/` | **L3 `Arena`** — caller-owned bump allocator with `Scope` and high-water tracking |
 | `test/CKKS/` | One test executable per layer, each linking only its own layer target |
 
@@ -285,42 +285,83 @@ Three things are easy to get wrong:
    file links `experiments/README.md`; that link dangles until it lands.
    Nothing else has an ordering constraint — no two branches touch the same
    file.
-3. **Every code PR should state that Clang has never compiled it.** Both
-   sessions build with GCC 13.3 only, so the macOS CI leg is the first Clang
-   exposure. See "The Clang gap" below.
+3. **Every code PR should say which compilers have actually seen it.** Both
+   sessions build with GCC 13.3; Clang 21 has since compiled the CKKS layers
+   clean, but Apple Clang still has not, so the macOS CI leg remains the first
+   exposure to it. See "The Clang gap" below.
 
 Verification to state honestly in each PR body:
 
 | Branch | Verified | Not verified |
 |---|---|---|
-| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation | Clang, any version |
-| `feat/ckks-ntt` | Same two platforms, **20/20** and **19/19** with `CkksNttTest` added; 10 NTT tests; mutation-tested independently by both sessions; layer isolation reconfirmed rather than taken on trust | Clang, any version |
+| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation; `Params.cpp` and `Arena.cpp` also compile clean under Clang 21 | Apple Clang; the `-Werror` CI leg on macOS |
+| `feat/ckks-ntt` | aarch64/GCC 13.3 **20/20** and x86_64/GCC 13.3 **19/19** with `CkksNttTest`; x86_64 **20/20** with `CkksBConvTest` added — the aarch64 leg for that commit is not run yet; 10 NTT tests and 12 base-conversion tests; the NTT mutation-tested independently by both sessions and the base conversion by the WSL session alone, with its one surviving mutation recorded in `BConvTest.cpp` rather than hidden; layer isolation reconfirmed rather than taken on trust; **Clang 21 clean** (see below) | Apple Clang; the `-Werror` CI leg on macOS |
 | `feat/gpu-experiment-track` | No compiled code — scripts, logs, markdown. Outside the clang-format path | — |
 | `docs/*` | Markdown only | — |
 
 The commit messages were written to be usable as PR bodies; prefer quoting
 them over paraphrasing.
 
-### The Clang gap
+### The Clang gap — closed 2026-08-21, and it was a non-question
 
-The one untested front end, and the specific question is narrow: does
-`#pragma GCC diagnostic ignored "-Wpedantic"` around the `__int128` alias in
-`ModArith.h` suppress Clang **at the alias**, or does Clang warn at every
-**use site**? The latter means redesigning that header, and it gets more
-expensive the more code stacks on it.
+The narrow question was whether `#pragma GCC diagnostic ignored "-Wpedantic"`
+around the `__int128` alias in `ModArith.h` suppresses Clang **at the alias**
+or leaves a warning at every **use site**. The answer is neither: **Clang does
+not diagnose `__int128` at all**, not under `-Wpedantic` and not under
+`-pedantic-errors`. There is nothing for the pragma to suppress. It stays
+because GCC does diagnose it — verified in the same run — but no redesign of
+that header is needed, and nothing that stacks on it is at risk.
 
-This does **not** need the Spark box. It is a compiler question, not a
-machine question — any Linux box with `clang` answers it, WSL included:
+Measured, so that none of this rests on argument:
+
+| Probe | Result |
+|---|---|
+| GCC 13.3, `unsigned __int128` alias, `-Wpedantic -Werror`, no pragma | **error** — this is why the pragma exists |
+| Clang 21, same TU, no pragma, `-pedantic-errors` | **no diagnostic** |
+| Clang 21, `-Wpedantic -Werror`, VLA probe | **error** — confirms `-Wpedantic` was actually live, so the line above is a real negative and not a dead flag |
+| Clang 21, all four CKKS layer TUs, the project's exact `CLANG_WARNINGS` + `-Werror` | **0 warnings** |
+| Clang 21, whole project | builds; the only 4 warnings are inside spdlog's bundled `fmt`, none in first-party code |
+| Clang 21, `ctest` | 17/20 — the four CKKS layer tests are **43/43 green**; the three failures are discussed below |
+
+The compiler was Clang 21.1.0 obtained as `zig c++` (`pip install ziglang`),
+because the WSL box has no `clang` package and no passwordless `sudo`. That is
+a real Clang front end and the diagnostics above are front-end behaviour, so
+the `__int128` answer is solid. What it is **not** is Apple Clang, and it is
+not the CI's Clang 18 — the macOS `-Werror` leg is still the first exposure to
+those. The gap is narrowed from "no Clang has ever seen this code" to "one
+Clang has, and had nothing to say".
+
+Reproducing without root:
 
 ```bash
-sudo apt install -y clang     # clang 18 is the right version family
-cmake -S . -B build-clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_TEST=ON -DBUILD_DOCUMENTATION=OFF
-cmake --build build-clang --target CkksParamsTest CkksArenaTest CkksNttTest -j
+python3 -m venv /tmp/zv && /tmp/zv/bin/pip install ziglang
+printf '#!/bin/sh\nexec /tmp/zv/bin/python -m ziglang c++ "$@"\n' > /tmp/zv/zigcxx
+printf '#!/bin/sh\nexec /tmp/zv/bin/python -m ziglang cc "$@"\n'  > /tmp/zv/zigcc
+chmod +x /tmp/zv/zigcxx /tmp/zv/zigcc
+cmake -S . -B build-clang -DCMAKE_CXX_COMPILER=/tmp/zv/zigcxx \
+      -DCMAKE_C_COMPILER=/tmp/zv/zigcc -DBUILD_TEST=ON -DBUILD_DOCUMENTATION=OFF
+cmake --build build-clang -j
 ```
 
-With that, the only thing left needing physical access to the Spark is the
-network fix (see the access notes), and even that is better raised as an IT
-request to route the full `/23`.
+Do **not** pass `-DCMAKE_CXX_COMPILER_ID=Clang`; forcing it breaks CMake's
+feature detection and googletest fails to configure. Let CMake detect it.
+
+### A lead, not a finding: the three exit-time segfaults
+
+Under that build, `CorpusUnitTest`, `FhnCorpusTest` and
+`FhnExternalBackendTest` crash — and all three **pass every test first** and
+then take SIGSEGV during process exit, after gtest's tear-down line. The same
+binaries exit 0 under GCC. All three are the `dlopen` backend tests, which
+points at a static destructor running after the backend handle is gone.
+
+Two reasons not to call this a bug in the project yet. Zig's toolchain links
+its own runtime, and mixing that with a `dlopen`ed shared object is exactly
+where this class of crash appears spuriously. But it is worth writing down
+because `FhnExternalBackendTest` is also the test that SIGTRAPs on macOS, and
+"destructor ordering around a `dlopen`ed backend" would explain both. If
+someone picks up the macOS SIGTRAP, start there. Nothing on the CKKS branches
+is affected — those four tests link one static layer each and do not `dlopen`
+anything.
 
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
