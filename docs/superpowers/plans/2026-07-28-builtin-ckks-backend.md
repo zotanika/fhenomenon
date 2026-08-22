@@ -363,6 +363,56 @@ someone picks up the macOS SIGTRAP, start there. Nothing on the CKKS branches
 is affected — those four tests link one static layer each and do not `dlopen`
 anything.
 
+### L2 Storage — what is forced, and the one thing that is not
+
+Three designs were produced independently from different starting premises
+(view-only, view-plus-owner, pointerless descriptor) and judged against the
+tree rather than against each other. The useful result is how little of it
+turned out to be open.
+
+**Forced by the repository, and no longer worth discussing:**
+
+| Question | Forced by |
+|---|---|
+| L2 cannot own arena memory; "arena-allocated RnsPoly" is not an L2 concept | `cmake/FhnCkksLayer.cmake`'s downward-only check — L3 is above L2 |
+| L2 depends on `fhn_ckks_params` only, never on L1 | the spec's layering, plus the precedent that a `poly.toNtt(tables)` method is exactly how I3 erodes |
+| The wire identity cannot be `Params::hash()` | `Params.cpp:165` — it is `std::hash`-derived, so implementation-defined, and `std::size_t` is not 64 bits everywhere. This is a correctness bug, not a trade-off |
+| Capacity must be a separate, checked quantity from live size | `include/FHN/fhn_backend_api.h:76` — `FhnBufferAllocFn` takes **no size**, so a buffer is sized once while the live shape shrinks with level |
+| Residues are limb-major | `NttTables.h` — `ntt::forward`/`inverse` need `degree()` contiguous residues for one prime, and the NTT dominates cost |
+| Views never own; duplication is a distinctly named operation | invariant I4, verbatim |
+
+**The one genuinely open decision: does L2 export an owning aligned slab type**
+(`PolySlab` — owns bytes, knows no shape), or does durable ownership live
+elsewhere? Nothing in the repo forces or forbids it. The argument that an
+owning L2 type violates I2 does not survive contact with
+`src/CKKS/arena/Arena.cpp:5`, where `Arena`'s own constructor calls
+`::operator new` — a reading of I2 that condemns `PolySlab` condemns `Arena`.
+
+The repo does not settle it but it leans, and the lean is already written down
+here: the NTT moved from L4 to L1 because placing it above "would have forced
+this layer's test to reach upward for something it does not use". The same rule
+says that if the L2 test needs an aligned allocator to exercise L2's own
+contract, the allocator belongs at L2. Saying yes costs a one-clause amendment
+to the spec's L2 line; saying no relaxes or drops the 64-byte alignment that
+`Arena::kAlignment`'s own comment promises to kernels, and pushes the durable
+owner somewhere that needs a *larger* amendment to the L3 line.
+
+### A seam between L1 and L4 that the base-conversion API creates
+
+`bconv::convert` consumes **one coefficient's residues across the whole source
+basis** — `in[i]` indexes source primes, `out[j]` target primes. Storage is
+limb-major because the NTT requires it. Those two facts do not compose: ModUp
+must gather `k` residues per coefficient into a temporary, call `convert`, and
+scatter `l` results, `N` times.
+
+That is not a bug in either layer, and `convert` is correct as written and as
+tested. But it means any L4 sketch of the form
+`bconv::convert(in.limb(j), out.limb(k), tables)` is wrong and would produce
+garbage, and any scratch-byte estimate that omits the gather/scatter pair is
+too small. Resolve it when L2 lands, most likely with a batched entry point at
+L1 that takes limb-major planes and does the transposition once — do not guess
+its signature before the storage layout is real.
+
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
 + Cortex-A725 with SVE2, 20 cores; 122 GiB unified memory; GCC 13.3, CMake 3.28.
