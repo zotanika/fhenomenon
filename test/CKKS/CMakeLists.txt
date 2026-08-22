@@ -17,6 +17,10 @@ add_executable(CkksBConvTest BConvTest.cpp)
 target_link_libraries(CkksBConvTest PRIVATE fhn_ckks_tables gtest_main)
 add_gtest_target_to_ctest(CkksBConvTest)
 
+add_executable(CkksLayoutTest LayoutTest.cpp)
+target_link_libraries(CkksLayoutTest PRIVATE fhn_ckks_storage gtest_main)
+add_gtest_target_to_ctest(CkksLayoutTest)
+
 add_executable(CkksArenaTest ArenaTest.cpp)
 target_link_libraries(CkksArenaTest PRIVATE fhn_ckks_arena gtest_main)
 add_gtest_target_to_ctest(CkksArenaTest)

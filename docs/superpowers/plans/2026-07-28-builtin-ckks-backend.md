@@ -21,10 +21,11 @@ Described by artifact rather than by commit hash, so this survives a rebase:
 | `cmake/FhnCkksLayer.cmake` | Layer-target enforcement for invariant I5 |
 | `src/CKKS/params/` | **L0 `Params`** — validated, immutable, hashable |
 | `src/CKKS/tables/` | **L1 `NttTables` + `ntt::forward`/`ntt::inverse`** — negacyclic transform, Harvey lazy butterflies; **L1 `BConvTables` + `bconv::convert`** — fast RNS base conversion; `ModArith.h` is the one place that names `__int128` |
+| `src/CKKS/storage/` | **L2 `ParamsId` / `RnsBasis` / `PolyLayout` / `CiphertextLayout`** — value arithmetic over index ranges, available before any memory exists |
 | `src/CKKS/arena/` | **L3 `Arena`** — caller-owned bump allocator with `Scope` and high-water tracking |
 | `test/CKKS/` | One test executable per layer, each linking only its own layer target |
 
-Everything above L0/L1/L3 is unimplemented. The built-in backend is still
+Everything above L0/L1/L2/L3 is unimplemented. The built-in backend is still
 ToyFHE and remains fully functional; nothing here degrades it.
 
 Two threads are live. **A** is the primary one; **B** is running and has one
