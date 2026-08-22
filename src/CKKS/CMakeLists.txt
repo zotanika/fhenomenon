@@ -12,4 +12,5 @@ include(FhnCkksLayer)
 
 add_subdirectory(params)
 add_subdirectory(tables)
+add_subdirectory(storage)
 add_subdirectory(arena)
