@@ -269,6 +269,29 @@ at the level-aware byte budgets commit):
 | `docs/readme-scoped-execution` | `main` | Restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
 | `docs/open-questions` | `main` | `docs/open-questions/` and question 001 |
 
+### Coordination between the two sessions: push it, do not just say it
+
+The two sessions talk over Remote Control, but **the reply leg is relayed by
+hand**, and on 2026-08-23 a message was lost in it. Both sessions independently
+derived the same refutation of the same wrong claim, spending the work twice
+and not noticing until one of them mentioned a detail the other had never seen.
+
+Two rules follow, and the first is the load-bearing one.
+
+1. **If a conclusion matters, it goes in the repository, not only in a
+   message.** Push it — to this file, to `docs/open-questions/`, or to a commit
+   message. A dropped message is invisible to both ends; a pushed commit is
+   not, and `git fetch --all` is a check either session can run unilaterally
+   without depending on the relay working. Messages are for notification and
+   argument; the repository is the record.
+2. **Silence is evidence of loss, not of agreement.** If one session sends
+   something and the other's next reply shows no trace of it, assume it never
+   arrived and resend, rather than assuming it was read and dismissed.
+
+Before starting work, run `git fetch --all && git log --oneline --all -20`.
+That is cheaper than re-deriving something the other session already settled,
+and it is the only path that does not depend on a human being in the loop.
+
 ### Opening the PRs
 
 `gh` is deliberately not authenticated on the Spark box — it is a shared
