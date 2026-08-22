@@ -122,11 +122,17 @@ namespace ntt {
 // there is no separate pre-scaling pass over the input and no bit-reversal
 // pass at either end.
 //
-// Reduction is lazy in Harvey's sense. Residues are carried unreduced — under
-// 4q in forward(), under 2q in inverse() — and brought back to [0, q) only in
-// the final pass, which is why the modulus must stay under 2^62. Each
-// conditional subtraction below is what keeps a value inside its stated
-// window; none of them is a defensive check.
+// Reduction is lazy in Harvey's sense. Residues are carried unreduced and
+// brought back to [0, q) only in the final pass, which is why the modulus must
+// stay under 2^62. Each conditional subtraction below is what keeps a value
+// inside its stated window; none of them is a defensive check.
+//
+// Both directions need the same 4q of headroom, and it is worth being exact
+// about where. forward() stores values under 4q. inverse() stores them under
+// 2q, which reads like the looser constraint but is not: the argument it hands
+// to the lazy multiply is x + 2q - y with x and y both under 2q, so the value
+// that has to fit a uint64 reaches 4q there too. 4q < 2^64 is therefore the
+// single condition behind kMaxModulusBits, not two different ones.
 
 void forward(uint64_t *values, const NttTables &tables) {
   const uint64_t modulus = tables.modulus();
