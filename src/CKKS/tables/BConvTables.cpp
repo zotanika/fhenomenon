@@ -26,7 +26,7 @@ bool validateBasis(const std::vector<uint64_t> &basis, const char *name, std::st
     if (modulus >> BConvTables::kMaxModulusBits != 0) {
       return fail(error, "modulus " + std::to_string(modulus) + " in the " + name + " basis exceeds " +
                            std::to_string(BConvTables::kMaxModulusBits) +
-                           " bits: the conversion accumulates partial sums up to 4p, which must fit a uint64");
+                           " bits: the conversion accumulates partial sums that must fit a uint64");
     }
     // The inverse below is Fermat's little theorem and returns silent garbage
     // on a composite, exactly as in NttTables::create. Load-bearing, not
@@ -48,8 +48,15 @@ std::optional<BConvTables> BConvTables::create(const std::vector<uint64_t> &from
 
   // Distinctness is coprimality here, and it is needed in three places at
   // once: Q must be squarefree for Q/q_i to be invertible mod q_i, the CRT
-  // over the target basis must be a bijection, and a target prime dividing Q
-  // would make its whole column the conversion of zero.
+  // over the target basis must be a bijection, and the two bases together must
+  // be coprime because ModUp builds a CRT basis out of their union.
+  //
+  // That last one is not a wrong-answer guard, and it is easy to assume it is.
+  // If p_j = q_m then Q_i is divisible by p_j for every i != m, so that whole
+  // column of the table is zero, only i = m contributes, and the output is
+  // exactly x mod p_j — the alpha*Q term vanishes because q_m divides Q. The
+  // shared column is the one column that is unconditionally exact. What breaks
+  // is the union basis one layer up, not this conversion.
   for (std::size_t i = 0; i < from.size(); ++i) {
     for (std::size_t l = i + 1; l < from.size(); ++l) {
       if (from[i] == from[l]) {

@@ -179,17 +179,34 @@ std::vector<uint64_t> pseudoRandomResidues(const std::vector<uint64_t> &basis, u
   return out;
 }
 
-// One thing these tests do NOT cover, recorded so that green is not mistaken
-// for complete. The conversion carries its accumulator unreduced under 2p and
-// subtracts 2p when it exceeds that; mutating the threshold to p leaves every
-// test here passing. That is not a missing test case, it is a property of the
-// mutant: the loop becomes out <- out + term - p, and the lazy Shoup product
-// exceeds p only when its input y satisfies a condition of probability at most
-// y / 2^64 < 1/4, so E[term] < 0.6p and the walk drifts downward instead of
-// overflowing. Driving it upward would need that probability above 1/2, which
-// no modulus under 2^62 can produce. The stated window is therefore justified
-// by the bound in ModArith.h rather than by anything below, and an off-by-one
-// in it is a review question, not a test question.
+// The accumulator's unreduced window is the subtlest thing in the
+// implementation, so the input that pins it is constructed rather than drawn.
+//
+// convert() carries partial sums under 2p and subtracts 2p when they exceed
+// that. Narrowing the threshold to p is a one-token change that no random test
+// catches, and the first version of this file recorded that as unkillable on
+// the following argument: the mutant's loop becomes out <- out + term - p, the
+// lazy Shoup product exceeds p only with probability under 1/4, so E[term] <
+// 0.6p and the walk drifts downward. The drift part is right. The conclusion
+// was wrong, and the reason is worth keeping.
+//
+// Writing B = 2^64, w' = floor(w*B/p), s = (w*B) mod p and r = (y*w') mod B,
+// the Shoup product is exactly
+//
+//     term = (y*s + r*p) / B
+//
+// which is not a coin flip between [0,p) and [p,2p) — it is continuous on
+// [0, p*(1 + q/B)), i.e. up to 1.25p for q just under 2^62. And r is not a
+// random variable: y_i is a bijection of the caller's in[i], so a caller
+// choosing in[i] chooses r. Terms near 1.25p give the mutant a drift of
+// +0.25p per source prime instead of -0.4p, and roughly thirty of them carry
+// the accumulator past 2^64.
+//
+// kAdversarialInput below is such a choice, found by searching each y_i for a
+// large r. Under the shipped 2p window the answer is correct; under the p
+// window the accumulator wraps and the answer is wrong. The same derivation is
+// what bounds the real code: term < 1.25p and out < 2p give sums under 3.25p,
+// which is why 62 bits is comfortable rather than marginal.
 
 // --- validation -----------------------------------------------------------
 
@@ -233,8 +250,12 @@ TEST(BConvTables, RejectsAPrimeRepeatedWithinABasis) {
 
 TEST(BConvTables, RejectsAPrimeSharedBetweenTheTwoBases) {
   // Not a coprimality failure inside either basis, but the pair still has to
-  // be coprime: a target prime dividing Q makes its output identically the
-  // conversion of zero, which is silently wrong rather than loudly wrong.
+  // be coprime. Note the failure is NOT that the shared column goes wrong: if
+  // p_j = q_m then every hat_residue_[i][j] with i != m is zero, only i = m
+  // contributes, and that column comes out exactly equal to x mod p_j. The
+  // check earns its place one layer up — a target basis sharing a factor with
+  // Q is not a CRT basis over the union Q u B, which is precisely what ModUp
+  // will build out of these two.
   std::string error;
   EXPECT_FALSE(BConvTables::create(kSmallFrom, {114689, 40961}, &error).has_value());
   EXPECT_NE(error.find("both bases"), std::string::npos) << "actual: " << error;
@@ -353,6 +374,45 @@ TEST(BConv, ConvertsExactlyFromASinglePrimeBasis) {
 // wrong by an additive constant — which the oracle comparisons above would
 // also catch, but which would otherwise only ever be exercised at random
 // inputs.
+const std::vector<uint64_t> kAdversarialBasis{
+  4611686018427365377ULL, 4611686018427322369ULL, 4611686018427289601ULL, 4611686018427277313ULL,
+  4611686018427246593ULL, 4611686018427228161ULL, 4611686018427215873ULL, 4611686018427199489ULL,
+  4611686018427185153ULL, 4611686018427156481ULL, 4611686018427136001ULL, 4611686018427045889ULL,
+  4611686018427013121ULL, 4611686018426963969ULL, 4611686018426953729ULL, 4611686018426933249ULL,
+  4611686018426884097ULL, 4611686018426877953ULL, 4611686018426800129ULL, 4611686018426767361ULL,
+  4611686018426705921ULL, 4611686018426689537ULL, 4611686018426687489ULL, 4611686018426669057ULL,
+  4611686018426658817ULL, 4611686018426656769ULL, 4611686018426533889ULL, 4611686018426529793ULL,
+  4611686018426460161ULL, 4611686018426454017ULL};
+
+constexpr uint64_t kAdversarialTarget = 4611686018426265601ULL;
+
+const std::vector<uint64_t> kAdversarialInput{
+  2011847961399330666ULL, 3006551479125975369ULL, 1325610053205173301ULL, 3437626732100612466ULL,
+  3913318144902842519ULL, 4437345481499131404ULL, 1363675003912973065ULL, 2088824549403435308ULL,
+  1369221513038479574ULL, 134026616539798516ULL,  3010557345888388261ULL, 91432409308323495ULL,
+  868414111692545801ULL,  3153712035997705813ULL, 2358569996940760888ULL, 1529897196526258155ULL,
+  3482948339824934170ULL, 2667613713644874240ULL, 3491996048545542376ULL, 3158679349810124402ULL,
+  367505333507003601ULL,  1597115850228775974ULL, 3288336649709413652ULL, 2724200718728384566ULL,
+  278468713882996152ULL,  1914362723960614415ULL, 3318169872102755989ULL, 1560825259618773744ULL,
+  2905042359063322962ULL, 3894750796965660549ULL};
+
+// Constructed, not drawn: see the derivation above. Thirty source primes just
+// under 2^62 with residues chosen so that every Shoup product lands near its
+// 1.25p supremum. This is the test that kills the narrowed-window mutant, and
+// it is the reason the window in BConvTables.cpp is stated as 2p rather than
+// left to argument.
+TEST(BConv, MatchesTheExactCrtSumOnAnAdversarialAccumulatorInput) {
+  const std::vector<uint64_t> to{kAdversarialTarget};
+  const auto tables = BConvTables::create(kAdversarialBasis, to, nullptr);
+  ASSERT_TRUE(tables.has_value());
+
+  std::vector<uint64_t> out(to.size(), 0);
+  fhenomenon::ckks::bconv::convert(kAdversarialInput.data(), out.data(), *tables);
+
+  EXPECT_EQ(out, exactConversion(kAdversarialInput, kAdversarialBasis, to));
+  EXPECT_LT(out[0], kAdversarialTarget);
+}
+
 TEST(BConv, ConvertsZeroToZero) {
   const auto tables = BConvTables::create(kSmallFrom, kSmallTo, nullptr);
   ASSERT_TRUE(tables.has_value());

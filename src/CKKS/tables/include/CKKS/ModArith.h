@@ -69,6 +69,22 @@ inline uint64_t shoupFactor(uint64_t w, uint64_t q) { return static_cast<uint64_
 // because t <= y*w/q, and is under 2q because t > y*w/q - y/B - 1 > y*w/q - 2.
 // That is what lets the butterflies below feed unreduced values straight back
 // in, which is the whole point of the lazy form.
+//
+// PRECONDITION, and the only one in this header that is not range-free:
+// q <= 2^63. The bound above is about the mathematical value; the return type
+// is a uint64, so a window of width 2q is only representable while 2q fits.
+// Above 2^63 the result is not merely out of window, it stops being congruent
+// to y*w at all. Every other function here is correct across the whole uint64
+// range. Both current callers cap their moduli at 62 bits and say so in their
+// own errors, but those caps live in the callers, and this file advertises
+// itself as usable from any layer.
+//
+// The sharper form of the bound is worth having, because callers that sum many
+// of these need it: with w' = floor(w*B/q), s = (w*B) mod q and r = (y*w') mod
+// B, the returned value is exactly (y*s + r*q)/B. That is continuous on
+// [0, q*(1 + y_max/B)) rather than concentrated at 0 or q — so for y under
+// 2^62 the true supremum is 1.25q, not 2q, and it is reachable by a caller who
+// chooses y rather than only by an unlucky one.
 inline uint64_t mulModShoupLazy(uint64_t y, uint64_t w, uint64_t w_shoup, uint64_t q) {
   return y * w - mulHigh(y, w_shoup) * q;
 }

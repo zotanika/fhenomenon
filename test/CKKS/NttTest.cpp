@@ -97,12 +97,28 @@ std::vector<uint64_t> schoolbookNegacyclicMultiply(const std::vector<uint64_t> &
 
 // A deterministic filler. std::rand would make a failure unreproducible, and
 // the point of a counterexample is that it can be replayed.
+//
+// The LCG output is passed through the SplitMix64 finaliser rather than being
+// shifted down, because the residues must reach the full width of the modulus.
+// An earlier version took `state >> 33`, which is 31 bits: against a 62-bit
+// prime it meant the "at the modulus bound" tests below never presented a
+// residue above 2^31, and the wide lazy windows they exist to exercise were
+// never driven anywhere near their limits. Taking the raw LCG state instead
+// would fix the width and break the quality, since the low bits of a power-of-
+// two LCG have a short period; the finaliser gives full width at every modulus.
+uint64_t mix(uint64_t z) {
+  z += 0x9E3779B97F4A7C15ULL;
+  z = (z ^ (z >> 30U)) * 0xBF58476D1CE4E5B9ULL;
+  z = (z ^ (z >> 27U)) * 0x94D049BB133111EBULL;
+  return z ^ (z >> 31U);
+}
+
 std::vector<uint64_t> pseudoRandomResidues(std::size_t count, uint64_t q, uint64_t seed) {
   std::vector<uint64_t> out(count);
   uint64_t state = seed;
   for (uint64_t &value : out) {
     state = state * 6364136223846793005ULL + 1442695040888963407ULL;
-    value = (state >> 33U) % q;
+    value = mix(state) % q;
   }
   return out;
 }
@@ -113,51 +129,75 @@ TEST(Ntt, PointwiseProductInTheTransformDomainIsNegacyclicConvolution) {
   ASSERT_TRUE(tables.has_value());
   const std::size_t n = tables->degree();
 
-  const std::vector<uint64_t> a = pseudoRandomResidues(n, kSmallPrime, 1);
-  const std::vector<uint64_t> b = pseudoRandomResidues(n, kSmallPrime, 2);
+  for (uint64_t seed = 1; seed <= 64; ++seed) {
+    const std::vector<uint64_t> a = pseudoRandomResidues(n, kSmallPrime, seed);
+    const std::vector<uint64_t> b = pseudoRandomResidues(n, kSmallPrime, seed + 1000);
 
-  std::vector<uint64_t> product = a;
-  std::vector<uint64_t> other = b;
-  fhenomenon::ckks::ntt::forward(product.data(), *tables);
-  fhenomenon::ckks::ntt::forward(other.data(), *tables);
-  for (std::size_t i = 0; i < n; ++i) {
-    product[i] = product[i] * other[i] % kSmallPrime;
+    std::vector<uint64_t> product = a;
+    std::vector<uint64_t> other = b;
+    fhenomenon::ckks::ntt::forward(product.data(), *tables);
+    fhenomenon::ckks::ntt::forward(other.data(), *tables);
+    for (std::size_t i = 0; i < n; ++i) {
+      product[i] = product[i] * other[i] % kSmallPrime;
+    }
+    fhenomenon::ckks::ntt::inverse(product.data(), *tables);
+
+    EXPECT_EQ(product, schoolbookNegacyclicMultiply(a, b, kSmallPrime)) << "seed " << seed;
   }
-  fhenomenon::ckks::ntt::inverse(product.data(), *tables);
-
-  EXPECT_EQ(product, schoolbookNegacyclicMultiply(a, b, kSmallPrime));
 }
 
 TEST(Ntt, RoundTripRecoversTheInput) {
   const auto tables = NttTables::create(kSmallPrime, 10, nullptr);
   ASSERT_TRUE(tables.has_value());
 
-  const std::vector<uint64_t> original = pseudoRandomResidues(tables->degree(), kSmallPrime, 3);
-  std::vector<uint64_t> values = original;
-  fhenomenon::ckks::ntt::forward(values.data(), *tables);
-  fhenomenon::ckks::ntt::inverse(values.data(), *tables);
+  for (uint64_t seed = 1; seed <= 32; ++seed) {
+    const std::vector<uint64_t> original = pseudoRandomResidues(tables->degree(), kSmallPrime, seed);
+    std::vector<uint64_t> values = original;
+    fhenomenon::ckks::ntt::forward(values.data(), *tables);
+    fhenomenon::ckks::ntt::inverse(values.data(), *tables);
 
-  EXPECT_EQ(values, original);
+    EXPECT_EQ(values, original) << "seed " << seed;
+  }
 }
 
-// The transform carries residues unreduced up to 4q between passes, so 4q
+// The transform carries residues unreduced between passes, so those windows
 // fitting a uint64 is the entire justification for kMaxModulusBits. At 62 bits
 // there are two spare bits and no more; an off-by-one in any of the lazy
 // windows wraps here and nowhere else, which is why this case is separate from
 // the 14-bit one above rather than folded into it.
+//
+// Swept over seeds, not drawn once. A single draw is not enough and that is
+// not hypothetical: narrowing inverse()'s Gentleman-Sande sum window from 2q
+// to q leaves the one-draw version of this test passing, because the failure
+// appears for only about one input in six. Seed 4 — what this test used to
+// pin — is one of the passing ones.
 TEST(Ntt, RoundTripRecoversTheInputAtTheModulusBound) {
   constexpr uint64_t kWidePrime = 4611686018427365377ULL; // 62 bits, 1 mod 2048
   const auto tables = NttTables::create(kWidePrime, 10, nullptr);
   ASSERT_TRUE(tables.has_value());
 
-  const std::vector<uint64_t> original = pseudoRandomResidues(tables->degree(), kWidePrime, 4);
-  std::vector<uint64_t> values = original;
-  fhenomenon::ckks::ntt::forward(values.data(), *tables);
-  fhenomenon::ckks::ntt::inverse(values.data(), *tables);
+  for (uint64_t seed = 1; seed <= 32; ++seed) {
+    const std::vector<uint64_t> original = pseudoRandomResidues(tables->degree(), kWidePrime, seed);
+    std::vector<uint64_t> values = original;
 
-  EXPECT_EQ(values, original);
-  for (uint64_t value : values) {
-    ASSERT_LT(value, kWidePrime) << "inverse() leaked an unreduced residue";
+    fhenomenon::ckks::ntt::forward(values.data(), *tables);
+    // forward() promises fully reduced output too, and nothing else in this
+    // file checks it. Without this loop the final 2q subtraction in forward()
+    // can be deleted outright and every test still passes, because every other
+    // test launders the result — two feed it back into inverse(), which
+    // tolerates unreduced input, and the convolution tests reduce modulo a
+    // 14-bit prime where even 4q squared still fits a uint64. The first real
+    // consumer to multiply two 62-bit forward outputs would overflow instead.
+    for (uint64_t value : values) {
+      ASSERT_LT(value, kWidePrime) << "forward() leaked an unreduced residue, seed " << seed;
+    }
+
+    fhenomenon::ckks::ntt::inverse(values.data(), *tables);
+
+    EXPECT_EQ(values, original) << "seed " << seed;
+    for (uint64_t value : values) {
+      ASSERT_LT(value, kWidePrime) << "inverse() leaked an unreduced residue";
+    }
   }
 }
 
