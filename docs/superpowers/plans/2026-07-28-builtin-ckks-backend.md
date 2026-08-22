@@ -388,30 +388,65 @@ owning L2 type violates I2 does not survive contact with
 `src/CKKS/arena/Arena.cpp:5`, where `Arena`'s own constructor calls
 `::operator new` — a reading of I2 that condemns `PolySlab` condemns `Arena`.
 
-The repo does not settle it but it leans, and the lean is already written down
-here: the NTT moved from L4 to L1 because placing it above "would have forced
-this layer's test to reach upward for something it does not use". The same rule
-says that if the L2 test needs an aligned allocator to exercise L2's own
-contract, the allocator belongs at L2. Saying yes costs a one-clause amendment
-to the spec's L2 line; saying no relaxes or drops the 64-byte alignment that
-`Arena::kAlignment`'s own comment promises to kernels, and pushes the durable
-owner somewhere that needs a *larger* amendment to the L3 line.
+**Settled by both sessions, 2026-08-23: yes, with a sharper reading of I2 than
+either of us started with.** I2 is not about who calls `operator new` — it is
+about who decides *how much, and when*. `Arena` satisfies it because its
+capacity is an explicit constructor argument that never grows implicitly, not
+because it avoids allocating. An L2 slab satisfies it the same way: explicit
+size, no implicit growth, no default allocator, no ambient anything. Stated
+that way the invariant is about the absence of hidden policy, which is what it
+was always for, and the "must receive already-allocated storage" gloss that
+seemed to follow from it does not.
 
-### A seam between L1 and L4 that the base-conversion API creates
+The house had also decided this shape of question once already: the NTT moved
+from L4 to L1 because placing it above "would have forced this layer's test to
+reach upward for something it does not use". The same rule says an aligned
+allocator that the L2 test needs to exercise L2's own contract belongs at L2.
+Saying no would relax or drop the 64-byte alignment `Arena::kAlignment`'s own
+comment promises to kernels, and push the durable owner somewhere needing a
+*larger* amendment to the L3 line.
+
+Still worth the user's sign-off, because it adds one clause to the spec's L2
+line — but it is no longer an open technical question.
+
+### The L1/L4 transposition — raised, then dissolved
 
 `bconv::convert` consumes **one coefficient's residues across the whole source
-basis** — `in[i]` indexes source primes, `out[j]` target primes. Storage is
-limb-major because the NTT requires it. Those two facts do not compose: ModUp
-must gather `k` residues per coefficient into a temporary, call `convert`, and
-scatter `l` results, `N` times.
+basis** (`in[i]` indexes source primes), while storage must be limb-major
+because `ntt::forward` needs `degree()` contiguous residues per prime. Read
+naively those do not compose, and ModUp appears to need a gather of `k`
+residues and a scatter of `l` per coefficient, `N` times.
 
-That is not a bug in either layer, and `convert` is correct as written and as
-tested. But it means any L4 sketch of the form
-`bconv::convert(in.limb(j), out.limb(k), tables)` is wrong and would produce
-garbage, and any scratch-byte estimate that omits the gather/scatter pair is
-too small. Resolve it when L2 lands, most likely with a batched entry point at
-L1 that takes limb-major planes and does the transposition once — do not guess
-its signature before the storage layout is real.
+That was wrong, and the fix is a loop order, not a buffer. Spark's shape:
+
+```
+for i in from:
+    for n in 0..N:  t[n] = reduce(lazy(in_limb[i][n], hat_inv[i], q_i))   // contiguous
+    for j in to:
+        w = hat_res[i][j]                                                 // inner-loop invariant
+        for n in 0..N:  out_limb[j][n] += lazy(t[n], w, p_j)              // contiguous
+```
+
+Verified bit-identical to the shipped per-coefficient path for
+`(k,l,N)` in `{(3,2,17), (5,3,32), (8,4,9), (2,1,64)}`, with both agreeing
+with an exact big-integer CRT oracle. Three things follow, and they matter
+beyond tidiness:
+
+- **Scratch is exactly one limb (`N` words), not `k*N`**, because `t` is reused
+  for each `i`. So `eval::scratch_bytes(FHN_MOD_UP, ...)` counts one limb; it
+  never needs a transposition buffer, and an estimate that budgets one is too
+  large rather than too small.
+- **The accumulation order over `i` is unchanged**, so the 2p window analysis
+  in `BConvTables.cpp` carries over untouched. This is the reason to prefer
+  this shape over any that reassociates the sum.
+- **The Shoup multiplier `w` is invariant in the innermost loop**, which is the
+  shape both SVE2 and AVX-512 want. The transposition was an artefact of the
+  single-coefficient API, never intrinsic — which also means it was an API
+  decision on the Cheddar side rather than a kernel one.
+
+The batched entry point itself waits until L2 is real, because only the storage
+layout fixes how a limb plane is addressed. Both sessions agree on that, and on
+the shape to write when the time comes.
 
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
