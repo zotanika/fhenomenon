@@ -20,11 +20,13 @@ Described by artifact rather than by commit hash, so this survives a rebase:
 | `../specs/2026-07-26-builtin-ckks-backend-design.md` | The architecture spec — R1–R5, I1–I5, L0–L6 |
 | `cmake/FhnCkksLayer.cmake` | Layer-target enforcement for invariant I5 |
 | `src/CKKS/params/` | **L0 `Params`** — validated, immutable, hashable |
+| `src/CKKS/tables/` | **L1 `NttTables` + `ntt::forward`/`ntt::inverse`** — negacyclic transform, Harvey lazy butterflies; **L1 `BConvTables` + `bconv::convert`** — fast RNS base conversion; `ModArith.h` is the one place that names `__int128` |
+| `src/CKKS/storage/` | **L2 `ParamsId` / `RnsBasis` / `PolyLayout` / `CiphertextLayout`** — value arithmetic over index ranges, available before any memory exists |
 | `src/CKKS/arena/` | **L3 `Arena`** — caller-owned bump allocator with `Scope` and high-water tracking |
 | `test/CKKS/` | One test executable per layer, each linking only its own layer target |
 
-Everything above L0/L3 is unimplemented. The built-in backend is still ToyFHE
-and remains fully functional; nothing here degrades it.
+Everything above L0/L1/L2/L3 is unimplemented. The built-in backend is still
+ToyFHE and remains fully functional; nothing here degrades it.
 
 Two threads are live. **A** is the primary one; **B** is running and has one
 recorded blocker that A happens to unblock.
@@ -149,11 +151,25 @@ behind the FHN ABI as correctness oracle and speed reference. Not blocking —
 but it should exist before the first performance number, or decision 5 above
 cannot be honoured.
 
-**(4) Prime width and modmul strategy.** 50–60-bit primes are conventional
-on CPU; Cheddar uses ~30-bit for GPU. On this machine (aarch64, Cortex-X925
-+ A725, SVE2, no AVX-512) the natural path is `umulh`-based Shoup/Barrett
-with lazy reduction and a scalar kernel written first, vectorised later.
-Affects L1 `NttTables` and L4 kernels; does not affect the layering.
+**(4) Prime width and modmul strategy — settled 2026-08-12, and it split in
+two.** The *strategy* half is decided and implemented: scalar Shoup
+multiplication with Harvey lazy reduction, in `src/CKKS/tables/`. The *width*
+half turned out not to be a decision at all. `Params` and `NttTables` both
+accept any prime below 62 bits that is `1 mod 2N`, so a 30-bit chain and a
+60-bit chain are already representable without touching code — width is a
+property of a parameter set, not of the build. What remains is measurement
+on real parameter sets, not a choice to make.
+
+The 62-bit ceiling is Harvey's bound rather than a preference: lazy
+butterflies carry intermediates up to `4q`, which fits a `uint64` only while
+`q < 2^62`. `Params::kMaxPrimeBits` and `NttTables::kMaxModulusBits` are
+therefore the same number derived twice, stated independently because L1 does
+not see L0. `test/CKKS/NttTest.cpp` exercises a 62-bit modulus specifically so
+that an off-by-one in a lazy window fails there.
+
+Vectorisation (SVE2 on the Spark, AVX2/AVX-512 elsewhere) stays open and is a
+local change behind `ModArith.h`, which is the only place in the tree that
+names `__int128`.
 
 **(5) Where arena sizing lives.** The spec proposes
 `eval::scratch_bytes(op, params, level)` at L4, with the program-level
@@ -190,9 +206,23 @@ first.
    model reduced to a pure function. `Arena` refuses to grow when exhausted,
    tracks a high-water mark so a caller can check the size it planned was the
    size it needed, and offers `Scope` for nested temporaries.
-3. **`NttTables` + negacyclic NTT (L1/L4) — next**, tested standalone: no
-   keys, no allocator singleton, no layer above. If that test needs anything
-   from L5, the layering has already failed and CI will say so.
+3. **`NttTables` + negacyclic NTT (L1) — done**, tested standalone: no keys,
+   no allocator singleton, no layer above. `CkksNttTest` links
+   `fhn_ckks_tables` and nothing else, so if that test ever needs a layer
+   above it, the link fails and CI says so.
+
+   This slice was planned as "L1/L4" and built as L1 alone. Putting the
+   transform at L4 was wrong: L4 is `eval::`, the layer of CKKS operations
+   over ciphertexts and keys, and a negacyclic NTT over a single prime has
+   none of those inputs — it is arithmetic on a span of residues given
+   tables. It also needs no scratch, because in-place Cooley-Tukey and
+   Gentleman-Sande butterflies allocate nothing, so it sits below L3 rather
+   than above it. Placing it at L4 would have forced this layer's test to
+   reach upward for something it does not use, which is the erosion I5
+   exists to catch. `NttTables` is keyed by `(modulus, log_degree)` and not
+   by `Params` for the same reason, which leaves L1 depending on nothing at
+   all — the spec already said `NttTables(prime, logN)`; it was this plan's
+   prose that drifted.
 
 `eval::scratch_bytes` was deliberately *not* added yet. A declared function
 with no definition is a footgun, and the contract only becomes meaningful
@@ -229,16 +259,16 @@ unblocks the corpus independently of the three Cheddar-side blockers above.
 
 **Read in this order:** the spec → this file → `experiments/README.md`.
 
-**Open branches as of 2026-08-20** (none merged to `main` yet; `main` is still
-at the level-aware byte budgets commit):
+**Branch state as of 2026-08-24.** `main` is at the open-questions merge and
+now carries the layer skeleton; two branches remain.
 
-| Branch | PR base | Contents |
+| Branch | PR base | State |
 |---|---|---|
-| `feat/gpu-experiment-track` | `main` | `experiments/` + the `.gpu-deps/` gitignore entry |
-| `feat/real-builtin` | `main` | This file, the architecture spec, the scheme decision, the I5 enforcement, and the L0/L3 layer skeleton |
-| `feat/ckks-ntt` | **`feat/real-builtin`** | L1 `NttTables`, the negacyclic transform, `ModArith.h` |
-| `docs/readme-scoped-execution` | `main` | Restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
-| `docs/open-questions` | `main` | `docs/open-questions/` and question 001 |
+| `feat/gpu-experiment-track` | `main` | **merged** — `experiments/` and the `.gpu-deps/` gitignore entry are on `main` |
+| `feat/real-builtin` | `main` | **merged as #14** (squash) — this file, the spec, the scheme decision, I5 enforcement, the L0/L3 skeleton |
+| `docs/open-questions` | `main` | **merged as #17** — `docs/open-questions/` and question 001 |
+| `feat/ckks-ntt` | `main` | **open as #18**, 8 commits, rebased onto `main`. L1 `NttTables`/`BConvTables`/`ModArith.h` and L2 layouts |
+| `docs/readme-scoped-execution` | `main` | open — restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
 
 ### Opening the PRs
 
@@ -250,48 +280,206 @@ Three things are easy to get wrong:
 
 1. **`feat/ckks-ntt` must target `feat/real-builtin`, not `main`.** It is
    stacked. Based on `main` its PR shows seven commits and re-reviews the
-   whole layer skeleton. `gh pr create --base feat/real-builtin`. GitHub
-   retargets it to `main` automatically once the base PR merges.
+   whole layer skeleton. `gh pr create --base feat/real-builtin`.
+
+   **This repository squash-merges, and that changes what happens next.** An
+   earlier revision of this file said GitHub retargets a stacked PR
+   automatically once its base merges. That is true of a merge-commit
+   repository and false here. A squash merge produces a *new* commit, so the
+   base branch's commits are no longer ancestors of `main`; GitHub does not
+   retarget, it **closes** the stacked PR when the base branch is deleted, and
+   until it is rebased the PR's diff shows every already-merged file again —
+   28 of them, the whole L0/L3 skeleton, on the first attempt here.
+
+   So in this repository the procedure after a base PR merges is fixed, and
+   both steps are required:
+
+   ```bash
+   git fetch origin
+   git rebase --onto origin/main <old-base-tip> feat/ckks-ntt   # 8 commits, 0 conflicts
+   git push --force-with-lease origin feat/ckks-ntt
+   gh pr create --base main                                     # the old PR is gone, not retargeted
+   ```
+
+   Anyone with local work on top of the old tip moves it with
+   `git rebase --onto origin/feat/ckks-ntt <old-tip> <their-branch>`. Check
+   the result with `git diff --stat <old-head> origin/feat/ckks-ntt` rather
+   than with `git log`: after a rebase every SHA differs, so a log comparison
+   looks alarming and proves nothing, while an additions-only diff proves
+   nothing was dropped.
 2. **Merge `feat/gpu-experiment-track` before `feat/real-builtin`.** This
    file links `experiments/README.md`; that link dangles until it lands.
    Nothing else has an ordering constraint — no two branches touch the same
    file.
-3. **Every code PR should state that Clang has never compiled it.** Both
-   sessions build with GCC 13.3 only, so the macOS CI leg is the first Clang
-   exposure. See "The Clang gap" below.
+3. **Every code PR should say which compilers have actually seen it.** As of
+   PR #18 that list is complete for the CKKS layers: GCC 13.3 on aarch64 and
+   x86_64, Clang 21 locally, and **Apple Clang via the macOS CI leg — 3/3
+   green**. `ModArith.h`'s `__int128` extension is the thing that was at risk
+   and it passed. See "The Clang gap" below, which is now closed rather than
+   narrowed.
 
 Verification to state honestly in each PR body:
 
 | Branch | Verified | Not verified |
 |---|---|---|
-| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation | Clang, any version |
-| `feat/ckks-ntt` | Same two platforms, **20/20** and **19/19** with `CkksNttTest` added; 10 NTT tests; mutation-tested independently by both sessions; layer isolation reconfirmed rather than taken on trust | Clang, any version |
+| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation; `Params.cpp` and `Arena.cpp` also compile clean under Clang 21; **merged to `main` as PR #14** | — |
+| `feat/ckks-ntt` | aarch64/GCC 13.3 **22/22** and x86_64/GCC 13.3 **21/21** at the rebased tip; 10 NTT tests and 13 base-conversion tests; **13 of 13 mutations caught** after an adversarial review round — including the accumulator-window mutation an earlier revision recorded as unkillable, whose impossibility argument was wrong (see `BConvTest.cpp`); layer isolation reconfirmed rather than taken on trust; **Clang 21 clean** locally and **Apple Clang clean on CI** (PR #18, 3/3 green) | — |
 | `feat/gpu-experiment-track` | No compiled code — scripts, logs, markdown. Outside the clang-format path | — |
 | `docs/*` | Markdown only | — |
 
 The commit messages were written to be usable as PR bodies; prefer quoting
 them over paraphrasing.
 
-### The Clang gap
+### The Clang gap — closed 2026-08-24 by the macOS CI leg
 
-The one untested front end, and the specific question is narrow: does
-`#pragma GCC diagnostic ignored "-Wpedantic"` around the `__int128` alias in
-`ModArith.h` suppress Clang **at the alias**, or does Clang warn at every
-**use site**? The latter means redesigning that header, and it gets more
-expensive the more code stacks on it.
+The narrow question was whether `#pragma GCC diagnostic ignored "-Wpedantic"`
+around the `__int128` alias in `ModArith.h` suppresses Clang **at the alias**
+or leaves a warning at every **use site**. The answer is neither: **Clang does
+not diagnose `__int128` at all**, not under `-Wpedantic` and not under
+`-pedantic-errors`. There is nothing for the pragma to suppress. It stays
+because GCC does diagnose it — verified in the same run — but no redesign of
+that header is needed, and nothing that stacks on it is at risk.
 
-This does **not** need the Spark box. It is a compiler question, not a
-machine question — any Linux box with `clang` answers it, WSL included:
+Measured, so that none of this rests on argument:
+
+| Probe | Result |
+|---|---|
+| GCC 13.3, `unsigned __int128` alias, `-Wpedantic -Werror`, no pragma | **error** — this is why the pragma exists |
+| Clang 21, same TU, no pragma, `-pedantic-errors` | **no diagnostic** |
+| Clang 21, `-Wpedantic -Werror`, VLA probe | **error** — confirms `-Wpedantic` was actually live, so the line above is a real negative and not a dead flag |
+| Clang 21, all four CKKS layer TUs, the project's exact `CLANG_WARNINGS` + `-Werror` | **0 warnings** |
+| Clang 21, whole project | builds; the only 4 warnings are inside spdlog's bundled `fmt`, none in first-party code |
+| Clang 21, `ctest` | 17/20 — the four CKKS layer tests are **43/43 green**; the three failures are discussed below |
+
+**Apple Clang has since compiled it too**, on PR #18's macOS leg, 3/3 green —
+so the ceiling this section describes is no longer a gap at all. The local
+result below stands as the reason it was safe to keep stacking work on
+`ModArith.h` before CI could say so, which was its whole purpose.
+
+The compiler was Clang 21.1.0 obtained as `zig c++` (`pip install ziglang`),
+because the WSL box has no `clang` package and no passwordless `sudo`. That is
+a real Clang front end and the diagnostics above are front-end behaviour, so
+the `__int128` answer is solid. What it is **not** is Apple Clang, and it is
+not the CI's Clang 18 — the macOS `-Werror` leg is still the first exposure to
+those. The gap is narrowed from "no Clang has ever seen this code" to "one
+Clang has, and had nothing to say".
+
+Reproducing without root:
 
 ```bash
-sudo apt install -y clang     # clang 18 is the right version family
-cmake -S . -B build-clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_TEST=ON -DBUILD_DOCUMENTATION=OFF
-cmake --build build-clang --target CkksParamsTest CkksArenaTest CkksNttTest -j
+python3 -m venv /tmp/zv && /tmp/zv/bin/pip install ziglang
+printf '#!/bin/sh\nexec /tmp/zv/bin/python -m ziglang c++ "$@"\n' > /tmp/zv/zigcxx
+printf '#!/bin/sh\nexec /tmp/zv/bin/python -m ziglang cc "$@"\n'  > /tmp/zv/zigcc
+chmod +x /tmp/zv/zigcxx /tmp/zv/zigcc
+cmake -S . -B build-clang -DCMAKE_CXX_COMPILER=/tmp/zv/zigcxx \
+      -DCMAKE_C_COMPILER=/tmp/zv/zigcc -DBUILD_TEST=ON -DBUILD_DOCUMENTATION=OFF
+cmake --build build-clang -j
 ```
 
-With that, the only thing left needing physical access to the Spark is the
-network fix (see the access notes), and even that is better raised as an IT
-request to route the full `/23`.
+Do **not** pass `-DCMAKE_CXX_COMPILER_ID=Clang`; forcing it breaks CMake's
+feature detection and googletest fails to configure. Let CMake detect it.
+
+### A lead, not a finding: the three exit-time segfaults
+
+Under that build, `CorpusUnitTest`, `FhnCorpusTest` and
+`FhnExternalBackendTest` crash — and all three **pass every test first** and
+then take SIGSEGV during process exit, after gtest's tear-down line. The same
+binaries exit 0 under GCC. All three are the `dlopen` backend tests, which
+points at a static destructor running after the backend handle is gone.
+
+Two reasons not to call this a bug in the project yet. Zig's toolchain links
+its own runtime, and mixing that with a `dlopen`ed shared object is exactly
+where this class of crash appears spuriously. But it is worth writing down
+because `FhnExternalBackendTest` is also the test that SIGTRAPs on macOS, and
+"destructor ordering around a `dlopen`ed backend" would explain both. If
+someone picks up the macOS SIGTRAP, start there. Nothing on the CKKS branches
+is affected — those four tests link one static layer each and do not `dlopen`
+anything.
+
+### L2 Storage — what is forced, and the one thing that is not
+
+Three designs were produced independently from different starting premises
+(view-only, view-plus-owner, pointerless descriptor) and judged against the
+tree rather than against each other. The useful result is how little of it
+turned out to be open.
+
+**Forced by the repository, and no longer worth discussing:**
+
+| Question | Forced by |
+|---|---|
+| L2 cannot own arena memory; "arena-allocated RnsPoly" is not an L2 concept | `cmake/FhnCkksLayer.cmake`'s downward-only check — L3 is above L2 |
+| L2 depends on `fhn_ckks_params` only, never on L1 | the spec's layering, plus the precedent that a `poly.toNtt(tables)` method is exactly how I3 erodes |
+| The wire identity cannot be `Params::hash()` | `Params.cpp:165` — it is `std::hash`-derived, so implementation-defined, and `std::size_t` is not 64 bits everywhere. This is a correctness bug, not a trade-off |
+| Capacity must be a separate, checked quantity from live size | `include/FHN/fhn_backend_api.h:76` — `FhnBufferAllocFn` takes **no size**, so a buffer is sized once while the live shape shrinks with level |
+| Residues are limb-major | `NttTables.h` — `ntt::forward`/`inverse` need `degree()` contiguous residues for one prime, and the NTT dominates cost |
+| Views never own; duplication is a distinctly named operation | invariant I4, verbatim |
+
+**The one genuinely open decision: does L2 export an owning aligned slab type**
+(`PolySlab` — owns bytes, knows no shape), or does durable ownership live
+elsewhere? Nothing in the repo forces or forbids it. The argument that an
+owning L2 type violates I2 does not survive contact with
+`src/CKKS/arena/Arena.cpp:5`, where `Arena`'s own constructor calls
+`::operator new` — a reading of I2 that condemns `PolySlab` condemns `Arena`.
+
+**Settled by both sessions, 2026-08-23: yes, with a sharper reading of I2 than
+either of us started with.** I2 is not about who calls `operator new` — it is
+about who decides *how much, and when*. `Arena` satisfies it because its
+capacity is an explicit constructor argument that never grows implicitly, not
+because it avoids allocating. An L2 slab satisfies it the same way: explicit
+size, no implicit growth, no default allocator, no ambient anything. Stated
+that way the invariant is about the absence of hidden policy, which is what it
+was always for, and the "must receive already-allocated storage" gloss that
+seemed to follow from it does not.
+
+The house had also decided this shape of question once already: the NTT moved
+from L4 to L1 because placing it above "would have forced this layer's test to
+reach upward for something it does not use". The same rule says an aligned
+allocator that the L2 test needs to exercise L2's own contract belongs at L2.
+Saying no would relax or drop the 64-byte alignment `Arena::kAlignment`'s own
+comment promises to kernels, and push the durable owner somewhere needing a
+*larger* amendment to the L3 line.
+
+Still worth the user's sign-off, because it adds one clause to the spec's L2
+line — but it is no longer an open technical question.
+
+### The L1/L4 transposition — raised, then dissolved
+
+`bconv::convert` consumes **one coefficient's residues across the whole source
+basis** (`in[i]` indexes source primes), while storage must be limb-major
+because `ntt::forward` needs `degree()` contiguous residues per prime. Read
+naively those do not compose, and ModUp appears to need a gather of `k`
+residues and a scatter of `l` per coefficient, `N` times.
+
+That was wrong, and the fix is a loop order, not a buffer. Spark's shape:
+
+```
+for i in from:
+    for n in 0..N:  t[n] = reduce(lazy(in_limb[i][n], hat_inv[i], q_i))   // contiguous
+    for j in to:
+        w = hat_res[i][j]                                                 // inner-loop invariant
+        for n in 0..N:  out_limb[j][n] += lazy(t[n], w, p_j)              // contiguous
+```
+
+Verified bit-identical to the shipped per-coefficient path for
+`(k,l,N)` in `{(3,2,17), (5,3,32), (8,4,9), (2,1,64)}`, with both agreeing
+with an exact big-integer CRT oracle. Three things follow, and they matter
+beyond tidiness:
+
+- **Scratch is exactly one limb (`N` words), not `k*N`**, because `t` is reused
+  for each `i`. So `eval::scratch_bytes(FHN_MOD_UP, ...)` counts one limb; it
+  never needs a transposition buffer, and an estimate that budgets one is too
+  large rather than too small.
+- **The accumulation order over `i` is unchanged**, so the 2p window analysis
+  in `BConvTables.cpp` carries over untouched. This is the reason to prefer
+  this shape over any that reassociates the sum.
+- **The Shoup multiplier `w` is invariant in the innermost loop**, which is the
+  shape both SVE2 and AVX-512 want. The transposition was an artefact of the
+  single-coefficient API, never intrinsic — which also means it was an API
+  decision on the Cheddar side rather than a kernel one.
+
+The batched entry point itself waits until L2 is real, because only the storage
+layout fixes how a limb plane is addressed. Both sessions agree on that, and on
+the shape to write when the time comes.
 
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
@@ -321,9 +509,17 @@ echo '#include "CKKS/Params.h"' | g++ -std=c++17 -x c++ -fsyntax-only -I src/CKK
 # 2. temporarily give a layer an equal-or-higher DEPENDS, then configure
 ```
 
-**Open the conversation with:** decision (4), prime width and modmul strategy.
-It is the only pending decision that touches the next slice (L1 `NttTables` +
-the negacyclic transform).
+**Open the conversation with:** decision (6), whether an empty key-switching
+digit should be rejected. The next slice after L1 is RNS base conversion →
+`ModUp`/`ModDown` → hybrid key switching, and (6) is the one pending decision
+that touches it: a `dnum` that silently means something smaller than the
+caller asked for is exactly the hidden discrepancy I4 exists to prevent, and
+rejecting it is a one-line change that gets harder to make once key switching
+reads `digitRange()` in anger.
+
+Decisions (2) and (3) — cryptographic scope, and which open-source library
+gets wrapped as the baseline — remain open and neither blocks that slice.
+(3) does block the first performance number, per locked decision 5.
 
 Note that (4) is narrower than it looks, and can largely be deferred rather
 than answered. Prime *width* is already a per-parameter-set choice, not a
