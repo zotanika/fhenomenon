@@ -60,7 +60,7 @@ The repository already contains the first version of that boundary.
 | External backend loading | Implemented with `dlopen` for Linux/macOS style shared libraries. |
 | Cheddar-FHE backend | Optional GPU CKKS backend under `src/FHN/cheddar`, built only when the Cheddar submodule and CUDA-facing dependencies are available. |
 | Async backend hooks | `fhn_submit`, `fhn_poll`, `fhn_wait`, `fhn_get_outputs`, and `fhn_exec_free` are defined as optional exports and resolved by `ExternalBackend`; the default executor is still primarily synchronous. |
-| Scheduler lowering | `LowerToFhnProgram` lowers scheduler ASTs into FHN programs. The legacy session execution path still coexists with this newer path. |
+| Scheduler lowering | `LowerToFhnProgram` lowers scheduler ASTs into FHN programs. `Session::run` executes a recorded scope through that same path — lower, plan movement, dispatch — so scoped execution is the FHN path rather than an alternative to it. See [Scoped Execution](#scoped-execution). |
 | TFHE-rs experiment | A separate Rust FFI experiment exists for integer operations when `BUILTIN_BACKEND=TFHE`. |
 
 The current default developer path is ToyFHE plus unit tests. The Cheddar backend is the GPU-oriented CKKS target currently wired into this repository; the ABI is meant to host other accelerator backends and fast-path kernel catalogs as they become available.
@@ -281,6 +281,27 @@ int main() {
 ```
 
 Today, `Fhenon<int>` is the most exercised path. ToyFHE also contains fixed-point internals, and the codebase has experiments for other types and TFHE-rs, but broad type support should be treated as roadmap rather than stable API.
+
+### Scoped Execution
+
+The example above runs eagerly: each operator dispatches as it is reached. Wrapping the same work in a session changes what the runtime is given.
+
+```cpp
+auto session = Session::create(Backend::getInstance());
+
+session->run([&]() {
+  a = 7;
+  b = b + 10;
+  a = a + 2;
+});
+```
+
+- **Outside a session**, operations execute immediately. This is the useful mode for setup and debugging, and `test/NoSessionTest.cpp` deliberately never creates a `Session` so the eager paths stay pinned.
+- **Inside a session**, operations are recorded rather than executed. On leaving the scope, `Session::run` lowers the recorded graph through `LowerToFhnProgram` into a single `FhnProgram`, plans its data movement with `FhnMovementPlan::analyze`, and dispatches the whole program through the backend's FHN runtime.
+
+The distinction is not a convenience. `FhnMovementPlan` can compute exact liveness, JIT prefetch, and Belady-optimal eviction only because an `FhnProgram` is straight-line and fully known before it runs — so the def-use chain of every buffer is exact at plan time. **A session scope is what draws that boundary.** Opening one is a statement that everything inside it is a single program to be planned as a unit; outside it, there is no program, only individual operations.
+
+That is also why the scope matters more as backends get more constrained, not less. Byte-budgeted residency, level-aware sizing, and the planned scratch arena of an accelerator backend all consume the same plan, and all of them need a program to plan over.
 
 ## Backend Author Sketch
 
