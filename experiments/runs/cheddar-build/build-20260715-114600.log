@@ -1,0 +1,1917 @@
+
+[1;36m[build-cheddar][0m Building libtommath from source -> /home/zotanika/workspace/fhenomenon/.gpu-deps/tommath
+Cloning into '/home/zotanika/workspace/fhenomenon/.gpu-deps/libtommath-src'...
+Note: switching to '95d80fd8229d05dd6cb4ec88bc8d4f5377ff00ef'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+make: Entering directory '/home/zotanika/workspace/fhenomenon/.gpu-deps/libtommath-src'
+   * cc bn_cutoffs.o
+   * cc bn_deprecated.o
+   * cc bn_mp_2expt.o
+   * cc bn_mp_abs.o
+   * cc bn_mp_add.o
+   * cc bn_mp_add_d.o
+   * cc bn_mp_addmod.o
+   * cc bn_mp_and.o
+   * cc bn_mp_clamp.o
+   * cc bn_mp_clear.o
+   * cc bn_mp_clear_multi.o
+   * cc bn_mp_cmp.o
+   * cc bn_mp_cmp_d.o
+   * cc bn_mp_cmp_mag.o
+   * cc bn_mp_cnt_lsb.o
+   * cc bn_mp_complement.o
+   * cc bn_mp_copy.o
+   * cc bn_mp_count_bits.o
+   * cc bn_mp_decr.o
+   * cc bn_mp_div.o
+   * cc bn_mp_div_2.o
+   * cc bn_mp_div_2d.o
+   * cc bn_mp_div_d.o
+   * cc bn_mp_dr_is_modulus.o
+   * cc bn_mp_dr_reduce.o
+   * cc bn_mp_dr_setup.o
+   * cc bn_mp_error_to_string.o
+   * cc bn_mp_exch.o
+   * cc bn_mp_expt_n.o
+   * cc bn_mp_exptmod.o
+   * cc bn_mp_exteuclid.o
+   * cc bn_mp_fread.o
+   * cc bn_mp_from_sbin.o
+   * cc bn_mp_from_ubin.o
+   * cc bn_mp_fwrite.o
+   * cc bn_mp_gcd.o
+   * cc bn_mp_get_double.o
+   * cc bn_mp_get_i32.o
+   * cc bn_mp_get_i64.o
+   * cc bn_mp_get_l.o
+   * cc bn_mp_get_mag_u32.o
+   * cc bn_mp_get_mag_u64.o
+   * cc bn_mp_get_mag_ul.o
+   * cc bn_mp_grow.o
+   * cc bn_mp_incr.o
+   * cc bn_mp_init.o
+   * cc bn_mp_init_copy.o
+   * cc bn_mp_init_i32.o
+   * cc bn_mp_init_i64.o
+   * cc bn_mp_init_l.o
+   * cc bn_mp_init_multi.o
+   * cc bn_mp_init_set.o
+   * cc bn_mp_init_size.o
+   * cc bn_mp_init_u32.o
+   * cc bn_mp_init_u64.o
+   * cc bn_mp_init_ul.o
+   * cc bn_mp_invmod.o
+   * cc bn_mp_is_square.o
+   * cc bn_mp_iseven.o
+   * cc bn_mp_isodd.o
+   * cc bn_mp_kronecker.o
+   * cc bn_mp_lcm.o
+   * cc bn_mp_log_n.o
+   * cc bn_mp_lshd.o
+   * cc bn_mp_mod.o
+   * cc bn_mp_mod_2d.o
+   * cc bn_mp_mod_d.o
+   * cc bn_mp_montgomery_calc_normalization.o
+   * cc bn_mp_montgomery_reduce.o
+   * cc bn_mp_montgomery_setup.o
+   * cc bn_mp_mul.o
+   * cc bn_mp_mul_2.o
+   * cc bn_mp_mul_2d.o
+   * cc bn_mp_mul_d.o
+   * cc bn_mp_mulmod.o
+   * cc bn_mp_neg.o
+   * cc bn_mp_or.o
+   * cc bn_mp_pack.o
+   * cc bn_mp_pack_count.o
+   * cc bn_mp_prime_fermat.o
+   * cc bn_mp_prime_frobenius_underwood.o
+   * cc bn_mp_prime_is_prime.o
+   * cc bn_mp_prime_miller_rabin.o
+   * cc bn_mp_prime_next_prime.o
+   * cc bn_mp_prime_rabin_miller_trials.o
+   * cc bn_mp_prime_rand.o
+   * cc bn_mp_prime_strong_lucas_selfridge.o
+   * cc bn_mp_radix_smap.o
+   * cc bn_mp_rand.o
+   * cc bn_mp_radix_size.o
+   * cc bn_mp_read_radix.o
+   * cc bn_mp_reduce.o
+   * cc bn_mp_reduce_2k.o
+   * cc bn_mp_reduce_2k_l.o
+   * cc bn_mp_reduce_2k_setup.o
+   * cc bn_mp_reduce_2k_setup_l.o
+   * cc bn_mp_reduce_is_2k.o
+   * cc bn_mp_reduce_is_2k_l.o
+   * cc bn_mp_reduce_setup.o
+   * cc bn_mp_root_n.o
+   * cc bn_mp_rshd.o
+   * cc bn_mp_sbin_size.o
+   * cc bn_mp_set.o
+   * cc bn_mp_set_double.o
+   * cc bn_mp_set_i32.o
+   * cc bn_mp_set_i64.o
+   * cc bn_mp_set_l.o
+   * cc bn_mp_set_u32.o
+   * cc bn_mp_set_u64.o
+   * cc bn_mp_set_ul.o
+   * cc bn_mp_shrink.o
+   * cc bn_mp_signed_rsh.o
+   * cc bn_mp_sqr.o
+   * cc bn_mp_sqrmod.o
+   * cc bn_mp_sqrt.o
+   * cc bn_mp_sqrtmod_prime.o
+   * cc bn_mp_sub.o
+   * cc bn_mp_sub_d.o
+   * cc bn_mp_submod.o
+   * cc bn_mp_to_radix.o
+   * cc bn_mp_to_sbin.o
+   * cc bn_mp_to_ubin.o
+   * cc bn_mp_ubin_size.o
+   * cc bn_mp_unpack.o
+   * cc bn_mp_xor.o
+   * cc bn_mp_zero.o
+   * cc bn_s_mp_add.o
+   * cc bn_prime_tab.o
+   * cc bn_s_mp_balance_mul.o
+   * cc bn_s_mp_div_3.o
+   * cc bn_s_mp_exptmod.o
+   * cc bn_s_mp_exptmod_fast.o
+   * cc bn_s_mp_get_bit.o
+   * cc bn_s_mp_invmod_fast.o
+   * cc bn_s_mp_invmod_slow.o
+   * cc bn_s_mp_karatsuba_mul.o
+   * cc bn_s_mp_karatsuba_sqr.o
+   * cc bn_s_mp_log.o
+   * cc bn_s_mp_log_2expt.o
+   * cc bn_s_mp_log_d.o
+   * cc bn_s_mp_montgomery_reduce_fast.o
+   * cc bn_s_mp_mul_digs.o
+   * cc bn_s_mp_mul_digs_fast.o
+   * cc bn_s_mp_mul_high_digs.o
+   * cc bn_s_mp_mul_high_digs_fast.o
+   * cc bn_s_mp_prime_is_divisible.o
+   * cc bn_s_mp_rand_jenkins.o
+   * cc bn_s_mp_rand_platform.o
+   * cc bn_s_mp_reverse.o
+   * cc bn_s_mp_sqr.o
+   * cc bn_s_mp_sqr_fast.o
+   * cc bn_s_mp_sub.o
+   * cc bn_s_mp_toom_mul.o
+   * cc bn_s_mp_toom_sqr.o
+ar rv libtommath.a bn_cutoffs.o bn_deprecated.o bn_mp_2expt.o bn_mp_abs.o bn_mp_add.o bn_mp_add_d.o bn_mp_addmod.o bn_mp_and.o bn_mp_clamp.o bn_mp_clear.o bn_mp_clear_multi.o bn_mp_cmp.o bn_mp_cmp_d.o bn_mp_cmp_mag.o bn_mp_cnt_lsb.o bn_mp_complement.o bn_mp_copy.o bn_mp_count_bits.o bn_mp_decr.o bn_mp_div.o bn_mp_div_2.o bn_mp_div_2d.o bn_mp_div_d.o bn_mp_dr_is_modulus.o bn_mp_dr_reduce.o bn_mp_dr_setup.o bn_mp_error_to_string.o bn_mp_exch.o bn_mp_expt_n.o bn_mp_exptmod.o bn_mp_exteuclid.o bn_mp_fread.o bn_mp_from_sbin.o bn_mp_from_ubin.o bn_mp_fwrite.o bn_mp_gcd.o bn_mp_get_double.o bn_mp_get_i32.o bn_mp_get_i64.o bn_mp_get_l.o bn_mp_get_mag_u32.o bn_mp_get_mag_u64.o bn_mp_get_mag_ul.o bn_mp_grow.o bn_mp_incr.o bn_mp_init.o bn_mp_init_copy.o bn_mp_init_i32.o bn_mp_init_i64.o bn_mp_init_l.o bn_mp_init_multi.o bn_mp_init_set.o bn_mp_init_size.o bn_mp_init_u32.o bn_mp_init_u64.o bn_mp_init_ul.o bn_mp_invmod.o bn_mp_is_square.o bn_mp_iseven.o bn_mp_isodd.o bn_mp_kronecker.o bn_mp_lcm.o bn_mp_log_n.o bn_mp_lshd.o bn_mp_mod.o bn_mp_mod_2d.o bn_mp_mod_d.o bn_mp_montgomery_calc_normalization.o bn_mp_montgomery_reduce.o bn_mp_montgomery_setup.o bn_mp_mul.o bn_mp_mul_2.o bn_mp_mul_2d.o bn_mp_mul_d.o bn_mp_mulmod.o bn_mp_neg.o bn_mp_or.o bn_mp_pack.o bn_mp_pack_count.o bn_mp_prime_fermat.o bn_mp_prime_frobenius_underwood.o bn_mp_prime_is_prime.o bn_mp_prime_miller_rabin.o bn_mp_prime_next_prime.o bn_mp_prime_rabin_miller_trials.o bn_mp_prime_rand.o bn_mp_prime_strong_lucas_selfridge.o bn_mp_radix_size.o bn_mp_radix_smap.o bn_mp_rand.o bn_mp_read_radix.o bn_mp_reduce.o bn_mp_reduce_2k.o bn_mp_reduce_2k_l.o bn_mp_reduce_2k_setup.o bn_mp_reduce_2k_setup_l.o bn_mp_reduce_is_2k.o bn_mp_reduce_is_2k_l.o bn_mp_reduce_setup.o bn_mp_root_n.o bn_mp_rshd.o bn_mp_sbin_size.o bn_mp_set.o bn_mp_set_double.o bn_mp_set_i32.o bn_mp_set_i64.o bn_mp_set_l.o bn_mp_set_u32.o bn_mp_set_u64.o bn_mp_set_ul.o bn_mp_shrink.o bn_mp_signed_rsh.o bn_mp_sqr.o bn_mp_sqrmod.o bn_mp_sqrt.o bn_mp_sqrtmod_prime.o bn_mp_sub.o bn_mp_sub_d.o bn_mp_submod.o bn_mp_to_radix.o bn_mp_to_sbin.o bn_mp_to_ubin.o bn_mp_ubin_size.o bn_mp_unpack.o bn_mp_xor.o bn_mp_zero.o bn_prime_tab.o bn_s_mp_add.o bn_s_mp_balance_mul.o bn_s_mp_div_3.o bn_s_mp_exptmod.o bn_s_mp_exptmod_fast.o bn_s_mp_get_bit.o bn_s_mp_invmod_fast.o bn_s_mp_invmod_slow.o bn_s_mp_karatsuba_mul.o bn_s_mp_karatsuba_sqr.o bn_s_mp_log.o bn_s_mp_log_2expt.o bn_s_mp_log_d.o bn_s_mp_montgomery_reduce_fast.o bn_s_mp_mul_digs.o bn_s_mp_mul_digs_fast.o bn_s_mp_mul_high_digs.o bn_s_mp_mul_high_digs_fast.o bn_s_mp_prime_is_divisible.o bn_s_mp_rand_jenkins.o bn_s_mp_rand_platform.o bn_s_mp_reverse.o bn_s_mp_sqr.o bn_s_mp_sqr_fast.o bn_s_mp_sub.o bn_s_mp_toom_mul.o bn_s_mp_toom_sqr.o
+ar: creating libtommath.a
+a - bn_cutoffs.o
+a - bn_deprecated.o
+a - bn_mp_2expt.o
+a - bn_mp_abs.o
+a - bn_mp_add.o
+a - bn_mp_add_d.o
+a - bn_mp_addmod.o
+a - bn_mp_and.o
+a - bn_mp_clamp.o
+a - bn_mp_clear.o
+a - bn_mp_clear_multi.o
+a - bn_mp_cmp.o
+a - bn_mp_cmp_d.o
+a - bn_mp_cmp_mag.o
+a - bn_mp_cnt_lsb.o
+a - bn_mp_complement.o
+a - bn_mp_copy.o
+a - bn_mp_count_bits.o
+a - bn_mp_decr.o
+a - bn_mp_div.o
+a - bn_mp_div_2.o
+a - bn_mp_div_2d.o
+a - bn_mp_div_d.o
+a - bn_mp_dr_is_modulus.o
+a - bn_mp_dr_reduce.o
+a - bn_mp_dr_setup.o
+a - bn_mp_error_to_string.o
+a - bn_mp_exch.o
+a - bn_mp_expt_n.o
+a - bn_mp_exptmod.o
+a - bn_mp_exteuclid.o
+a - bn_mp_fread.o
+a - bn_mp_from_sbin.o
+a - bn_mp_from_ubin.o
+a - bn_mp_fwrite.o
+a - bn_mp_gcd.o
+a - bn_mp_get_double.o
+a - bn_mp_get_i32.o
+a - bn_mp_get_i64.o
+a - bn_mp_get_l.o
+a - bn_mp_get_mag_u32.o
+a - bn_mp_get_mag_u64.o
+a - bn_mp_get_mag_ul.o
+a - bn_mp_grow.o
+a - bn_mp_incr.o
+a - bn_mp_init.o
+a - bn_mp_init_copy.o
+a - bn_mp_init_i32.o
+a - bn_mp_init_i64.o
+a - bn_mp_init_l.o
+a - bn_mp_init_multi.o
+a - bn_mp_init_set.o
+a - bn_mp_init_size.o
+a - bn_mp_init_u32.o
+a - bn_mp_init_u64.o
+a - bn_mp_init_ul.o
+a - bn_mp_invmod.o
+a - bn_mp_is_square.o
+a - bn_mp_iseven.o
+a - bn_mp_isodd.o
+a - bn_mp_kronecker.o
+a - bn_mp_lcm.o
+a - bn_mp_log_n.o
+a - bn_mp_lshd.o
+a - bn_mp_mod.o
+a - bn_mp_mod_2d.o
+a - bn_mp_mod_d.o
+a - bn_mp_montgomery_calc_normalization.o
+a - bn_mp_montgomery_reduce.o
+a - bn_mp_montgomery_setup.o
+a - bn_mp_mul.o
+a - bn_mp_mul_2.o
+a - bn_mp_mul_2d.o
+a - bn_mp_mul_d.o
+a - bn_mp_mulmod.o
+a - bn_mp_neg.o
+a - bn_mp_or.o
+a - bn_mp_pack.o
+a - bn_mp_pack_count.o
+a - bn_mp_prime_fermat.o
+a - bn_mp_prime_frobenius_underwood.o
+a - bn_mp_prime_is_prime.o
+a - bn_mp_prime_miller_rabin.o
+a - bn_mp_prime_next_prime.o
+a - bn_mp_prime_rabin_miller_trials.o
+a - bn_mp_prime_rand.o
+a - bn_mp_prime_strong_lucas_selfridge.o
+a - bn_mp_radix_size.o
+a - bn_mp_radix_smap.o
+a - bn_mp_rand.o
+a - bn_mp_read_radix.o
+a - bn_mp_reduce.o
+a - bn_mp_reduce_2k.o
+a - bn_mp_reduce_2k_l.o
+a - bn_mp_reduce_2k_setup.o
+a - bn_mp_reduce_2k_setup_l.o
+a - bn_mp_reduce_is_2k.o
+a - bn_mp_reduce_is_2k_l.o
+a - bn_mp_reduce_setup.o
+a - bn_mp_root_n.o
+a - bn_mp_rshd.o
+a - bn_mp_sbin_size.o
+a - bn_mp_set.o
+a - bn_mp_set_double.o
+a - bn_mp_set_i32.o
+a - bn_mp_set_i64.o
+a - bn_mp_set_l.o
+a - bn_mp_set_u32.o
+a - bn_mp_set_u64.o
+a - bn_mp_set_ul.o
+a - bn_mp_shrink.o
+a - bn_mp_signed_rsh.o
+a - bn_mp_sqr.o
+a - bn_mp_sqrmod.o
+a - bn_mp_sqrt.o
+a - bn_mp_sqrtmod_prime.o
+a - bn_mp_sub.o
+a - bn_mp_sub_d.o
+a - bn_mp_submod.o
+a - bn_mp_to_radix.o
+a - bn_mp_to_sbin.o
+a - bn_mp_to_ubin.o
+a - bn_mp_ubin_size.o
+a - bn_mp_unpack.o
+a - bn_mp_xor.o
+a - bn_mp_zero.o
+a - bn_prime_tab.o
+a - bn_s_mp_add.o
+a - bn_s_mp_balance_mul.o
+a - bn_s_mp_div_3.o
+a - bn_s_mp_exptmod.o
+a - bn_s_mp_exptmod_fast.o
+a - bn_s_mp_get_bit.o
+a - bn_s_mp_invmod_fast.o
+a - bn_s_mp_invmod_slow.o
+a - bn_s_mp_karatsuba_mul.o
+a - bn_s_mp_karatsuba_sqr.o
+a - bn_s_mp_log.o
+a - bn_s_mp_log_2expt.o
+a - bn_s_mp_log_d.o
+a - bn_s_mp_montgomery_reduce_fast.o
+a - bn_s_mp_mul_digs.o
+a - bn_s_mp_mul_digs_fast.o
+a - bn_s_mp_mul_high_digs.o
+a - bn_s_mp_mul_high_digs_fast.o
+a - bn_s_mp_prime_is_divisible.o
+a - bn_s_mp_rand_jenkins.o
+a - bn_s_mp_rand_platform.o
+a - bn_s_mp_reverse.o
+a - bn_s_mp_sqr.o
+a - bn_s_mp_sqr_fast.o
+a - bn_s_mp_sub.o
+a - bn_s_mp_toom_mul.o
+a - bn_s_mp_toom_sqr.o
+ranlib libtommath.a
+make: Leaving directory '/home/zotanika/workspace/fhenomenon/.gpu-deps/libtommath-src'
+
+[1;36m[build-cheddar][0m Cloning spdlog headers -> /tmp/spdlog
+Cloning into '/tmp/spdlog'...
+Note: switching to 'ad0e89cbfb4d0c1ce4d097e134eb7be67baebb36'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+
+[1;36m[build-cheddar][0m Patching CMAKE_CUDA_ARCHITECTURES -> 121 in /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/CMakeLists.txt
+
+[1;36m[build-cheddar][0m Configuring cheddar (arch=121, jobs=20)
+-- The CUDA compiler identification is NVIDIA 13.0.88
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting CUDA compiler ABI info
+-- Detecting CUDA compiler ABI info - done
+-- Check for working CUDA compiler: /usr/local/cuda/bin/nvcc - skipped
+-- Detecting CUDA compile features
+-- Detecting CUDA compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found CUDAToolkit: /usr/local/cuda/targets/sbsa-linux/include (found suitable version "13.0.88", minimum required is "11.8") 
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- RMM: RMM_LOGGING_LEVEL = 'INFO'
+-- Found CUDAToolkit: /usr/local/cuda/targets/sbsa-linux/include (found version "13.0.88") 
+-- CPM: adding package spdlog@1.8.5 (v1.8.5)
+-- Build spdlog: 1.8.5
+-- Build type: Release
+-- Generating install
+-- Found Git: /usr/bin/git (found version "2.43.0") 
+-- CPM: adding package Thrust@1.17.2 (1.17.2)
+CMake Deprecation Warning at build/_deps/thrust-src/CMakeLists.txt:9 (cmake_policy):
+  The OLD behavior for policy CMP0104 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+
+
+-- Found Thrust: /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/cmake/thrust-config.cmake (found version "1.17.2.0") 
+-- rapids-cmake [Thrust]: applied diff transform_iter_with_reduce_by_key.diff to fix issue: 'Support transform iterator with reduce by key [https://github.com/NVIDIA/thrust/pull/1805]'
+-- rapids-cmake [Thrust]: applied diff install_rules.diff to fix issue: 'Thrust 1.X installs incorrect files [https://github.com/NVIDIA/thrust/issues/1790]'
+-- Found CUB: /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/dependencies/cub/cub/cmake/cub-config.cmake (found suitable version "1.17.2.0", minimum required is "1.17.2.0") 
+-- RMM source dir: /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/rmm-src
+-- CKKS_GPU_SOURCES: src/core/Container.cpp;src/core/Context.cpp;src/core/DeviceVector.cpp;src/core/Encode.cpp;src/core/EvkMap.cpp;src/core/EvkRequest.cpp;src/core/MemoryPool.cpp;src/core/MultiLevelCiphertext.cpp;src/core/NPInfo.cpp;src/core/ElementWise.cu;src/core/ModSwitch.cu;src/core/NTT.cu;src/core/Parameter.cu;src/UserInterface.cu;src/core/BigInt_tommath.cpp;src/extension/BootContext.cpp;src/extension/BootParameter.cpp;src/extension/EvalMod.cpp;src/extension/EvalPoly.cpp;src/extension/EvalSpecialFFT.cpp;src/extension/Hoist.cu;src/extension/LinearTransform.cpp;src/extension/StripedMatrix.cpp
+-- Configuring done (20.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build
+
+[1;36m[build-cheddar][0m Building libcheddar.so
+[  8%] Building CXX object CMakeFiles/cheddar.dir/src/core/DeviceVector.cpp.o
+[  8%] Building CXX object CMakeFiles/cheddar.dir/src/core/Container.cpp.o
+[ 16%] Building CXX object CMakeFiles/cheddar.dir/src/core/Encode.cpp.o
+[ 16%] Building CXX object CMakeFiles/cheddar.dir/src/core/Context.cpp.o
+[ 20%] Building CXX object CMakeFiles/cheddar.dir/src/core/MemoryPool.cpp.o
+[ 25%] Building CUDA object CMakeFiles/cheddar.dir/src/core/ModSwitch.cu.o
+[ 29%] Building CXX object CMakeFiles/cheddar.dir/src/core/MultiLevelCiphertext.cpp.o
+[ 33%] Building CUDA object CMakeFiles/cheddar.dir/src/core/Parameter.cu.o
+[ 41%] Building CUDA object CMakeFiles/cheddar.dir/src/UserInterface.cu.o
+[ 37%] Building CXX object CMakeFiles/cheddar.dir/src/core/EvkMap.cpp.o
+[ 50%] Building CXX object CMakeFiles/cheddar.dir/src/extension/BootParameter.cpp.o
+[ 45%] Building CXX object CMakeFiles/cheddar.dir/src/core/EvkRequest.cpp.o
+[ 54%] Building CXX object CMakeFiles/cheddar.dir/src/core/NPInfo.cpp.o
+[ 66%] Building CXX object CMakeFiles/cheddar.dir/src/extension/EvalSpecialFFT.cpp.o
+[ 66%] Building CUDA object CMakeFiles/cheddar.dir/src/core/ElementWise.cu.o
+[ 66%] Building CUDA object CMakeFiles/cheddar.dir/src/core/NTT.cu.o
+[ 70%] Building CXX object CMakeFiles/cheddar.dir/src/core/BigInt_tommath.cpp.o
+[ 83%] Building CXX object CMakeFiles/cheddar.dir/src/extension/EvalPoly.cpp.o
+[ 83%] Building CXX object CMakeFiles/cheddar.dir/src/extension/EvalMod.cpp.o
+[ 79%] Building CXX object CMakeFiles/cheddar.dir/src/extension/BootContext.cpp.o
+[ 87%] Building CUDA object CMakeFiles/cheddar.dir/src/extension/Hoist.cu.o
+[ 91%] Building CXX object CMakeFiles/cheddar.dir/src/extension/LinearTransform.cpp.o
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/MultiLevelCiphertext.h:5,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/core/MultiLevelCiphertext.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Context.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/extension/EvalSpecialFFT.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/extension/EvalSpecialFFT.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/core/Container.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Context.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/core/Context.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Encode.h:7,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/core/Encode.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+[ 95%] Building CXX object CMakeFiles/cheddar.dir/src/extension/StripedMatrix.cpp.o
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/core/DeviceVector.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Context.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/extension/EvalPoly.h:11,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/extension/EvalPoly.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/EvkMap.h:5,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/core/EvkMap.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Context.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/extension/BootContext.h:7,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/extension/BootContext.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Context.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/extension/EvalMod.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/extension/EvalMod.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+In file included from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.inl:26,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/sequential/copy.h:61,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/detail/adl/copy.h:25,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/copy.h:90,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/allocator/copy_construct_range.h:45,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.inl:23,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/contiguous_storage.h:234,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/detail/vector_base.h:30,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/host_vector.h:27,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/DeviceVector.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Container.h:3,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/core/Context.h:6,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/include/extension/LinearTransform.h:7,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/src/extension/LinearTransform.cpp:1:
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:39: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                       ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/cuda_runtime_api.h:150,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/system/cuda/detail/guarded_cuda_runtime_api.h:38,
+                 from /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:297:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:39: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                       ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:39: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                       ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:39: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                       ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:39: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                       ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:229:41: note: in definition of macro ‘THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE’
+  229 |   struct proclaim_trivially_relocatable<T> : THRUST_NS_QUALIFIER::true_type   \
+      |                                         ^
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:31: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      |                               ^    
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/crt/host_runtime.h:58,
+                 from /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h:218:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:1: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:31: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      |                               ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:1: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:31: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      |                               ^~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:1: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:31: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      |                               ^~~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:1: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:31: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      |                               ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:1: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:70: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                                                      ^    
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:70: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                                                      ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:70: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                                                      ^        
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:70: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                                                      ^         
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:70: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                                                      ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:31: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      |                               ^    
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/crt/host_runtime.h:58,
+                 from /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h:218:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:1: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:31: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      |                               ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:1: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:31: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      |                               ^~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:1: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:31: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      |                               ^~~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:1: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:31: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      |                               ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:1: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:70: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                                                      ^    
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:70: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                                                      ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:70: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                                                      ^        
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:70: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                                                      ^         
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:70: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                                                      ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:31: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      |                               ^    
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/crt/host_runtime.h:58,
+                 from /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h:218:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:1: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:31: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      |                               ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:1: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:31: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      |                               ^~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:1: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:31: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      |                               ^~~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:1: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:31: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      |                               ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:1: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:70: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                                                      ^    
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:70: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                                                      ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:70: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                                                      ^        
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:70: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                                                      ^         
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:70: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                                                      ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:31: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      |                               ^    
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/crt/host_runtime.h:58,
+                 from /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h:218:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:1: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:31: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      |                               ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:1: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:31: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      |                               ^~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:1: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:31: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      |                               ^~~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:1: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:31: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      |                               ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:1: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:70: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                                                      ^    
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:70: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                                                      ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:70: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                                                      ^        
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:70: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                                                      ^         
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:70: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                                                      ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:31: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      |                               ^    
+In file included from /usr/local/cuda/targets/sbsa-linux/include/driver_types.h:61,
+                 from /usr/local/cuda/targets/sbsa-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda/targets/sbsa-linux/include/crt/host_runtime.h:58,
+                 from /usr/lib/gcc/aarch64-linux-gnu/13/include/stddef.h:218:
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:380:1: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  380 | __CUB_ALIGN_BYTES(long4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:31: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      |                               ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:381:1: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  381 | __CUB_ALIGN_BYTES(ulong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:31: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      |                               ^~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:385:1: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  385 | __CUB_ALIGN_BYTES(longlong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:31: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      |                               ^~~       
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:386:1: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  386 | __CUB_ALIGN_BYTES(ulonglong4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:31: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      |                               ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:387:1: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  387 | __CUB_ALIGN_BYTES(double4, 16)
+      | ^~~~
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:657:332: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  657 | CUB_DEFINE_VECTOR_TYPE(long,               long)
+      |                                                                                                                                                                                                                                                                                                                                            ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:320:42: note: declared here
+  320 | __device_builtin__ __builtin_align__(16) long4
+      |                                          ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:658:360: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  658 | CUB_DEFINE_VECTOR_TYPE(long long,          longlong)
+      |                                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:426:42: note: declared here
+  426 | __device_builtin__ __builtin_align__(16) longlong4
+      |                                          ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:662:370: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  662 | CUB_DEFINE_VECTOR_TYPE(unsigned long,      ulong)
+      |                                                                                                                                                                                                                                                                                                                                                                                  ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:326:42: note: declared here
+  326 | __device_builtin__ __builtin_align__(16) ulong4
+      |                                          ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:663:398: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  663 | CUB_DEFINE_VECTOR_TYPE(unsigned long long, ulonglong)
+      |                                                                                                                                                                                                                                                                                                                                                                                                              ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:442:42: note: declared here
+  442 | __device_builtin__ __builtin_align__(16) ulonglong4
+      |                                          ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/cub/block/../block/../util_type.cuh:665:344: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  665 | CUB_DEFINE_VECTOR_TYPE(double,             double)
+      |                                                                                                                                                                                                                                                                                                                                                        ^   
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:474:42: note: declared here
+  474 | __device_builtin__ __builtin_align__(16) double4
+      |                                          ^~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:326:70: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  326 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(long4)
+      |                                                                      ^    
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:330:70: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  330 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulong4)
+      |                                                                      ^     
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:334:70: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  334 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(longlong4)
+      |                                                                      ^        
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:338:70: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  338 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(ulonglong4)
+      |                                                                      ^         
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/_deps/thrust-src/thrust/type_traits/is_trivially_relocatable.h:353:70: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  353 | THRUST_PROCLAIM_TRIVIALLY_RELOCATABLE(double4)
+      |                                                                      ^      
+/usr/local/cuda/targets/sbsa-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~
+[100%] Linking CXX shared library libcheddar.so
+[100%] Built target cheddar
+
+[1;36m[build-cheddar][0m DONE — libcheddar.so at: /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/libcheddar.so
+-rwxrwxr-x 1 zotanika zotanika 9231448  7월 15 14:29 /home/zotanika/workspace/fhenomenon/refs/cheddar-fhe/build/libcheddar.so
