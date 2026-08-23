@@ -164,3 +164,7 @@ if(EXISTS "${CHEDDAR_FHE_DIR}/include/core/Context.h" AND EXISTS "${CHEDDAR_LIB_
 else()
   message(STATUS "Cheddar-FHE not found or not built, skipping GPU tests")
 endif()
+
+# Built-in CKKS backend: one test executable per layer, each linking only its
+# own layer target.
+add_subdirectory(CKKS)
