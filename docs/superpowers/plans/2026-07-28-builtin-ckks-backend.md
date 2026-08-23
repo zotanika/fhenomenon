@@ -259,39 +259,16 @@ unblocks the corpus independently of the three Cheddar-side blockers above.
 
 **Read in this order:** the spec → this file → `experiments/README.md`.
 
-**Open branches as of 2026-08-20** (none merged to `main` yet; `main` is still
-at the level-aware byte budgets commit):
+**Branch state as of 2026-08-24.** `main` is at the open-questions merge and
+now carries the layer skeleton; two branches remain.
 
-| Branch | PR base | Contents |
+| Branch | PR base | State |
 |---|---|---|
-| `feat/gpu-experiment-track` | `main` | `experiments/` + the `.gpu-deps/` gitignore entry |
-| `feat/real-builtin` | `main` | This file, the architecture spec, the scheme decision, the I5 enforcement, and the L0/L3 layer skeleton |
-| `feat/ckks-ntt` | **`feat/real-builtin`** | L1 `NttTables`, the negacyclic transform, `ModArith.h` |
-| `docs/readme-scoped-execution` | `main` | Restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
-| `docs/open-questions` | `main` | `docs/open-questions/` and question 001 |
-
-### Coordination between the two sessions: push it, do not just say it
-
-The two sessions talk over Remote Control, but **the reply leg is relayed by
-hand**, and on 2026-08-23 a message was lost in it. Both sessions independently
-derived the same refutation of the same wrong claim, spending the work twice
-and not noticing until one of them mentioned a detail the other had never seen.
-
-Two rules follow, and the first is the load-bearing one.
-
-1. **If a conclusion matters, it goes in the repository, not only in a
-   message.** Push it — to this file, to `docs/open-questions/`, or to a commit
-   message. A dropped message is invisible to both ends; a pushed commit is
-   not, and `git fetch --all` is a check either session can run unilaterally
-   without depending on the relay working. Messages are for notification and
-   argument; the repository is the record.
-2. **Silence is evidence of loss, not of agreement.** If one session sends
-   something and the other's next reply shows no trace of it, assume it never
-   arrived and resend, rather than assuming it was read and dismissed.
-
-Before starting work, run `git fetch --all && git log --oneline --all -20`.
-That is cheaper than re-deriving something the other session already settled,
-and it is the only path that does not depend on a human being in the loop.
+| `feat/gpu-experiment-track` | `main` | **merged** — `experiments/` and the `.gpu-deps/` gitignore entry are on `main` |
+| `feat/real-builtin` | `main` | **merged as #14** (squash) — this file, the spec, the scheme decision, I5 enforcement, the L0/L3 skeleton |
+| `docs/open-questions` | `main` | **merged as #17** — `docs/open-questions/` and question 001 |
+| `feat/ckks-ntt` | `main` | **open as #18**, 8 commits, rebased onto `main`. L1 `NttTables`/`BConvTables`/`ModArith.h` and L2 layouts |
+| `docs/readme-scoped-execution` | `main` | open — restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
 
 ### Opening the PRs
 
@@ -303,30 +280,57 @@ Three things are easy to get wrong:
 
 1. **`feat/ckks-ntt` must target `feat/real-builtin`, not `main`.** It is
    stacked. Based on `main` its PR shows seven commits and re-reviews the
-   whole layer skeleton. `gh pr create --base feat/real-builtin`. GitHub
-   retargets it to `main` automatically once the base PR merges.
+   whole layer skeleton. `gh pr create --base feat/real-builtin`.
+
+   **This repository squash-merges, and that changes what happens next.** An
+   earlier revision of this file said GitHub retargets a stacked PR
+   automatically once its base merges. That is true of a merge-commit
+   repository and false here. A squash merge produces a *new* commit, so the
+   base branch's commits are no longer ancestors of `main`; GitHub does not
+   retarget, it **closes** the stacked PR when the base branch is deleted, and
+   until it is rebased the PR's diff shows every already-merged file again —
+   28 of them, the whole L0/L3 skeleton, on the first attempt here.
+
+   So in this repository the procedure after a base PR merges is fixed, and
+   both steps are required:
+
+   ```bash
+   git fetch origin
+   git rebase --onto origin/main <old-base-tip> feat/ckks-ntt   # 8 commits, 0 conflicts
+   git push --force-with-lease origin feat/ckks-ntt
+   gh pr create --base main                                     # the old PR is gone, not retargeted
+   ```
+
+   Anyone with local work on top of the old tip moves it with
+   `git rebase --onto origin/feat/ckks-ntt <old-tip> <their-branch>`. Check
+   the result with `git diff --stat <old-head> origin/feat/ckks-ntt` rather
+   than with `git log`: after a rebase every SHA differs, so a log comparison
+   looks alarming and proves nothing, while an additions-only diff proves
+   nothing was dropped.
 2. **Merge `feat/gpu-experiment-track` before `feat/real-builtin`.** This
    file links `experiments/README.md`; that link dangles until it lands.
    Nothing else has an ordering constraint — no two branches touch the same
    file.
-3. **Every code PR should say which compilers have actually seen it.** Both
-   sessions build with GCC 13.3; Clang 21 has since compiled the CKKS layers
-   clean, but Apple Clang still has not, so the macOS CI leg remains the first
-   exposure to it. See "The Clang gap" below.
+3. **Every code PR should say which compilers have actually seen it.** As of
+   PR #18 that list is complete for the CKKS layers: GCC 13.3 on aarch64 and
+   x86_64, Clang 21 locally, and **Apple Clang via the macOS CI leg — 3/3
+   green**. `ModArith.h`'s `__int128` extension is the thing that was at risk
+   and it passed. See "The Clang gap" below, which is now closed rather than
+   narrowed.
 
 Verification to state honestly in each PR body:
 
 | Branch | Verified | Not verified |
 |---|---|---|
-| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation; `Params.cpp` and `Arena.cpp` also compile clean under Clang 21 | Apple Clang; the `-Werror` CI leg on macOS |
-| `feat/ckks-ntt` | aarch64/GCC 13.3 **20/20** and x86_64/GCC 13.3 **19/19** with `CkksNttTest`; x86_64 **20/20** with `CkksBConvTest` added — the aarch64 leg for that commit is not run yet; 10 NTT tests and 13 base-conversion tests; **13 of 13 mutations caught** after an adversarial review round — including the accumulator-window mutation an earlier revision recorded as unkillable, whose impossibility argument was wrong (see `BConvTest.cpp`); layer isolation reconfirmed rather than taken on trust; **Clang 21 clean** (see below) | Apple Clang; the `-Werror` CI leg on macOS |
+| `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation; `Params.cpp` and `Arena.cpp` also compile clean under Clang 21; **merged to `main` as PR #14** | — |
+| `feat/ckks-ntt` | aarch64/GCC 13.3 **22/22** and x86_64/GCC 13.3 **21/21** at the rebased tip; 10 NTT tests and 13 base-conversion tests; **13 of 13 mutations caught** after an adversarial review round — including the accumulator-window mutation an earlier revision recorded as unkillable, whose impossibility argument was wrong (see `BConvTest.cpp`); layer isolation reconfirmed rather than taken on trust; **Clang 21 clean** locally and **Apple Clang clean on CI** (PR #18, 3/3 green) | — |
 | `feat/gpu-experiment-track` | No compiled code — scripts, logs, markdown. Outside the clang-format path | — |
 | `docs/*` | Markdown only | — |
 
 The commit messages were written to be usable as PR bodies; prefer quoting
 them over paraphrasing.
 
-### The Clang gap — closed 2026-08-21, and it was a non-question
+### The Clang gap — closed 2026-08-24 by the macOS CI leg
 
 The narrow question was whether `#pragma GCC diagnostic ignored "-Wpedantic"`
 around the `__int128` alias in `ModArith.h` suppresses Clang **at the alias**
@@ -346,6 +350,11 @@ Measured, so that none of this rests on argument:
 | Clang 21, all four CKKS layer TUs, the project's exact `CLANG_WARNINGS` + `-Werror` | **0 warnings** |
 | Clang 21, whole project | builds; the only 4 warnings are inside spdlog's bundled `fmt`, none in first-party code |
 | Clang 21, `ctest` | 17/20 — the four CKKS layer tests are **43/43 green**; the three failures are discussed below |
+
+**Apple Clang has since compiled it too**, on PR #18's macOS leg, 3/3 green —
+so the ceiling this section describes is no longer a gap at all. The local
+result below stands as the reason it was safe to keep stacking work on
+`ModArith.h` before CI could say so, which was its whole purpose.
 
 The compiler was Clang 21.1.0 obtained as `zig c++` (`pip install ziglang`),
 because the WSL box has no `clang` package and no passwordless `sudo`. That is
