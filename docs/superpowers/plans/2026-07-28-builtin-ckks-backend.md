@@ -1,11 +1,17 @@
 # Built-in RNS-CKKS Backend — Plan and Handoff
 
-Date: 2026-07-28
-Status: **design fixed, no code written.** Five decisions are open and two
-of them block the first line of implementation. This document is the
-handoff: it records what was decided, what was deliberately left open, and
-what a fresh session needs in order to continue without re-deriving any of
-it.
+Date: 2026-07-28, last revised 2026-08-24
+Status: **L0–L3 are implemented and merged to `main`.** `Params`, the L1
+tables and transforms, the L2 layout value types, and `Arena` are in, with
+the I5 layer enforcement they depend on. No branches are open. This document
+is the handoff: it records what was decided, what was deliberately left open,
+and what a fresh session needs in order to continue without re-deriving any
+of it.
+
+Next slice: the L2 memory-binding half — `PolySlab`, `BasicRnsPoly` with the
+const/mutable template split, and `Ciphertext` over a uniform per-poly
+stride. That is also where the batched base-conversion entry point becomes
+writable (see the L1/L4 seam below).
 
 Read first: [`../specs/2026-07-26-builtin-ckks-backend-design.md`](../specs/2026-07-26-builtin-ckks-backend-design.md).
 This file assumes it.
@@ -259,30 +265,38 @@ unblocks the corpus independently of the three Cheddar-side blockers above.
 
 **Read in this order:** the spec → this file → `experiments/README.md`.
 
-**Branch state as of 2026-08-24.** `main` is at the open-questions merge and
-now carries the layer skeleton; two branches remain.
+**Branch state as of 2026-08-24: everything is merged.** `main` carries all
+of it — `experiments/` (#13), the architecture and L0/L3 skeleton (#14), the
+README restoration (#16), open questions (#17), and the L1/L2 slices (#18).
+No branches remain and no PRs are open; start the next slice from `main`.
 
-| Branch | PR base | State |
-|---|---|---|
-| `feat/gpu-experiment-track` | `main` | **merged** — `experiments/` and the `.gpu-deps/` gitignore entry are on `main` |
-| `feat/real-builtin` | `main` | **merged as #14** (squash) — this file, the spec, the scheme decision, I5 enforcement, the L0/L3 skeleton |
-| `docs/open-questions` | `main` | **merged as #17** — `docs/open-questions/` and question 001 |
-| `feat/ckks-ntt` | `main` | **open as #18**, 8 commits, rebased onto `main`. L1 `NttTables`/`BConvTables`/`ModArith.h` and L2 layouts |
-| `docs/readme-scoped-execution` | `main` | open — restores the README's Scoped Execution section; corrects the "legacy session execution path" claim |
+Verified on the merged tip: aarch64/GCC 13.3 22/22 including the Cheddar GPU
+leg, zero warnings on the CKKS targets, and both CI legs green.
 
-### Opening the PRs
+### Merging, when there is a next time
 
-`gh` is deliberately not authenticated on the Spark box — it is a shared
-office machine and a GitHub token should not live there. PRs are opened from
-the WSL box instead.
+`gh` is authenticated on the Spark box as of 2026-08-23. It had deliberately
+not been, on the grounds that a shared office machine is a poor home for a
+GitHub token; that reasoning has not stopped being true, so if the box is
+ever handed on, revoke first.
 
-Three things are easy to get wrong:
+One thing here cost real time and will cost it again:
 
-1. **`feat/ckks-ntt` must target `feat/real-builtin`, not `main`.** It is
-   stacked. Based on `main` its PR shows seven commits and re-reviews the
-   whole layer skeleton. `gh pr create --base feat/real-builtin`.
+1. **Do not stack a PR on another PR in this repository unless you have to.**
+   Stacking gets the review scope right — a PR based on `main` re-reviews
+   everything already in the base — but it costs two things that are not
+   obvious.
 
-   **This repository squash-merges, and that changes what happens next.** An
+   First, **a stacked PR gets no CI at all.** Both workflows filter on
+   `pull_request: branches: [main, master]`, and that filter matches the
+   *base*. PR #15 sat with zero checks while it held the largest body of code
+   in the project. Adding `feat/**` to the triggers would fix it and is
+   deliberately not done — with no concurrent contributors there is rarely a
+   reason to stack, so the fix would be carrying weight for a case that
+   should not recur. Revisit it the moment two branches are in flight again.
+
+   Second, **this repository squash-merges, and that changes what happens
+   when the base lands.** An
    earlier revision of this file said GitHub retargets a stacked PR
    automatically once its base merges. That is true of a merge-commit
    repository and false here. A squash merge produces a *new* commit, so the
@@ -296,21 +310,24 @@ Three things are easy to get wrong:
 
    ```bash
    git fetch origin
-   git rebase --onto origin/main <old-base-tip> feat/ckks-ntt   # 8 commits, 0 conflicts
-   git push --force-with-lease origin feat/ckks-ntt
-   gh pr create --base main                                     # the old PR is gone, not retargeted
+   git rebase --onto origin/main <old-base-tip> <child-branch>   # verify: 0 conflicts
+   git push --force-with-lease origin <child-branch>
+   gh pr create --base main                                      # the old PR is gone, not retargeted
    ```
 
    Anyone with local work on top of the old tip moves it with
-   `git rebase --onto origin/feat/ckks-ntt <old-tip> <their-branch>`. Check
-   the result with `git diff --stat <old-head> origin/feat/ckks-ntt` rather
+   `git rebase --onto origin/<child-branch> <old-tip> <their-branch>`. Check
+   the result with `git diff --stat <old-head> origin/<child-branch>` rather
    than with `git log`: after a rebase every SHA differs, so a log comparison
    looks alarming and proves nothing, while an additions-only diff proves
    nothing was dropped.
-2. **Merge `feat/gpu-experiment-track` before `feat/real-builtin`.** This
-   file links `experiments/README.md`; that link dangles until it lands.
-   Nothing else has an ordering constraint — no two branches touch the same
-   file.
+
+   Do the rebase on a throwaway branch first and build it there. The measure
+   of success is the diff *shrinking* to the child's own files — 28 down to
+   15 here — not the rebase reporting no conflicts.
+2. **A doc that links a file from another branch pins a merge order.** This
+   file links `experiments/README.md`, so its branch had to land second.
+   Cheap to honour, invisible if forgotten until the link is dead on `main`.
 3. **Every code PR should say which compilers have actually seen it.** As of
    PR #18 that list is complete for the CKKS layers: GCC 13.3 on aarch64 and
    x86_64, Clang 21 locally, and **Apple Clang via the macOS CI leg — 3/3
