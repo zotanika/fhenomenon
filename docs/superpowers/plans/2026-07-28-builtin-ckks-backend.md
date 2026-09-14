@@ -1,17 +1,19 @@
 # Built-in RNS-CKKS Backend — Plan and Handoff
 
-Date: 2026-07-28, last revised 2026-08-24
-Status: **L0–L3 are implemented and merged to `main`.** `Params`, the L1
-tables and transforms, the L2 layout value types, and `Arena` are in, with
-the I5 layer enforcement they depend on. No branches are open. This document
-is the handoff: it records what was decided, what was deliberately left open,
-and what a fresh session needs in order to continue without re-deriving any
-of it.
+Date: 2026-07-28, last revised 2026-09-14
+Status: **L0–L3 are implemented.** `Params`, the L1 tables and transforms,
+both halves of L2 storage — the layout value types and the memory binding —
+and `Arena` are in, with the I5 layer enforcement they depend on. This
+document is the handoff: it records what was decided, what was deliberately
+left open, and what a fresh session needs in order to continue without
+re-deriving any of it.
 
-Next slice: the L2 memory-binding half — `PolySlab`, `BasicRnsPoly` with the
-const/mutable template split, and `Ciphertext` over a uniform per-poly
-stride. That is also where the batched base-conversion entry point becomes
-writable (see the L1/L4 seam below).
+Next slice: the batched base-conversion entry point at L1 — `bconv` over
+limb planes rather than one coefficient's residues — and on it the first L4
+functions, `eval::modUp` / `eval::modDown` over `RnsPolyRef`/`RnsPolyView`
+with an `Arena &` for the one limb of scratch the batched shape needs. The
+storage handles those functions take now exist (see "L2 Storage" below), so
+nothing about their signatures has to be guessed.
 
 Read first: [`../specs/2026-07-26-builtin-ckks-backend-design.md`](../specs/2026-07-26-builtin-ckks-backend-design.md).
 This file assumes it.
@@ -27,12 +29,12 @@ Described by artifact rather than by commit hash, so this survives a rebase:
 | `cmake/FhnCkksLayer.cmake` | Layer-target enforcement for invariant I5 |
 | `src/CKKS/params/` | **L0 `Params`** — validated, immutable, hashable |
 | `src/CKKS/tables/` | **L1 `NttTables` + `ntt::forward`/`ntt::inverse`** — negacyclic transform, Harvey lazy butterflies; **L1 `BConvTables` + `bconv::convert`** — fast RNS base conversion; `ModArith.h` is the one place that names `__int128` |
-| `src/CKKS/storage/` | **L2 `ParamsId` / `RnsBasis` / `PolyLayout` / `CiphertextLayout`** — value arithmetic over index ranges, available before any memory exists |
+| `src/CKKS/storage/` | **L2 `ParamsId` / `RnsBasis` / `PolyLayout` / `CiphertextLayout`** — value arithmetic over index ranges, available before any memory exists; **`PolySlab`** — the one owner, words with an explicit size and no growth; **`BasicRnsPoly<T>` / `BasicCiphertext<T>`** — non-owning const/mutable handles (`RnsPolyView`/`RnsPolyRef`, `CiphertextView`/`CiphertextRef`) a kernel takes without knowing whether an Arena or a slab is behind them; **`Ciphertext`** — owner over a uniform per-polynomial stride, with limb and polynomial capacity carried separately from the live layout |
 | `src/CKKS/arena/` | **L3 `Arena`** — caller-owned bump allocator with `Scope` and high-water tracking |
 | `test/CKKS/` | One test executable per layer, each linking only its own layer target |
 
-Everything above L0/L1/L2/L3 is unimplemented. The built-in backend is still
-ToyFHE and remains fully functional; nothing here degrades it.
+Everything above L3 is unimplemented. The built-in backend is still ToyFHE
+and remains fully functional; nothing here degrades it.
 
 Two threads are live. **A** is the primary one; **B** is running and has one
 recorded blocker that A happens to unblock.
@@ -265,13 +267,16 @@ unblocks the corpus independently of the three Cheddar-side blockers above.
 
 **Read in this order:** the spec → this file → `experiments/README.md`.
 
-**Branch state as of 2026-08-24: everything is merged.** `main` carries all
-of it — `experiments/` (#13), the architecture and L0/L3 skeleton (#14), the
-README restoration (#16), open questions (#17), and the L1/L2 slices (#18).
-No branches remain and no PRs are open; start the next slice from `main`.
+**Branch state as of 2026-09-14:** `main` carries `experiments/` (#13), the
+architecture and L0/L3 skeleton (#14), the README restoration (#16), open
+questions (#17), the L1 and L2-layout slices (#18) and the handoff revision
+(#19). The L2 memory-binding half is on `feat/ckks-storage-binding`; once it
+is merged, start the next slice from `main`.
 
-Verified on the merged tip: aarch64/GCC 13.3 22/22 including the Cheddar GPU
-leg, zero warnings on the CKKS targets, and both CI legs green.
+Verified on the binding branch: aarch64/GCC 13.3 23/23 including the Cheddar
+GPU leg, zero warnings on the CKKS targets, ASan+UBSan+LSan clean on the L2
+tests (with leak detection confirmed live by a deliberate leak first), 39 of
+39 mutations caught, Clang 21 clean on every storage TU.
 
 ### Merging, when there is a next time
 
@@ -341,6 +346,7 @@ Verification to state honestly in each PR body:
 |---|---|---|
 | `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation; `Params.cpp` and `Arena.cpp` also compile clean under Clang 21; **merged to `main` as PR #14** | — |
 | `feat/ckks-ntt` | aarch64/GCC 13.3 **22/22** and x86_64/GCC 13.3 **21/21** at the rebased tip; 10 NTT tests and 13 base-conversion tests; **13 of 13 mutations caught** after an adversarial review round — including the accumulator-window mutation an earlier revision recorded as unkillable, whose impossibility argument was wrong (see `BConvTest.cpp`); layer isolation reconfirmed rather than taken on trust; **Clang 21 clean** locally and **Apple Clang clean on CI** (PR #18, 3/3 green) | — |
+| `feat/ckks-storage-binding` | aarch64/GCC 13.3 **23/23** including the Cheddar GPU leg; 48 tests in `CkksStorageBindingTest`, linking `fhn_ckks_storage` only; **39 of 39 mutations caught** across the handle arithmetic, the capacity checks, `reshape`, `duplicate`, both `copy` overloads and the slab's move/clone; **ASan+UBSan+LSan clean** with leak detection proven live first; L1 and L3 headers confirmed unreachable from L2; **Clang 21 clean** on all four storage TUs and the test TU | x86_64; Apple Clang until the CI leg runs |
 | `feat/gpu-experiment-track` | No compiled code — scripts, logs, markdown. Outside the clang-format path | — |
 | `docs/*` | Markdown only | — |
 
@@ -456,8 +462,35 @@ Saying no would relax or drop the 64-byte alignment `Arena::kAlignment`'s own
 comment promises to kernels, and push the durable owner somewhere needing a
 *larger* amendment to the L3 line.
 
-Still worth the user's sign-off, because it adds one clause to the spec's L2
-line — but it is no longer an open technical question.
+**Implemented 2026-09-14, and the spec's L2 line now carries the clause.**
+What the binding half fixed, beyond the slab:
+
+- **Two capacities, not one.** `Ciphertext` carries a limb capacity *and* a
+  polynomial capacity. The second is forced by the same ABI fact as the
+  first: `FhnBufferAllocFn` takes no size, and `FHN_MULT_CC` is "tensor
+  only" (`include/FHN/fhn_program.h`), so a buffer must be able to hold the
+  three-polynomial product across an instruction boundary. Both are checked
+  at `create`/`adopt` and again at every `reshape`.
+- **`reshape` is the one mutator and it is atomic.** Basis, polynomial count
+  and scale change together or not at all, the ring may not change (the
+  stride is in words and was computed from the degree), and a refusal leaves
+  the layout untouched — there is a mutation test for exactly the
+  apply-before-check ordering.
+- **Two kinds of function, one rule.** Addressing *within* a bound layout
+  (`limb`, `mainLimb`, `auxLimb`, `poly`) is unchecked, because an inner
+  loop calls it and the layout was validated at binding. Producing a *new*
+  layout (`mainSlice`, `reshape`, `create`, `adopt`) validates and refuses.
+- **The Arena shape and the slab shape are the same handle.** A temporary
+  bound at a tight stride and a buffer bound with headroom are both a
+  `CiphertextRef`; `copy` moves live words between them regardless of
+  stride. A kernel cannot tell which it was given, which is the whole reason
+  the handle and the owner are different types.
+- **A plaintext is a one-polynomial layout.** `CiphertextLayout` already
+  admits `num_polys == 1`; storage adds no second type for it.
+- **Slab contents are uninitialised**, as an Arena allocation is. Zeroing
+  multi-megabyte buffers on every allocation is a cost the caller did not
+  ask for and could not switch off — the same hidden-policy objection I2
+  makes.
 
 ### The L1/L4 transposition — raised, then dissolved
 
@@ -494,9 +527,14 @@ beyond tidiness:
   single-coefficient API, never intrinsic — which also means it was an API
   decision on the Cheddar side rather than a kernel one.
 
-The batched entry point itself waits until L2 is real, because only the storage
-layout fixes how a limb plane is addressed. Both sessions agree on that, and on
-the shape to write when the time comes.
+L2 is now real, and it fixed how a limb plane is addressed: `limb(i)` is
+`degree()` contiguous words at `data() + i * degree()`, main limbs first, then
+aux. The batched entry point is therefore next — but it belongs at **L1**,
+taking raw limb-plane pointers and a degree, because L1 sees nothing above
+itself and a `bconv` over pointers needs nothing above itself. The L4 wrapper
+that binds `RnsPolyView`/`RnsPolyRef` to those pointers and carves the one
+scratch limb from an `Arena &` is where the L2 types first meet the L1
+arithmetic, which is exactly the seam the layering says they should meet at.
 
 **Environment (already verified, do not re-derive):** host `spark-0faa`;
 NVIDIA GB10, compute capability 12.1 → `sm_121`; CUDA 13.0; aarch64 Cortex-X925
