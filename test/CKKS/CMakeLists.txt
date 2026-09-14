@@ -24,3 +24,7 @@ add_gtest_target_to_ctest(CkksLayoutTest)
 add_executable(CkksArenaTest ArenaTest.cpp)
 target_link_libraries(CkksArenaTest PRIVATE fhn_ckks_arena gtest_main)
 add_gtest_target_to_ctest(CkksArenaTest)
+
+add_executable(CkksStorageBindingTest StorageBindingTest.cpp)
+target_link_libraries(CkksStorageBindingTest PRIVATE fhn_ckks_storage gtest_main)
+add_gtest_target_to_ctest(CkksStorageBindingTest)
