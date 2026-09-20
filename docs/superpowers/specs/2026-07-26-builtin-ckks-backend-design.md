@@ -176,6 +176,9 @@ L1  Tables      Pure derived precomputation, keyed by the identity of what it
 L2  Storage     RnsPoly / Ciphertext / Plaintext = data. (level, scale, ntt
                 state, RNS basis identity, coefficient span). No context
                 pointer, no allocator handle, no global. Serializable as bytes.
+                Handles never own. The one owner, a slab of words, takes its
+                size explicitly and never grows: I2 is satisfied by the
+                absence of hidden policy, not by refusing to allocate.
 
 L3  Arena       Caller-owned scratch. Bump allocator over one planned slab.
                 Passed by reference to anything that needs temporaries.
