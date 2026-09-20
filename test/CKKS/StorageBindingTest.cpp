@@ -620,12 +620,18 @@ TEST(Ciphertext, DuplicateIsAnIndependentOwnerWithTheSameLiveWordsAndCapacities)
   dup.poly(1).limb(2)[4] = 0;
   EXPECT_EQ(ct->poly(1).limb(2)[4], tag(1, 2, 4)) << "writing the duplicate must not touch the original";
 
-  // The duplicate has the original's headroom, not merely its live shape.
+  // The duplicate has the original's headroom, not merely its live shape —
+  // and the slab behind it, not merely the capacity fields: reshape checks
+  // the fields, so the write into the grown region is what a sanitizer
+  // would catch if duplicate() allocated only the live words.
+  EXPECT_EQ(dup.slab().words(), Ciphertext::slabWords(kLogDegree, 5, 3));
   CiphertextLayout grown = dup.layout();
   grown.num_polys = 3;
   grown.poly.basis.aux_end = 2;
   std::string error;
   EXPECT_TRUE(dup.reshape(grown, &error)) << error;
+  dup.poly(2).auxLimb(1)[kDegree - 1] = 1;
+  EXPECT_EQ(dup.poly(2).auxLimb(1), dup.slab().data() + 2 * dup.polyStride() + 4 * kDegree);
 }
 
 TEST(Ciphertext, DuplicateOfNothingIsNothing) {
@@ -650,11 +656,18 @@ TEST(Ciphertext, MoveTransfersTheSlabAndLeavesTheSourceShapeless) {
   EXPECT_EQ(source.limbCapacity(), 0U);           // NOLINT(bugprone-use-after-move)
   EXPECT_EQ(source.polyCapacity(), 0U);           // NOLINT(bugprone-use-after-move)
 
+  // Move assignment is a separate function from the move constructor, so the
+  // capacity transfer and the source reset are asserted again here.
   Ciphertext assigned;
   assigned = std::move(moved);
   EXPECT_EQ(assigned.slab().data(), slab);
   EXPECT_EQ(assigned.layout(), ciphertextOf(3, 2));
-  EXPECT_TRUE(moved.empty()); // NOLINT(bugprone-use-after-move)
+  EXPECT_EQ(assigned.limbCapacity(), 4U);
+  EXPECT_EQ(assigned.polyCapacity(), 2U);
+  EXPECT_TRUE(moved.empty());                    // NOLINT(bugprone-use-after-move)
+  EXPECT_EQ(moved.layout(), CiphertextLayout{}); // NOLINT(bugprone-use-after-move)
+  EXPECT_EQ(moved.limbCapacity(), 0U);           // NOLINT(bugprone-use-after-move)
+  EXPECT_EQ(moved.polyCapacity(), 0U);           // NOLINT(bugprone-use-after-move)
 }
 
 TEST(Ciphertext, AdoptBindsACallerOwnedSlab) {
@@ -727,6 +740,62 @@ TEST(Ciphertext, CopyRefusesADifferentLayoutAndWritesNothing) {
       ASSERT_EQ(dst->poly(p).data()[i], 0xDEADU) << "poly " << p << " word " << i;
     }
   }
+}
+
+// The refusal above differs in the limb count. CiphertextLayout::operator==
+// also compares num_polys and scale, so each gets a case in which it is the
+// ONLY field that differs — a copy that compared the polynomial layout alone
+// would pass the test above and fail these.
+TEST(Ciphertext, CopyRefusesALayoutDifferingOnlyInPolynomialCountOrScale) {
+  auto src = Ciphertext::create(ciphertextOf(3, 2), 3, 3);
+  auto dst = Ciphertext::create(ciphertextOf(3, 2), 3, 3);
+  ASSERT_TRUE(src.has_value() && dst.has_value());
+  fillTagged(src->ref());
+  const auto poison = [&] {
+    for (uint32_t p = 0; p < dst->layout().num_polys; ++p) {
+      for (std::size_t i = 0; i < dst->poly(p).words(); ++i) {
+        dst->poly(p).data()[i] = 0xDEAD;
+      }
+    }
+  };
+  const auto expectUntouched = [&] {
+    for (uint32_t p = 0; p < dst->layout().num_polys; ++p) {
+      for (std::size_t i = 0; i < dst->poly(p).words(); ++i) {
+        ASSERT_EQ(dst->poly(p).data()[i], 0xDEADU) << "poly " << p << " word " << i;
+      }
+    }
+  };
+
+  CiphertextLayout three = dst->layout();
+  three.num_polys = 3;
+  ASSERT_TRUE(dst->reshape(three));
+  poison();
+  EXPECT_FALSE(copy(dst->ref(), src->view()));
+  expectUntouched();
+
+  CiphertextLayout rescaled = src->layout();
+  rescaled.scale = 4096.0;
+  ASSERT_TRUE(dst->reshape(rescaled));
+  poison();
+  EXPECT_FALSE(copy(dst->ref(), src->view()));
+  expectUntouched();
+}
+
+// The exact trace from review: same base, three polynomials, stride 24 -> 32.
+// An ascending copy would write polynomial 1 over the words polynomial 2 has
+// not been read from yet and report success. Refused instead, with nothing
+// written.
+TEST(Ciphertext, CopyRefusesTheSameBaseUnderADifferentStride) {
+  const CiphertextLayout layout = ciphertextOf(3, 3);
+  std::vector<uint64_t> words(3 * 4 * kDegree);
+  const CiphertextRef tight(layout, words.data(), 3 * kDegree);
+  const CiphertextRef wide(layout, words.data(), 4 * kDegree);
+  fillTagged(tight);
+  const std::vector<uint64_t> before = words;
+  EXPECT_FALSE(copy(wide, tight));
+  EXPECT_EQ(words, before);
+  EXPECT_FALSE(copy(tight, wide));
+  EXPECT_EQ(words, before);
 }
 
 TEST(Ciphertext, CopyOntoItselfIsANoOp) {

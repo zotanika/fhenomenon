@@ -130,6 +130,12 @@ bool copy(CiphertextRef dst, CiphertextView src) {
   if (dst.layout() != src.layout()) {
     return false;
   }
+  if (dst.data() == src.data()) {
+    // The same handle is the total alias the ABI permits. The same base under
+    // a different stride is not: polynomial 1 would be written over words
+    // polynomial 2 has not been read from yet.
+    return dst.polyStride() == src.polyStride();
+  }
   for (uint32_t p = 0; p < src.numPolys(); ++p) {
     copy(dst.poly(p), src.poly(p));
   }

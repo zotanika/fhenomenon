@@ -275,8 +275,9 @@ is merged, start the next slice from `main`.
 
 Verified on the binding branch: aarch64/GCC 13.3 23/23 including the Cheddar
 GPU leg, zero warnings on the CKKS targets, ASan+UBSan+LSan clean on the L2
-tests (with leak detection confirmed live by a deliberate leak first), 39 of
-39 mutations caught, Clang 21 clean on every storage TU.
+tests (with leak detection confirmed live by a deliberate leak first), 45 of
+45 mutations caught, Clang 21 clean on every storage TU, and the macOS leg
+green on PR #20.
 
 ### Merging, when there is a next time
 
@@ -346,7 +347,7 @@ Verification to state honestly in each PR body:
 |---|---|---|
 | `feat/real-builtin` | aarch64/GCC 13.3 **19/19** (includes the Cheddar GPU test); x86_64/GCC 13.3 **18/18** (Cheddar absent, so that test never configures); zero warnings on CKKS targets under `-Werror`; clang-format clean under both 18.1.8 and 22; all three I5 checks verified by deliberate violation; `Params.cpp` and `Arena.cpp` also compile clean under Clang 21; **merged to `main` as PR #14** | — |
 | `feat/ckks-ntt` | aarch64/GCC 13.3 **22/22** and x86_64/GCC 13.3 **21/21** at the rebased tip; 10 NTT tests and 13 base-conversion tests; **13 of 13 mutations caught** after an adversarial review round — including the accumulator-window mutation an earlier revision recorded as unkillable, whose impossibility argument was wrong (see `BConvTest.cpp`); layer isolation reconfirmed rather than taken on trust; **Clang 21 clean** locally and **Apple Clang clean on CI** (PR #18, 3/3 green) | — |
-| `feat/ckks-storage-binding` | aarch64/GCC 13.3 **23/23** including the Cheddar GPU leg; 48 tests in `CkksStorageBindingTest`, linking `fhn_ckks_storage` only; **39 of 39 mutations caught** across the handle arithmetic, the capacity checks, `reshape`, `duplicate`, both `copy` overloads and the slab's move/clone; **ASan+UBSan+LSan clean** with leak detection proven live first; L1 and L3 headers confirmed unreachable from L2; **Clang 21 clean** on all four storage TUs and the test TU | x86_64; Apple Clang until the CI leg runs |
+| `feat/ckks-storage-binding` | aarch64/GCC 13.3 **23/23** including the Cheddar GPU leg; 50 tests in `CkksStorageBindingTest`, linking `fhn_ckks_storage` only; **45 of 45 mutations caught** across the handle arithmetic, the capacity checks, `reshape`, `duplicate`, both `copy` overloads, the slab's move/clone, and the six the PR #20 review traced (move-assignment reset and capacity transfer, a `copy` that compares only the polynomial layout, a `duplicate` that allocates only the live words, and same-base/different-stride aliasing); **ASan+UBSan+LSan clean** with leak detection proven live first; L1 and L3 headers confirmed unreachable from L2; **Clang 21 clean** on all four storage TUs and the test TU; x86_64/GCC **22/22** and **Apple Clang 3/3 green** on PR #20 | — |
 | `feat/gpu-experiment-track` | No compiled code — scripts, logs, markdown. Outside the clang-format path | — |
 | `docs/*` | Markdown only | — |
 

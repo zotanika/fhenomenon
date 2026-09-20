@@ -133,6 +133,13 @@ class Ciphertext {
   // and a buffer does not change parameter sets), and within both
   // capacities. This is the one mutator, so a shape change is atomic: basis,
   // polynomial count and scale move together or not at all.
+  //
+  // Division of labour with kernels: a kernel computes through handles whose
+  // layout is fixed for the call, and whoever holds the owner calls
+  // reshape() to declare the shape the kernel produced. Because reshape()
+  // moves no word, it is safe before or after the kernel runs — a RESCALE may
+  // reshape first and let the kernel address the new live range, or compute
+  // first and reshape to publish the result.
   bool reshape(const CiphertextLayout &layout, std::string *error = nullptr);
 
   const CiphertextLayout &layout() const { return layout_; }
@@ -160,8 +167,14 @@ class Ciphertext {
 
 // Copy every live word of `src` into `dst`, polynomial by polynomial. Refuses,
 // writing nothing, unless the two layouts are identical; the strides may
-// differ, which is how an Arena temporary lands in a buffer. Tolerates dst
-// and src addressing the same words.
+// differ, which is how an Arena temporary lands in a buffer.
+//
+// Aliasing: the same handle (same base, same stride) is a no-op and returns
+// true — the ABI lets a kernel's result be one of its operands. The same base
+// under different strides is refused, because copying polynomial p over the
+// words polynomial p+1 has not been read from yet is a re-striding in place,
+// and nothing at this layer asks for one. Any other overlap is undefined, as
+// it is for memcpy.
 bool copy(CiphertextRef dst, CiphertextView src);
 
 } // namespace fhenomenon::ckks
