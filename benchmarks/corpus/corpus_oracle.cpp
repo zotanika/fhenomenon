@@ -48,6 +48,7 @@ std::optional<std::map<uint32_t, Slots>> evaluate(const FhnProgram &program, con
       out = binary([](int64_t x, int64_t y) { return x - y; });
       break;
     case FHN_MULT_CC:
+    case FHN_HMULT:
       out = binary([](int64_t x, int64_t y) { return x * y; });
       break;
     case FHN_ADD_CS:
@@ -62,12 +63,16 @@ std::optional<std::map<uint32_t, Slots>> evaluate(const FhnProgram &program, con
     case FHN_NEGATE:
       out = unary([](int64_t x) { return -x; });
       break;
-    case FHN_ROTATE: {
+    case FHN_ROTATE:
+    case FHN_HROT_ADD: {
+      if (a->empty() || (inst.opcode == FHN_HROT_ADD && (!b || b->size() != a->size())))
+        return std::nullopt;
       const int64_t n = static_cast<int64_t>(a->size());
       const int64_t d = ((inst.params[0] % n) + n) % n; // positive = left
       Slots rotated(a->size());
       for (int64_t s = 0; s < n; ++s)
-        rotated[static_cast<size_t>(s)] = (*a)[static_cast<size_t>((s + d) % n)];
+        rotated[static_cast<size_t>(s)] =
+          (*a)[static_cast<size_t>((s + d) % n)] + (inst.opcode == FHN_HROT_ADD ? (*b)[static_cast<size_t>(s)] : 0);
       out = rotated;
       break;
     }
@@ -90,7 +95,7 @@ std::optional<std::map<uint32_t, Slots>> evaluate(const FhnProgram &program, con
       out = binary([](int64_t x, int64_t y) { return x ^ y; });
       break;
     default:
-      return std::nullopt; // fused/lifecycle opcodes are not modeled
+      return std::nullopt; // other fused/lifecycle opcodes are not modeled
     }
 
     if (!out)

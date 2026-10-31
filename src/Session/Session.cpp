@@ -17,15 +17,14 @@ using namespace fhenomenon;
 
 thread_local std::shared_ptr<Session> Session::session_ptr_ = nullptr;
 
-namespace {
-
 // Execute the recorded graph through the backend's FHN runtime: lower the
 // AST to an FhnProgram, provision the buffer table, dispatch through the
 // executor, and write results back into the bound entities.
 // Returns false when lowering produced nothing executable, in which case the
 // caller falls back to the legacy per-operation path.
-bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planner<int> &planner, const Backend &backend,
-                              const FhnRuntime &runtime) {
+bool Session::executeThroughFhnRuntime(scheduler::Planner<int> &planner, const FhnRuntime &runtime) {
+  auto &scheduler = *scheduler_;
+  const auto &backend = backend_;
   scheduler::LowerToFhnProgram::EntityBindings<int> bindings;
   std::unique_ptr<FhnProgram, decltype(&fhn_program_free)> program(scheduler.lowerGraph<int>(planner, &bindings),
                                                                    &fhn_program_free);
@@ -42,22 +41,22 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
     }
   }
 
-  // Pin what must survive execution: program inputs (entity-owned buffers
-  // the plan must not free) and every write-back target. Superseded
-  // intermediate results are deliberately NOT pinned — the plan frees them
-  // at their last use.
-  std::vector<uint32_t> pinned(program->input_ids, program->input_ids + program->num_inputs);
-  // Aliased entities (e.g. an input that is also a write-back target) can
-  // push the same id into `pinned` more than once; analyze() dedupes
-  // pinned ids internally, so no dedup is needed here.
-  for (const auto &[raw_entity, bound] : latest) {
-    (void)raw_entity;
-    pinned.push_back(bound.second);
+  // Returned-value shells that survived the lambda are observable too.
+  // They may be stack/optional/shared-owned: ownership is not provenance.
+  for (const auto &[key, copy] : result_copies_) {
+    (void)key;
+    auto *source = static_cast<Fhenon<int> *>(copy.second);
+    const auto found = latest.find(source);
+    if (found != latest.end()) {
+      auto *target = static_cast<Fhenon<int> *>(copy.first);
+      latest[target] = {std::shared_ptr<Fhenon<int>>(target, SessionAliasDeleter{}), found->second.second};
+    }
   }
-
-  const auto plan = FhnMovementPlan::analyze(*program, pinned, /*device_budget=*/0);
-  if (!plan) {
-    throw std::runtime_error("Session: FHN program failed movement analysis (operand used without a definition?)");
+  for (auto it = latest.begin(); it != latest.end();) {
+    if (isTemporary(it->first))
+      it = latest.erase(it);
+    else
+      ++it;
   }
 
   uint32_t max_id = 0;
@@ -76,8 +75,11 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
   // (zero copy); a foreign owner is an error, not a skip.
   const std::unordered_set<uint32_t> input_ids(program->input_ids, program->input_ids + program->num_inputs);
   std::vector<std::shared_ptr<FhnBuffer>> input_hold(max_id + 1);
+  std::unordered_set<uint32_t> seen_inputs;
   for (const auto &[id, entity] : bindings) {
-    if (!input_ids.count(id) || input_hold[id] || !entity || !entity->isEncrypted_) {
+    // Only the defining operand supplies an input. A later assignment binds
+    // its destination to this id, but its old ciphertext is not the input.
+    if (!input_ids.count(id) || !seen_inputs.insert(id).second || !entity || !entity->isEncrypted_) {
       continue;
     }
     if (const auto *ct = std::any_cast<FhnCiphertext>(&entity->ciphertext_)) {
@@ -91,6 +93,52 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
     if (!input_hold[program->input_ids[i]]) {
       throw std::runtime_error("Session: operand is not encrypted — call belong() before using it in a session");
     }
+  }
+
+  // Copies can share an immutable input buffer. Canonicalize its SSA id
+  // before planning so it cannot receive conflicting eviction/free actions.
+  // Computed results retain distinct IDs; overwrites preserve other copies.
+  std::unordered_map<FhnBuffer *, uint32_t> physical_inputs;
+  std::unordered_map<uint32_t, uint32_t> canonical_ids;
+  uint32_t unique_inputs = 0;
+  for (uint32_t i = 0; i < program->num_inputs; ++i) {
+    const uint32_t id = program->input_ids[i];
+    const auto [found, inserted] = physical_inputs.emplace(input_hold[id].get(), id);
+    canonical_ids[id] = found->second;
+    if (inserted)
+      program->input_ids[unique_inputs++] = id;
+  }
+  program->num_inputs = unique_inputs;
+  auto canonical = [&](uint32_t id) {
+    const auto found = canonical_ids.find(id);
+    return found == canonical_ids.end() ? id : found->second;
+  };
+  for (uint32_t i = 0; i < program->num_instructions; ++i)
+    for (auto &operand : program->instructions[i].operands)
+      operand = canonical(operand);
+  for (uint32_t i = 0; i < program->num_outputs; ++i)
+    program->output_ids[i] = canonical(program->output_ids[i]);
+  for (auto &[entity, bound] : latest) {
+    (void)entity;
+    bound.second = canonical(bound.second);
+  }
+
+  // Pin what must survive execution: program inputs (entity-owned buffers
+  // the plan must not free) and every write-back target. Superseded
+  // intermediate results are deliberately NOT pinned — the plan frees them
+  // at their last use.
+  std::vector<uint32_t> pinned(program->input_ids, program->input_ids + program->num_inputs);
+  // Aliased entities (e.g. an input that is also a write-back target) can
+  // push the same id into `pinned` more than once; analyze() dedupes
+  // pinned ids internally, so no dedup is needed here.
+  for (const auto &[raw_entity, bound] : latest) {
+    (void)raw_entity;
+    pinned.push_back(bound.second);
+  }
+
+  const auto plan = FhnMovementPlan::analyze(*program, pinned, /*device_budget=*/0);
+  if (!plan) {
+    throw std::runtime_error("Session: FHN program failed movement analysis (operand used without a definition?)");
   }
 
   std::vector<FhnBuffer *> buffers(max_id + 1, nullptr);
@@ -135,10 +183,11 @@ bool executeThroughFhnRuntime(scheduler::Scheduler &scheduler, scheduler::Planne
   return true;
 }
 
-} // namespace
-
 void Session::optimize() {
   LOG_MESSAGE("Session: optimize");
+
+  if (unsupported_type_)
+    throw std::logic_error("Session: recording currently supports only Fhenon<int>");
 
   // A recorded entity died before evaluation: executing the graph would read
   // dead objects, so refuse deterministically instead.
@@ -159,15 +208,8 @@ void Session::optimize() {
   if (!passes_registered_) {
     // Register pre-AST passes
     scheduler_->addPreASTPass(std::make_shared<scheduler::MatMulRecognitionPass>());
-
-    // Scheduler uses backend as delegate - it's decoupled from actual computation
-    scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
     passes_registered_ = true;
   }
-  // scheduler_->addASTPass(std::make_shared<scheduler::FuseOperationsASTPass>());
-  // scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
-  // scheduler_->addASTPass(std::make_shared<scheduler::AdditionToMultiplicationASTPass>());
-  // scheduler_->addASTPass(std::make_shared<scheduler::PrintASTPass>());
 
   scheduler::Planner<int> planner;
   planner = scheduler_->buildGraph<int>(operations_, planner);
@@ -177,8 +219,17 @@ void Session::optimize() {
   // FhnProgram through the executor; the rest use the legacy per-operation
   // evaluation. Lowering failures also fall back.
   const FhnRuntime *runtime = backend_.fhnRuntime();
-  if (runtime && executeThroughFhnRuntime(*scheduler_, planner, backend_, *runtime)) {
+  if (runtime && executeThroughFhnRuntime(planner, *runtime)) {
     return;
   }
   scheduler_->evaluateGraph(planner);
+  for (const auto &[key, copy] : result_copies_) {
+    (void)key;
+    auto &target = *static_cast<Fhenon<int> *>(copy.first);
+    const auto &source = *static_cast<Fhenon<int> *>(copy.second);
+    target.setValue(source.getValue());
+    target.setProfile(source.getProfile());
+    target.ciphertext_ = source.ciphertext_;
+    target.isEncrypted_ = source.isEncrypted_;
+  }
 }

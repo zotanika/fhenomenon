@@ -43,6 +43,29 @@ Shape shapeMatvec() {
   return b.finish("matvec", "fan-out reuse of one input ct", 64, 0, {y});
 }
 
+// Eight encrypted rows dotted with a shared packed vector. Every output
+// contains its row's dot product in all eight slots. Uses the complete
+// multiply and rotate-add contracts to exercise native and fallback paths.
+Shape shapeMatvecFused() {
+  ShapeBuilder b;
+  const uint32_t x = b.input({1, -2, 3, 0, -1, 2, 1, -3});
+  std::vector<uint32_t> rows;
+  for (uint32_t row = 0; row < 8; ++row) {
+    Slots weights(8);
+    for (uint32_t col = 0; col < 8; ++col)
+      weights[col] = static_cast<int64_t>((row * 3 + col * 2) % 5) - 2;
+    rows.push_back(b.input(std::move(weights)));
+  }
+  std::vector<uint32_t> outputs;
+  for (uint32_t row : rows) {
+    uint32_t acc = b.cc(FHN_HMULT, x, row);
+    for (int64_t distance : {4, 2, 1})
+      acc = b.rotAdd(acc, acc, distance);
+    outputs.push_back(acc);
+  }
+  return b.finish("matvec-fused", "encrypted 8x8 packed matvec, native/fallback verification", 8, 1, outputs);
+}
+
 Shape shapeMatmulTile() {
   ShapeBuilder b;
   const uint32_t x = b.input(vec(32, 2));
@@ -196,6 +219,7 @@ Shape shapeDiamond() {
 std::vector<Shape> allShapes() {
   std::vector<Shape> shapes;
   shapes.push_back(shapeMatvec());
+  shapes.push_back(shapeMatvecFused());
   shapes.push_back(shapeMatmulTile());
   shapes.push_back(shapeHorner15());
   shapes.push_back(shapeReduceTree());

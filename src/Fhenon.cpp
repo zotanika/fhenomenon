@@ -23,13 +23,8 @@ Fhenon<T>::Fhenon(const Fhenon<T> &other)
   if (Session::isRecording()) {
     auto *canonical = Session::getSession()->getEntity<T>(&other);
     Fhenon<T> &source = canonical ? *canonical : const_cast<Fhenon<T> &>(other);
-    auto owned = source.weak_from_this().lock();
-    if (owned && std::get_deleter<SessionAliasDeleter>(owned) == nullptr) {
-      // Copies of shared-owned operation results collapse to their canonical
-      // object, so trackEntity() resolves any copy in one hop. (A session
-      // alias to a caller variable also locks, but carries the alias
-      // deleter — that source is caller-owned, not shared.)
-      Session::getSession()->setEntity<T>(this, source);
+    if (Session::getSession()->isTemporary(&source)) {
+      Session::getSession()->recordResultCopy(*this, source);
     } else {
       // Copying a caller-owned session variable inside run() would record
       // against the source (clobbering it) and the copy dies with the
@@ -54,14 +49,13 @@ Fhenon<T>::Fhenon(Fhenon<T> &&other) noexcept
   other.profile_ = nullptr;
   LOG_MESSAGE("Move constructor with value: " << val_ << " " << this << "other:" << &other);
   if (Session::isRecording()) {
-    // Mirror the copy constructor's collapse for shared-owned sources; a
+    // Mirror the copy constructor for explicit recording temporaries; a
     // caller-owned source cannot be rejected by throwing from a noexcept
     // move, so poison the recording instead.
     auto *canonical = Session::getSession()->getEntity<T>(&other);
     Fhenon<T> &source = canonical ? *canonical : other;
-    auto owned = source.weak_from_this().lock();
-    if (owned && std::get_deleter<SessionAliasDeleter>(owned) == nullptr) {
-      Session::getSession()->setEntity<T>(this, source);
+    if (Session::getSession()->isTemporary(&source)) {
+      Session::getSession()->recordResultCopy(*this, source);
     } else {
       Session::getSession()->poisonRecording(
         "Session: a session variable was moved inside run() — declare and assign instead");
@@ -90,7 +84,7 @@ template <typename T> Fhenon<T>::~Fhenon() {
 template <typename T> void Fhenon<T>::belong(std::shared_ptr<Profile> newProfile) {
   profile_.swap(newProfile);
   Backend::getInstance().transform(*this, *(profile_->getParam()));
-  if (Session::getSession())
+  if (Session::isRecording())
     Session::getSession()->saveEntity(*this);
 }
 
@@ -100,7 +94,7 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(const T &scalar) {
     Session::getSession()->saveEntity(*this);
 
     auto op1_ptr = Session::getSession()->trackEntity(*this);
-    auto tmp = std::make_shared<Fhenon<T>>(scalar);
+    auto tmp = Session::getSession()->makeTemporary(scalar, op1_ptr->getProfile());
     tmp->belong(op1_ptr->getProfile());
 
     Session::getSession()->saveOp(
@@ -138,7 +132,6 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(const Fhenon<T> &other) {
     return *this;
 #endif
   if (Session::isRecording()) {
-    std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
     auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
 
@@ -169,7 +162,6 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(Fhenon &&other) noexcept {
 
   if (Session::isRecording()) {
     LOG_MESSAGE("(Move) Assignment on session");
-    std::cout << "other: " << &other << " " << Session::getSession()->getEntity<T>(&other) << std::endl;
     auto op1_ptr = Session::getSession()->trackEntity(*this);
     auto op2_ptr = Session::getSession()->trackEntity(other);
 
@@ -194,7 +186,9 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(Fhenon &&other) noexcept {
 
 template <typename T> Fhenon<T> Fhenon<T>::operator+(const T &scalar) const {
   LOG_MESSAGE("=====Operator Add of Fhenon with scalar=====");
-  auto entity = std::make_shared<Fhenon<T>>(scalar);
+  auto entity = Session::isRecording()
+                  ? Session::getSession()->makeTemporary(scalar, this->getProfile())
+                  : std::make_shared<Fhenon<T>>(scalar);
   entity->setScalar();
   entity->belong(this->getProfile());
   LOG_MESSAGE("=============================");
@@ -212,9 +206,7 @@ template <typename T> Fhenon<T> Fhenon<T>::operator+(const Fhenon<T> &other) con
     // Track operands and result in the Session
     auto op1_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(*this));
     auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
-    auto result_ptr = std::make_shared<Fhenon<T>>(1234);
-    Session::getSession()->saveEntity(*result_ptr);
-    Session::getSession()->trackEntity(*result_ptr);
+    auto result_ptr = Session::getSession()->makeTemporary(T{}, op1_ptr->getProfile());
 
     // Save the add operation for later execution
     Session::getSession()->saveOp(
@@ -251,9 +243,7 @@ template <typename T> Fhenon<T> Fhenon<T>::operator*(const Fhenon<T> &other) con
     // Track operands and result in the Session
     auto op1_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(*this));
     auto op2_ptr = Session::getSession()->trackEntity(const_cast<Fhenon<T> &>(other));
-    auto result_ptr = std::make_shared<Fhenon<T>>(1234);
-    Session::getSession()->saveEntity(*result_ptr);
-    Session::getSession()->trackEntity(*result_ptr);
+    auto result_ptr = Session::getSession()->makeTemporary(T{}, op1_ptr->getProfile());
 
     Session::getSession()->saveOp(
       std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Multiply, op1_ptr, op2_ptr, result_ptr));
@@ -279,7 +269,9 @@ template <typename T> Fhenon<T> Fhenon<T>::operator*(const Fhenon<T> &other) con
 }
 
 template <typename T> Fhenon<T> Fhenon<T>::operator*(const T &scalar) const {
-  auto entity = std::make_shared<Fhenon<T>>(scalar);
+  auto entity = Session::isRecording()
+                  ? Session::getSession()->makeTemporary(scalar, this->getProfile())
+                  : std::make_shared<Fhenon<T>>(scalar);
   entity->setScalar();
   entity->belong(this->getProfile());
   return *this * *entity;
@@ -339,7 +331,11 @@ template <typename T> Fhenon<T> Fhenon<T>::operator<=(const Fhenon<T> &other) co
   return *result;
 }
 
-template <typename T> T Fhenon<T>::decrypt() const { return std::any_cast<T>(Backend::getInstance().decrypt(*this)); }
+template <typename T> T Fhenon<T>::decrypt() const {
+  if (Session::isRecording())
+    throw std::logic_error("Session: decrypt is not supported during recording; decrypt after run() returns");
+  return std::any_cast<T>(Backend::getInstance().decrypt(*this));
+}
 
 template class Fhenon<int>;
 // The backends instantiate double/float handles (Builtin/External plain-op

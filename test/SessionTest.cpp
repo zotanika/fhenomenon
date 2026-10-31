@@ -4,6 +4,9 @@
 
 #include <gtest/gtest.h>
 
+#include <optional>
+#include <unordered_set>
+
 using namespace fhenomenon;
 
 namespace {
@@ -248,4 +251,359 @@ TEST(SessionTest, AliasedWriteBackTargetsShareOneBuffer) {
 
   EXPECT_EQ(a.decrypt(), 7);
   EXPECT_EQ(b.decrypt(), 7);
+}
+
+TEST(SessionTest, CompositeAddThenScalarMultiplyPreservesProfile) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2, b = 3, c = 0;
+  a.belong(profile);
+  b.belong(profile);
+  c.belong(profile);
+  session->run([&] { c = (a + b) * 2; });
+  EXPECT_EQ(c.decrypt(), 10);
+  EXPECT_EQ(c.getProfile(), profile);
+}
+
+TEST(SessionTest, CompositeMultiplyThenScalarAddPreservesProfile) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2, b = 3, c = 0;
+  a.belong(profile);
+  b.belong(profile);
+  c.belong(profile);
+  session->run([&] { c = (a * b) + 3; });
+  EXPECT_EQ(c.decrypt(), 9);
+}
+
+TEST(SessionTest, SharedOwnedUserValuesAndDistinctOutputsSurvive) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  auto a = std::make_shared<Fhenon<int>>(2);
+  auto b = std::make_shared<Fhenon<int>>(0);
+  Fhenon<int> c = 0, d = 0;
+  a->belong(profile);
+  b->belong(profile);
+  c.belong(profile);
+  d.belong(profile);
+  session->run([&] {
+    *b = *a + 3;
+    c = *b;
+    *b = *b + 4;
+    d = *b;
+  });
+  EXPECT_EQ(a->decrypt(), 2);
+  EXPECT_EQ(b->decrypt(), 9);
+  EXPECT_EQ(c.decrypt(), 5);
+  EXPECT_EQ(d.decrypt(), 9);
+}
+
+TEST(SessionTest, ReturnedIntermediateRetainedOutsideRunIsWrittenBack) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2, b = 3, c = 0;
+  a.belong(profile);
+  b.belong(profile);
+  c.belong(profile);
+  std::optional<Fhenon<int>> retained;
+  session->run([&] {
+    retained.emplace(a + b);
+    c = *retained + b;
+  });
+  ASSERT_TRUE(retained.has_value());
+  EXPECT_EQ(retained->decrypt(), 5);
+  EXPECT_EQ(c.decrypt(), 8);
+}
+
+TEST(SessionTest, OlderSessionBecomesCurrentForItsRun) {
+  auto profile = makeProfile();
+  auto older = Session::create(Backend::getInstance());
+  auto newer = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2;
+  a.belong(profile);
+  older->run([&] {
+    EXPECT_TRUE(Session::isRecording());
+    EXPECT_EQ(Session::getSession(), older);
+    a = a + 3;
+  });
+  EXPECT_EQ(a.decrypt(), 5);
+  EXPECT_FALSE(Session::isRecording());
+  newer->run([&] { a = a + 1; });
+  EXPECT_EQ(a.decrypt(), 6);
+}
+
+TEST(SessionTest, NestedRunRejectsBeforeChangingOuterRecording) {
+  auto profile = makeProfile();
+  auto outer = Session::create(Backend::getInstance());
+  auto inner = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2;
+  a.belong(profile);
+  outer->run([&] {
+    a = a + 1;
+    EXPECT_THROW(outer->run([&] { a = a + 100; }), std::logic_error);
+    EXPECT_THROW(inner->run([&] { a = a + 100; }), std::logic_error);
+    EXPECT_TRUE(Session::isRecording());
+    EXPECT_EQ(Session::getSession(), outer);
+    a = a + 3;
+  });
+  EXPECT_EQ(a.decrypt(), 6);
+}
+
+TEST(SessionTest, CreatingSessionDuringRecordingCannotReplaceOuter) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2;
+  a.belong(profile);
+  session->run([&] {
+    a = a + 1;
+    EXPECT_THROW(Session::create(Backend::getInstance()), std::logic_error);
+    EXPECT_EQ(Session::getSession(), session);
+    a = a + 3;
+  });
+  EXPECT_EQ(a.decrypt(), 6);
+}
+
+TEST(SessionTest, DecryptDuringRecordingRejectsAndSessionRecovers) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2;
+  a.belong(profile);
+  EXPECT_THROW(session->run([&] {
+    a = a + 3;
+    (void)a.decrypt();
+  }),
+               std::logic_error);
+  EXPECT_EQ(a.decrypt(), 2);
+  session->run([&] { a = a + 1; });
+  EXPECT_EQ(a.decrypt(), 3);
+}
+
+TEST(SessionTest, SharedOwnedUserCopyHasSameRecordingRulesAsStackValue) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  auto a = std::make_shared<Fhenon<int>>(2);
+  a->belong(profile);
+  EXPECT_THROW(session->run([&] {
+    Fhenon<int> copy = *a;
+    copy = copy + 3;
+  }),
+               std::logic_error);
+  EXPECT_EQ(a->decrypt(), 2);
+}
+
+TEST(SessionTest, UnsupportedFloatingRecordingRejectsBeforeExecution) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2;
+  Fhenon<double> d = 3.5;
+  Fhenon<float> f = 4.5f;
+  a.belong(profile);
+  d.belong(profile);
+  f.belong(profile);
+  auto reject = [&](auto &value) {
+    try {
+      session->run([&] {
+        a = a + 1;
+        value = value + value;
+      });
+      FAIL() << "unsupported recording must throw";
+    } catch (const std::logic_error &e) {
+      EXPECT_NE(std::string(e.what()).find("int"), std::string::npos);
+    }
+  };
+  reject(d);
+  reject(f);
+  EXPECT_EQ(a.decrypt(), 2);
+  EXPECT_DOUBLE_EQ(d.decrypt(), 3.5);
+  EXPECT_FLOAT_EQ(f.decrypt(), 4.5f);
+}
+
+TEST(SessionTest, RepeatedDoublingDoesNotPrintAutomatically) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 1;
+  a.belong(profile);
+  testing::internal::CaptureStdout();
+  session->run([&] {
+    for (int i = 0; i < 12; ++i)
+      a = a + a;
+  });
+  auto output = testing::internal::GetCapturedStdout();
+  EXPECT_TRUE(output.empty()) << "unexpected output bytes: " << output.size();
+  EXPECT_EQ(a.decrypt(), 4096);
+}
+
+namespace {
+// Observe real executor buffer lifetimes without changing the kernel or
+// lowering path. Only plan-created buffers are counted; caller inputs stay owned.
+struct ScopedAllocationProbe {
+  FhnRuntime &runtime;
+  inline static ScopedAllocationProbe *active = nullptr;
+  inline static FhnBufferAllocFn allocate = nullptr;
+  inline static FhnBufferFreeFn release = nullptr;
+  std::unordered_set<FhnBuffer *> live;
+  size_t peak = 0, allocations = 0, frees = 0;
+
+  explicit ScopedAllocationProbe(FhnRuntime &value) : runtime(value) {
+    allocate = runtime.buffer_alloc;
+    release = runtime.buffer_free;
+    active = this;
+    runtime.buffer_alloc = [](FhnBackendCtx *ctx) {
+      auto *buffer = allocate(ctx);
+      if (active && buffer) {
+        active->live.insert(buffer);
+        ++active->allocations;
+        active->peak = std::max(active->peak, active->live.size());
+      }
+      return buffer;
+    };
+    runtime.buffer_free = [](FhnBackendCtx *ctx, FhnBuffer *buffer) {
+      if (active && active->live.erase(buffer))
+        ++active->frees;
+      release(ctx, buffer);
+    };
+  }
+  ~ScopedAllocationProbe() {
+    runtime.buffer_alloc = allocate;
+    runtime.buffer_free = release;
+    active = nullptr;
+  }
+};
+} // namespace
+
+TEST(SessionTest, TwelveInternalScalarAddResultsAreFreedAfterLastUse) {
+  auto profile = makeProfile();
+  auto &backend = Backend::getInstance();
+  auto session = Session::create(backend);
+  Fhenon<int> a = 1;
+  a.belong(profile);
+  ASSERT_NE(backend.fhnRuntime(), nullptr);
+  ScopedAllocationProbe probe(*const_cast<FhnRuntime *>(backend.fhnRuntime()));
+  session->run([&] {
+    for (int i = 0; i < 12; ++i)
+      a = a + 1;
+  });
+  EXPECT_EQ(a.decrypt(), 13);
+  EXPECT_EQ(probe.allocations, 12u);
+  EXPECT_LE(probe.peak, 2u); // previous result + next result, plus the caller-owned input
+  EXPECT_EQ(probe.live.size(), 1u);
+  EXPECT_EQ(probe.frees, 11u);
+}
+
+TEST(SessionTest, RetainedCopiesOfAnExpressionHaveIndependentAssignments) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2, b = 3, c = 0;
+  a.belong(profile);
+  b.belong(profile);
+  c.belong(profile);
+  std::optional<Fhenon<int>> first, second;
+  session->run([&] {
+    first.emplace(a + b);
+    second.emplace(*first);
+    *first = *first + 1;
+    c = *second;
+  });
+  EXPECT_EQ(first->decrypt(), 6);
+  EXPECT_EQ(second->decrypt(), 5);
+  EXPECT_EQ(c.decrypt(), 5);
+}
+
+namespace {
+// Use the real builtin primitives while deliberately selecting the legacy
+// scheduler path, as a backend without an FHN runtime does.
+class LegacyBuiltinBackend final : public Backend {
+  const Backend &delegate_ = Backend::getInstance();
+
+  public:
+  BackendType getBackendType() const override { return delegate_.getBackendType(); }
+  void transform(FhenonBase &value, const Parameter &param) const override { delegate_.transform(value, param); }
+  std::shared_ptr<FhenonBase> add(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.add(a, b);
+  }
+  std::shared_ptr<FhenonBase> multiply(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.multiply(a, b);
+  }
+  std::any decrypt(const FhenonBase &value) const override { return delegate_.decrypt(value); }
+  std::shared_ptr<FhenonBase> bitAnd(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.bitAnd(a, b);
+  }
+  std::shared_ptr<FhenonBase> bitOr(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.bitOr(a, b);
+  }
+  std::shared_ptr<FhenonBase> bitXor(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.bitXor(a, b);
+  }
+  std::shared_ptr<FhenonBase> compareEq(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.compareEq(a, b);
+  }
+  std::shared_ptr<FhenonBase> compareLt(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.compareLt(a, b);
+  }
+  std::shared_ptr<FhenonBase> compareLe(const FhenonBase &a, const FhenonBase &b) const override {
+    return delegate_.compareLe(a, b);
+  }
+};
+} // namespace
+
+TEST(SessionTest, LegacyExecutionWritesBackRetainedExpressionCopies) {
+  auto profile = makeProfile();
+  LegacyBuiltinBackend backend;
+  auto session = Session::create(backend);
+  Fhenon<int> a = 2, b = 3, c = 0;
+  a.belong(profile);
+  b.belong(profile);
+  c.belong(profile);
+  std::optional<Fhenon<int>> retained;
+  session->run([&] {
+    retained.emplace(a + b);
+    c = *retained * 2;
+  });
+  EXPECT_EQ(c.decrypt(), 10);
+  EXPECT_EQ(retained->decrypt(), 5);
+}
+
+TEST(SessionTest, AssignmentFromUnencryptedInputDoesNotUseDestinationCiphertext) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> source = 2, destination = 9;
+  destination.belong(profile);
+  EXPECT_THROW(session->run([&] { destination = source; }), std::runtime_error);
+  EXPECT_FALSE(source.isEncrypted_);
+  EXPECT_EQ(source.decrypt(), 2);
+  EXPECT_EQ(destination.decrypt(), 9);
+}
+
+TEST(SessionTest, SharedCiphertextInputsRemainUsableAcrossRuns) {
+  auto profile = makeProfile();
+  auto session = Session::create(Backend::getInstance());
+  Fhenon<int> a = 2, b = 0, c = 0;
+  a.belong(profile);
+  b.belong(profile);
+  c.belong(profile);
+  session->run([&] { b = a; });
+  ASSERT_NO_THROW(session->run([&] { c = a + b; }));
+  EXPECT_EQ(c.decrypt(), 4);
+  ASSERT_NO_THROW(session->run([&] {
+    a = a + 1;
+    c = a + b;
+  }));
+  EXPECT_EQ(a.decrypt(), 3);
+  EXPECT_EQ(b.decrypt(), 2);
+  EXPECT_EQ(c.decrypt(), 5);
+  Fhenon<int> copy = b;
+  ASSERT_NO_THROW(session->run([&] { c = b + copy; }));
+  EXPECT_EQ(c.decrypt(), 4);
+}
+
+TEST(SessionTest, LegacyAssignmentRejectsUnencryptedInputBeforeChangingDestination) {
+  auto profile = makeProfile();
+  LegacyBuiltinBackend backend;
+  auto session = Session::create(backend);
+  Fhenon<int> source = 2, destination = 9;
+  destination.belong(profile);
+  EXPECT_THROW(session->run([&] { destination = source; }), std::runtime_error);
+  EXPECT_EQ(destination.getValue(), 9);
+  EXPECT_EQ(destination.decrypt(), 9);
+  EXPECT_FALSE(source.isEncrypted_);
 }

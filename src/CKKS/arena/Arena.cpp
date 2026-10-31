@@ -8,6 +8,51 @@ Arena::Arena(std::size_t capacity_bytes) : capacity_(roundUp(capacity_bytes)) {
   }
 }
 
+Arena::~Arena() { invalidateScopes(); }
+
+Arena::Arena(Arena &&other) noexcept
+  : slab_(std::move(other.slab_)), capacity_(other.capacity_), offset_(other.offset_),
+    high_water_(other.high_water_) {
+  other.invalidateScopes();
+  other.capacity_ = 0;
+  other.offset_ = 0;
+  other.high_water_ = 0;
+}
+
+Arena &Arena::operator=(Arena &&other) noexcept {
+  if (this != &other) {
+    invalidateScopes();
+    other.invalidateScopes();
+    slab_ = std::move(other.slab_);
+    capacity_ = other.capacity_;
+    offset_ = other.offset_;
+    high_water_ = other.high_water_;
+    other.capacity_ = 0;
+    other.offset_ = 0;
+    other.high_water_ = 0;
+  }
+  return *this;
+}
+
+Arena::Scope::Scope(Arena &arena) : arena_(&arena), saved_(arena.offset_), previous_(arena.scope_) {
+  arena.scope_ = this;
+}
+
+Arena::Scope::~Scope() {
+  if (arena_ != nullptr) {
+    arena_->offset_ = saved_;
+    arena_->invalidateScopes(previous_);
+  }
+}
+
+void Arena::invalidateScopes(Scope *stop) noexcept {
+  while (scope_ != stop) {
+    Scope *scope = scope_;
+    scope_ = scope->previous_;
+    scope->arena_ = nullptr;
+  }
+}
+
 void *Arena::allocateBytes(std::size_t bytes) {
   if (bytes == 0) {
     return nullptr;
@@ -26,7 +71,10 @@ void *Arena::allocateBytes(std::size_t bytes) {
   return storage;
 }
 
-void Arena::reset() { offset_ = 0; }
+void Arena::reset() {
+  invalidateScopes();
+  offset_ = 0;
+}
 
 std::size_t Arena::roundUp(std::size_t bytes) {
   const std::size_t remainder = bytes % kAlignment;

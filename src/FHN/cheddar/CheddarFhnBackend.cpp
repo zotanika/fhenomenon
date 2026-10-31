@@ -20,10 +20,12 @@
 
 #include <algorithm>
 #include <complex>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <limits>
 #include <set>
 #include <vector>
 
@@ -556,6 +558,63 @@ int fhn_decrypt_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *value_out) 
     return -1;
   *value_out = msg[0].real();
   return 0;
+}
+
+// Packed real I/O: Cheddar's encoder pads to a power of two. Reject other
+// lengths explicitly so successful calls preserve the exact slot count and
+// rotation period requested by this portable API.
+int fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double *values, uint32_t count) {
+  if (!ctx || !out || !values || count == 0 || (count & (count - 1)) != 0 ||
+      count > static_cast<uint64_t>(ctx->param->degree_) / 2)
+    return -1;
+  const int level = ctx->default_encryption_level;
+  const double scale = ctx->param->GetScale(level);
+  if (!std::isfinite(scale) || scale <= 0)
+    return -1;
+  // Bound FFT intermediates as well as scaled coefficients so finite but
+  // enormous inputs cannot become infinity inside Cheddar's BigInt encoder.
+  const double safe_magnitude = std::numeric_limits<double>::max() / static_cast<double>(count) /
+                                std::max(1.0, scale) / 2.0;
+  for (uint32_t i = 0; i < count; ++i)
+    if (!std::isfinite(values[i]) || std::abs(values[i]) > safe_magnitude)
+      return -1;
+  try {
+    std::vector<cheddar::Complex> message;
+    message.reserve(count);
+    for (uint32_t i = 0; i < count; ++i)
+      message.emplace_back(values[i], 0.0);
+    cheddar::Plaintext<word> plaintext;
+    cheddar::Ciphertext<word> encrypted;
+    ctx->context->encoder_.Encode(plaintext, level, scale, message);
+    ctx->ui->Encrypt(encrypted, plaintext);
+    out->ct = std::move(encrypted);
+    out->kind = CheddarBufKind::Ciphertext;
+    return 0;
+  } catch (const std::exception &) {
+    return -1;
+  }
+}
+
+int fhn_decrypt_vec_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *values, uint32_t count) {
+  if (!ctx || !isCiphertext(in) || !values || count == 0 ||
+      static_cast<uint64_t>(in->ct.GetNumSlots()) != count)
+    return -1;
+  try {
+    cheddar::Plaintext<word> plaintext;
+    std::vector<cheddar::Complex> message;
+    ctx->ui->Decrypt(plaintext, in->ct);
+    ctx->context->encoder_.Decode(message, plaintext);
+    if (message.size() != count)
+      return -1;
+    for (const auto &value : message)
+      if (!std::isfinite(value.real()) || !std::isfinite(value.imag()))
+        return -1;
+    for (uint32_t i = 0; i < count; ++i)
+      values[i] = message[i].real();
+    return 0;
+  } catch (const std::exception &) {
+    return -1;
+  }
 }
 
 // --- Buffer helpers (Cheddar-specific, for tests/examples) -----------------

@@ -26,5 +26,4 @@ cpmaddpackage(
   VERSION
   3.11.3
   OPTIONS
-  EXCLUDE_FROM_ALL
-  YES)
+  "JSON_Install ON")

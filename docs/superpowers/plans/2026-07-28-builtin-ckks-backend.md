@@ -1,5 +1,36 @@
 # Built-in RNS-CKKS Backend — Plan and Handoff
 
+
+## Current handoff — 2026-10-28
+
+The working checkout now implements genuine leveled CPU CKKS through L6:
+fixed L2 storage, exact L1 CRT, immutable L4 tables and hybrid evaluation,
+L5 canonical packing/public-key crypto, and a `ckks_fhn` plugin with separate
+trusted client ownership. The default N8192 profile supports two multiplication
+levels. Packed 8×8 native/fallback execution and independent boundary reviews
+are complete; see [execution plan](2026-10-28-native-ckks-execution.md),
+[user guide](../../native-ckks.md), and [validation record](../../native-ckks-validation-2026-10-28.md).
+These changes are local and uncommitted; do not infer a merge from this handoff.
+
+ToyFHE remains the reference. The current C++ `Fhenon`/`Session` default is
+still ToyFHE; the genuine path is the public FHN trusted-client/compute ABI
+and corpus loader. Bootstrap and GPU remain outside this CPU milestone.
+Table setup currently prepares all configured levels explicitly; operation
+scratch sizes are conservative bounds and buffers have fixed capacity. The
+movement model reports that reserve, not a falsely shrinking allocation or
+an exact total-process footprint.
+
+Next work should build on this executable path: connect the high-level
+frontend to explicit client ownership and level/scale handling; define secure
+ciphertext transport; refine program-wide key/table/scratch accounting and
+measure against an established backend before claiming performance.
+
+## Historical handoff — through 2026-08-24
+
+The material below preserves the original decisions and investigation history.
+Its statements about unimplemented upper layers or live chats are historical;
+the current implementation status is the October handoff above.
+
 Date: 2026-07-28, last revised 2026-08-24
 Status: **L0–L3 are implemented and merged to `main`.** `Params`, the L1
 tables and transforms, the L2 layout value types, and `Arena` are in, with

@@ -2,10 +2,13 @@
 
 #include <iostream>
 
-#define FHENOMENON_DEBUG
-
-#ifdef FHENOMENON_DEBUG
-#define LOG_MESSAGE(msg) std::cout << msg << std::endl;
+#if defined(FHENOMENON_DEBUG) && FHENOMENON_DEBUG
+#define LOG_MESSAGE(msg) \
+  do { \
+    std::cout << msg << std::endl; \
+  } while (false)
 #else
-#define LOG_MESSAGE(msg) // do nothing
+#define LOG_MESSAGE(msg) \
+  do { \
+  } while (false)
 #endif

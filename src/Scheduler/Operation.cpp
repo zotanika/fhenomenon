@@ -15,6 +15,8 @@ template <typename T> void Operation<T>::execute() {
   const Backend &backend = *backend_delegate_;
 
   if (type_ == OperationType::Assignment) {
+    if (!operand2_->isEncrypted_)
+      throw std::runtime_error("Session: operand is not encrypted — call belong() before using it in a session");
     auto op1_ref = Session::getSession()->getEntity(*operand1_);
     LOG_MESSAGE("OperationType::Assignment start (" << operand1_->getValue() << ", " << operand2_->getValue() << ")");
 
@@ -110,6 +112,8 @@ template <typename T> void Operation<T>::execute() {
 }
 
 template class Operation<int>;
+template class Operation<double>;
+template class Operation<float>;
 
 } // namespace scheduler
 } // namespace fhenomenon

@@ -21,10 +21,10 @@ class ASTPass {
 class PrintASTPass final : public ASTPass {
   public:
   void apply(Planner<int> &plan) const override {
-    LOG_MESSAGE("Tree Structure of Operations");
+    std::unordered_set<const ASTNode *> visited;
+    std::cout << "Operation DAG" << std::endl;
     for (const auto &root : plan.getRoots()) {
-      LOG_MESSAGE("Root");
-      root->print(0);
+      root->printWithVisited(0, visited);
     }
   }
 

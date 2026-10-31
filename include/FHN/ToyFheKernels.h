@@ -28,6 +28,15 @@ int toyfhe_fhn_decrypt_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *valu
 int toyfhe_fhn_encrypt_vec_i64(FhnBackendCtx *ctx, FhnBuffer *out, const int64_t *values, uint32_t n);
 int toyfhe_fhn_decrypt_vec_i64(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *out, uint32_t n);
 
+// Packed real values use the Engine's fixed-point encoding (default step
+// 1/65536, centered range approximately +/-32768). Nonfinite inputs and
+// rounded mantissas outside the strict centered range are rejected before
+// changing out. Arithmetic retains the toy scheme's modular range limits.
+// Counts are exact, positive, and may be any length supported by allocation.
+int toyfhe_fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double *values, uint32_t count);
+int toyfhe_fhn_decrypt_vec_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *values, uint32_t count);
+
+
 // Convenience readers for tests/examples (decrypt ciphertext buffers in place)
 int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf);
 double toyfhe_fhn_buffer_read_double(FhnBackendCtx *ctx, FhnBuffer *buf);

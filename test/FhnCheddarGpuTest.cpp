@@ -14,29 +14,25 @@
 #include "FHN/FhnDefaultExecutor.h"
 #include "FHN/fhn_program.h"
 
-#include "core/Container.h"
-#include "core/Type.h"
+#include <cuda_runtime_api.h>
 
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
 #include <chrono>
 #include <cmath>
-#include <complex>
 #include <dlfcn.h>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
 using namespace fhenomenon;
-using word = uint32_t;
 
 // Data-plane / buffer helper function pointers (resolved once from the .so)
-using BufAllocFn = FhnBuffer *(*)(FhnBackendCtx *);
-using BufFreeFn = void (*)(FhnBackendCtx *, FhnBuffer *);
-using BufEncryptMsgFn = int (*)(FhnBackendCtx *, FhnBuffer *);
-using BufReadComplexFn = void (*)(FhnBackendCtx *, FhnBuffer *, double *, double *, int);
+using BufAllocFn = FhnBufferAllocFn;
+using BufFreeFn = FhnBufferFreeFn;
 using EncryptF64Fn = int (*)(FhnBackendCtx *, FhnBuffer *, double);
 using DecryptF64Fn = int (*)(FhnBackendCtx *, const FhnBuffer *, double *);
 
@@ -51,8 +47,8 @@ class CheddarGpuTest : public ::testing::Test {
   static void *dl_;
   static BufAllocFn buf_alloc_;
   static BufFreeFn buf_free_;
-  static BufEncryptMsgFn buf_encrypt_;
-  static BufReadComplexFn buf_read_;
+  static FhnEncryptVectorDoubleFn encrypt_vector_;
+  static FhnDecryptVectorDoubleFn decrypt_vector_;
   static EncryptF64Fn encrypt_f64_;
   static DecryptF64Fn decrypt_f64_;
 
@@ -72,19 +68,28 @@ class CheddarGpuTest : public ::testing::Test {
     config["rotation_keys"] = {1, 3};
     std::string config_str = config.dump();
 
-    auto t0 = std::chrono::high_resolution_clock::now();
+    ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+    auto t0 = std::chrono::steady_clock::now();
     backend_ = std::make_unique<ExternalBackend>(lib, config_str.c_str());
-    auto t1 = std::chrono::high_resolution_clock::now();
+    ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+    auto t1 = std::chrono::steady_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-    std::cout << "\n[  SETUP  ] Context + keys: " << ms << " ms (one-time cost)\n" << std::endl;
+    std::cout << "\n[  SETUP  ] Completed context + keys pipeline: " << ms << " ms (one-time cost)\n" << std::endl;
 
     dl_ = dlopen(lib.c_str(), RTLD_LAZY | RTLD_NOLOAD);
+    ASSERT_NE(dl_, nullptr);
     buf_alloc_ = reinterpret_cast<BufAllocFn>(dlsym(dl_, "fhn_buffer_alloc"));
     buf_free_ = reinterpret_cast<BufFreeFn>(dlsym(dl_, "fhn_buffer_free"));
-    buf_encrypt_ = reinterpret_cast<BufEncryptMsgFn>(dlsym(dl_, "cheddar_fhn_buffer_encrypt_message"));
-    buf_read_ = reinterpret_cast<BufReadComplexFn>(dlsym(dl_, "cheddar_fhn_buffer_read_complex"));
+    encrypt_vector_ = reinterpret_cast<FhnEncryptVectorDoubleFn>(dlsym(dl_, "fhn_encrypt_vec_f64"));
+    decrypt_vector_ = reinterpret_cast<FhnDecryptVectorDoubleFn>(dlsym(dl_, "fhn_decrypt_vec_f64"));
     encrypt_f64_ = reinterpret_cast<EncryptF64Fn>(dlsym(dl_, "fhn_encrypt_f64"));
     decrypt_f64_ = reinterpret_cast<DecryptF64Fn>(dlsym(dl_, "fhn_decrypt_f64"));
+    ASSERT_NE(buf_alloc_, nullptr);
+    ASSERT_NE(buf_free_, nullptr);
+    ASSERT_NE(encrypt_vector_, nullptr);
+    ASSERT_NE(decrypt_vector_, nullptr);
+    ASSERT_NE(encrypt_f64_, nullptr);
+    ASSERT_NE(decrypt_f64_, nullptr);
   }
 
   static void TearDownTestSuite() {
@@ -98,24 +103,9 @@ class CheddarGpuTest : public ::testing::Test {
   FhnBackendCtx *ctx() { return backend_->getFhnCtx(); }
   FhnDefaultExecutor *exec() { return backend_->getFhnExecutor(); }
 
-  // Helper: CheddarBufKind::Message = 3
-  struct CheddarFhnBuffer {
-    int kind;
-    cheddar::Ciphertext<word> ct;
-    cheddar::Plaintext<word> pt;
-    std::vector<cheddar::Complex> msg;
-  };
-
-  void setMessage(FhnBuffer *buf, const std::vector<cheddar::Complex> &msg) {
-    auto *b = reinterpret_cast<CheddarFhnBuffer *>(buf);
-    b->msg = msg;
-    b->kind = 3; // CheddarBufKind::Message
-  }
-
-  // Host-side data plane: stage a message, then encode + encrypt it in place.
-  void encryptMessage(FhnBuffer *buf, const std::vector<cheddar::Complex> &msg) {
-    setMessage(buf, msg);
-    ASSERT_EQ(buf_encrypt_(ctx(), buf), 0);
+  // Packed inputs cross the public API; opaque layouts remain in the backend.
+  int encryptMessage(FhnBuffer *buf, const std::vector<double> &values) {
+    return encrypt_vector_(ctx(), buf, values.data(), static_cast<uint32_t>(values.size()));
   }
 
   // RAII buffer set
@@ -142,10 +132,9 @@ class CheddarGpuTest : public ::testing::Test {
 
   Buffers allocBuffers(int n) { return Buffers(n, ctx(), buf_alloc_, buf_free_); }
 
-  void readResult(FhnBuffer *buf, std::vector<double> &real, std::vector<double> &imag, int slots) {
-    real.resize(slots);
-    imag.resize(slots);
-    buf_read_(ctx(), buf, real.data(), imag.data(), slots);
+  int readResult(FhnBuffer *buf, std::vector<double> &values, uint32_t slots) {
+    values.resize(slots);
+    return decrypt_vector_(ctx(), buf, values.data(), slots);
   }
 };
 
@@ -154,8 +143,8 @@ std::unique_ptr<ExternalBackend> CheddarGpuTest::backend_;
 void *CheddarGpuTest::dl_ = nullptr;
 BufAllocFn CheddarGpuTest::buf_alloc_ = nullptr;
 BufFreeFn CheddarGpuTest::buf_free_ = nullptr;
-BufEncryptMsgFn CheddarGpuTest::buf_encrypt_ = nullptr;
-BufReadComplexFn CheddarGpuTest::buf_read_ = nullptr;
+FhnEncryptVectorDoubleFn CheddarGpuTest::encrypt_vector_ = nullptr;
+FhnDecryptVectorDoubleFn CheddarGpuTest::decrypt_vector_ = nullptr;
 EncryptF64Fn CheddarGpuTest::encrypt_f64_ = nullptr;
 DecryptF64Fn CheddarGpuTest::decrypt_f64_ = nullptr;
 
@@ -215,8 +204,8 @@ TEST_F(CheddarGpuTest, AddVectors) {
   const int N = 4;
   auto bufs = allocBuffers(4);
 
-  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
-  encryptMessage(bufs[2], {{10, 0}, {20, 0}, {30, 0}, {40, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {1, 2, 3, 4}), 0);
+  ASSERT_EQ(encryptMessage(bufs[2], {10, 20, 30, 40}), 0);
 
   auto *prog = fhn_program_alloc(1, 2, 1);
   prog->input_ids[0] = 1;
@@ -224,15 +213,17 @@ TEST_F(CheddarGpuTest, AddVectors) {
   prog->output_ids[0] = 3;
   prog->instructions[0] = {FHN_ADD_CC, 3, {1, 2, 0, 0}, {}, {}};
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
-  auto t1 = std::chrono::high_resolution_clock::now();
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t0 = std::chrono::steady_clock::now();
+  ASSERT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t1 = std::chrono::steady_clock::now();
 
   auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-  std::cout << "  ADD_CC pipeline: " << us << " us" << std::endl;
+  std::cout << "  ADD_CC completed pipeline: " << us << " us" << std::endl;
 
-  std::vector<double> real, imag;
-  readResult(bufs[3], real, imag, N);
+  std::vector<double> real;
+  ASSERT_EQ(readResult(bufs[3], real, N), 0);
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], (i + 1) + (i + 1) * 10, 1e-3) << "slot " << i;
 
@@ -244,8 +235,8 @@ TEST_F(CheddarGpuTest, HMultGpu) {
   const int N = 4;
   auto bufs = allocBuffers(4);
 
-  encryptMessage(bufs[1], {{2, 0}, {3, 0}, {4, 0}, {5, 0}});
-  encryptMessage(bufs[2], {{10, 0}, {10, 0}, {10, 0}, {10, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {2, 3, 4, 5}), 0);
+  ASSERT_EQ(encryptMessage(bufs[2], {10, 10, 10, 10}), 0);
 
   auto *prog = fhn_program_alloc(1, 2, 1);
   prog->input_ids[0] = 1;
@@ -253,15 +244,17 @@ TEST_F(CheddarGpuTest, HMultGpu) {
   prog->output_ids[0] = 3;
   prog->instructions[0] = {FHN_HMULT, 3, {1, 2, 0, 0}, {}, {}};
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
-  auto t1 = std::chrono::high_resolution_clock::now();
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t0 = std::chrono::steady_clock::now();
+  ASSERT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t1 = std::chrono::steady_clock::now();
 
   auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-  std::cout << "  HMULT pipeline: " << us << " us" << std::endl;
+  std::cout << "  HMULT completed pipeline: " << us << " us" << std::endl;
 
-  std::vector<double> real, imag;
-  readResult(bufs[3], real, imag, N);
+  std::vector<double> real;
+  ASSERT_EQ(readResult(bufs[3], real, N), 0);
   double expected[] = {20, 30, 40, 50};
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], expected[i], 0.1) << "slot " << i;
@@ -285,7 +278,7 @@ TEST_F(CheddarGpuTest, AddScalar) {
   const int N = 4;
   auto bufs = allocBuffers(3);
 
-  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {1, 2, 3, 4}), 0);
 
   // add_cs(scalar=100.0), inputs/outputs handled by the host data plane
   auto *prog = fhn_program_alloc(1, 1, 1);
@@ -293,15 +286,17 @@ TEST_F(CheddarGpuTest, AddScalar) {
   prog->output_ids[0] = 2;
   prog->instructions[0] = {FHN_ADD_CS, 2, {1, 0, 0, 0}, {}, {100.0, 0}};
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
-  auto t1 = std::chrono::high_resolution_clock::now();
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t0 = std::chrono::steady_clock::now();
+  ASSERT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t1 = std::chrono::steady_clock::now();
 
   auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-  std::cout << "  ADD_CS pipeline: " << us << " us" << std::endl;
+  std::cout << "  ADD_CS completed pipeline: " << us << " us" << std::endl;
 
-  std::vector<double> real, imag;
-  readResult(bufs[2], real, imag, N);
+  std::vector<double> real;
+  ASSERT_EQ(readResult(bufs[2], real, N), 0);
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], (i + 1) + 100.0, 1e-2) << "slot " << i;
 
@@ -313,22 +308,24 @@ TEST_F(CheddarGpuTest, MultScalar) {
   const int N = 4;
   auto bufs = allocBuffers(3);
 
-  encryptMessage(bufs[1], {{10, 0}, {20, 0}, {30, 0}, {40, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {10, 20, 30, 40}), 0);
 
   auto *prog = fhn_program_alloc(1, 1, 1);
   prog->input_ids[0] = 1;
   prog->output_ids[0] = 2;
   prog->instructions[0] = {FHN_MULT_CS, 2, {1, 0, 0, 0}, {}, {0.5, 0}};
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
-  auto t1 = std::chrono::high_resolution_clock::now();
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t0 = std::chrono::steady_clock::now();
+  ASSERT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t1 = std::chrono::steady_clock::now();
 
   auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-  std::cout << "  MULT_CS pipeline: " << us << " us" << std::endl;
+  std::cout << "  MULT_CS completed pipeline: " << us << " us" << std::endl;
 
-  std::vector<double> real, imag;
-  readResult(bufs[2], real, imag, N);
+  std::vector<double> real;
+  ASSERT_EQ(readResult(bufs[2], real, N), 0);
   double expected[] = {5, 10, 15, 20};
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], expected[i], 0.1) << "slot " << i;
@@ -341,7 +338,7 @@ TEST_F(CheddarGpuTest, ChainedScalarOps) {
   const int N = 4;
   auto bufs = allocBuffers(4);
 
-  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {1, 2, 3, 4}), 0);
 
   // add_cs(10) -> mult_cs(2)
   auto *prog = fhn_program_alloc(2, 1, 1);
@@ -350,15 +347,17 @@ TEST_F(CheddarGpuTest, ChainedScalarOps) {
   prog->instructions[0] = {FHN_ADD_CS, 2, {1, 0, 0, 0}, {}, {10.0, 0}};
   prog->instructions[1] = {FHN_MULT_CS, 3, {2, 0, 0, 0}, {}, {2.0, 0}};
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
-  auto t1 = std::chrono::high_resolution_clock::now();
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t0 = std::chrono::steady_clock::now();
+  ASSERT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t1 = std::chrono::steady_clock::now();
 
   auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-  std::cout << "  Chained ADD_CS+MULT_CS: " << us << " us" << std::endl;
+  std::cout << "  Chained ADD_CS+MULT_CS completed pipeline: " << us << " us" << std::endl;
 
-  std::vector<double> real, imag;
-  readResult(bufs[3], real, imag, N);
+  std::vector<double> real;
+  ASSERT_EQ(readResult(bufs[3], real, N), 0);
   double expected[] = {22, 24, 26, 28};
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], expected[i], 0.5) << "slot " << i;
@@ -378,7 +377,7 @@ TEST_F(CheddarGpuTest, RotateBothDirections) {
   const int N = 4;
   auto bufs = allocBuffers(4);
 
-  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {1, 2, 3, 4}), 0);
 
   auto *prog = fhn_program_alloc(2, 1, 2);
   prog->input_ids[0] = 1;
@@ -387,20 +386,22 @@ TEST_F(CheddarGpuTest, RotateBothDirections) {
   prog->instructions[0] = {FHN_ROTATE, 2, {1, 0, 0, 0}, {1, 0, 0, 0}, {}};
   prog->instructions[1] = {FHN_ROTATE, 3, {1, 0, 0, 0}, {-1, 0, 0, 0}, {}};
 
-  auto t0 = std::chrono::high_resolution_clock::now();
-  EXPECT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
-  auto t1 = std::chrono::high_resolution_clock::now();
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t0 = std::chrono::steady_clock::now();
+  ASSERT_EQ(exec()->execute(ctx(), prog, bufs.data()), 0);
+  ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);
+  auto t1 = std::chrono::steady_clock::now();
 
   auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-  std::cout << "  ROTATE(+1)+ROTATE(-1) pipeline: " << us << " us" << std::endl;
+  std::cout << "  ROTATE(+1)+ROTATE(-1) completed pipeline: " << us << " us" << std::endl;
 
-  std::vector<double> real, imag;
-  readResult(bufs[2], real, imag, N);
+  std::vector<double> real;
+  ASSERT_EQ(readResult(bufs[2], real, N), 0);
   double expected_left[] = {2, 3, 4, 1};
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], expected_left[i], 1e-2) << "slot " << i;
 
-  readResult(bufs[3], real, imag, N);
+  ASSERT_EQ(readResult(bufs[3], real, N), 0);
   double expected_right[] = {4, 1, 2, 3};
   for (int i = 0; i < N; i++)
     EXPECT_NEAR(real[i], expected_right[i], 1e-2) << "slot " << i;
@@ -413,7 +414,7 @@ TEST_F(CheddarGpuTest, RotateUnpreparedDistanceFails) {
   // with a non-zero rc instead of reaching cheddar's AssertTrue/std::exit.
   auto bufs = allocBuffers(3);
 
-  encryptMessage(bufs[1], {{1, 0}, {2, 0}, {3, 0}, {4, 0}});
+  ASSERT_EQ(encryptMessage(bufs[1], {1, 2, 3, 4}), 0);
 
   auto *prog = fhn_program_alloc(1, 1, 1);
   prog->input_ids[0] = 1;
@@ -422,4 +423,34 @@ TEST_F(CheddarGpuTest, RotateUnpreparedDistanceFails) {
   EXPECT_NE(exec()->execute(ctx(), prog, bufs.data()), 0);
 
   fhn_program_free(prog);
+}
+
+
+TEST_F(CheddarGpuTest, PackedDoubleRoundTripValidatesExactCountAndFiniteValues) {
+  auto bufs = allocBuffers(2);
+  const std::vector<double> input = {1.25, -2.5, 0.125, 3.75};
+  ASSERT_EQ(encrypt_vector_(ctx(), bufs[0], input.data(), 4), 0);
+  std::vector<double> actual(4);
+  ASSERT_EQ(decrypt_vector_(ctx(), bufs[0], actual.data(), 4), 0);
+  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], input[i], 1e-3);
+  EXPECT_NE(encrypt_vector_(nullptr, bufs[0], input.data(), 4), 0);
+  EXPECT_NE(encrypt_vector_(ctx(), nullptr, input.data(), 4), 0);
+  EXPECT_NE(encrypt_vector_(ctx(), bufs[0], nullptr, 4), 0);
+  for (uint32_t count : {0u, 3u, std::numeric_limits<uint32_t>::max()})
+    EXPECT_NE(encrypt_vector_(ctx(), bufs[0], input.data(), count), 0);
+  for (double bad : {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity(),
+                     -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::max()}) {
+    const double invalid[] = {1, bad, 2, 3};
+    EXPECT_NE(encrypt_vector_(ctx(), bufs[0], invalid, 4), 0);
+  }
+  ASSERT_EQ(decrypt_vector_(ctx(), bufs[0], actual.data(), 4), 0);
+  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], input[i], 1e-3);
+  actual.assign(4, 123.0);
+  EXPECT_NE(decrypt_vector_(nullptr, bufs[0], actual.data(), 4), 0);
+  EXPECT_NE(decrypt_vector_(ctx(), nullptr, actual.data(), 4), 0);
+  EXPECT_NE(decrypt_vector_(ctx(), bufs[0], nullptr, 4), 0);
+  EXPECT_NE(decrypt_vector_(ctx(), bufs[1], actual.data(), 4), 0);
+  for (uint32_t count : {0u, 3u, 5u, std::numeric_limits<uint32_t>::max()})
+    EXPECT_NE(decrypt_vector_(ctx(), bufs[0], actual.data(), count), 0);
+  EXPECT_EQ(actual, (std::vector<double>{123.0, 123.0, 123.0, 123.0}));
 }

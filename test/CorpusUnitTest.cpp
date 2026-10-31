@@ -4,6 +4,7 @@
 #include "corpus_oracle.h"
 #include "corpus_shapes.h"
 
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <set>
 
@@ -73,13 +74,34 @@ TEST(CorpusOracle, BooleanAndComparisonOps) {
   EXPECT_EQ(vals->at(an), (Slots{1, 0, 0}));
 }
 
-TEST(CorpusOracle, FusedOpcodeIsRejected) {
+TEST(CorpusOracle, FusedMultiplyMatchesLiteralProduct) {
   ShapeBuilder b;
   const uint32_t x = b.input({1});
   const uint32_t y = b.input({2});
-  const uint32_t h = b.cc(FHN_HMULT, x, y); // corpus generators never emit fused ops
+  const uint32_t h = b.cc(FHN_HMULT, x, y);
   Shape shape = b.finish("t", "test", 1, 1, {h});
-  EXPECT_FALSE(evaluate(*shape.program, shape.inputs).has_value());
+  auto values = evaluate(*shape.program, shape.inputs);
+  ASSERT_TRUE(values);
+  EXPECT_EQ(values->at(h), (Slots{2}));
+}
+
+TEST(CorpusShapes, PackedFusedMatvecMatchesIndependentRowDotProducts) {
+  auto shapes = allShapes();
+  auto it = std::find_if(shapes.begin(), shapes.end(), [](const Shape &s) { return s.name == "matvec-fused"; });
+  ASSERT_NE(it, shapes.end());
+  ASSERT_EQ(it->slot_count, 8u);
+  ASSERT_EQ(it->inputs.size(), 9u);
+  ASSERT_EQ(it->output_ids.size(), 8u);
+  auto values = evaluate(*it->program, it->inputs);
+  ASSERT_TRUE(values);
+  const auto &x = it->inputs.at(1);
+  for (uint32_t row = 0; row < 8; ++row) {
+    const auto &weights = it->inputs.at(row + 2);
+    int64_t dot = 0;
+    for (uint32_t col = 0; col < 8; ++col)
+      dot += weights[col] * x[col];
+    EXPECT_EQ(values->at(it->output_ids[row]), Slots(8, dot));
+  }
 }
 
 TEST(CorpusOracle, SlotSizeMismatchIsRejected) {
@@ -129,6 +151,55 @@ TEST(CorpusBackend, LoadsToyFheAndResolvesDataPlane) {
   backend->bufferFree()(backend->ctx(), buf);
 }
 
+TEST(CorpusBackend, PackedDataPlaneSurvivesMoves) {
+  std::string error;
+  auto loaded = CorpusBackend::load(getTestLibPath(), "toyfhe_", &error);
+  ASSERT_TRUE(loaded) << error;
+  CorpusBackend moved(std::move(*loaded));
+  auto replacement = CorpusBackend::load(getTestLibPath(), "toyfhe_", &error);
+  ASSERT_TRUE(replacement);
+  *replacement = std::move(moved);
+  ASSERT_NE(replacement->encryptVector(), nullptr);
+  ASSERT_NE(replacement->decryptVector(), nullptr);
+  auto *buffer = replacement->bufferAlloc()(replacement->ctx());
+  ASSERT_NE(buffer, nullptr);
+  const double input[] = {1.25, -2.5, 0, 3.75};
+  double output[4]{};
+  EXPECT_EQ(replacement->encryptVector()(replacement->ctx(), buffer, input, 4), 0);
+  EXPECT_EQ(replacement->decryptVector()(replacement->ctx(), buffer, output, 4), 0);
+  for (unsigned i = 0; i < 4; ++i)
+    EXPECT_NEAR(output[i], input[i], 1e-6);
+  replacement->bufferFree()(replacement->ctx(), buffer);
+}
+
+TEST(CorpusBackend, ForwardsConfigurationAndKeepsScalarOnlyCompatibility) {
+  std::string error;
+  auto backend = CorpusBackend::load(getPartialTestLibPath(), "ptl_", &error, "{\"fixture\":true}");
+  ASSERT_TRUE(backend) << error;
+  EXPECT_NE(backend->encryptI64(), nullptr);
+  EXPECT_EQ(backend->encryptVector(), nullptr);
+  EXPECT_EQ(backend->decryptVector(), nullptr);
+  EXPECT_FALSE(CorpusBackend::load(getPartialTestLibPath(), "ptl_", &error, "invalid"));
+}
+
+TEST(CorpusBackend, LoadsPackedOnlyBackendWithoutIntegerExports) {
+  std::string error;
+  auto backend = CorpusBackend::load(getPartialTestLibPath(), "vonly_", &error);
+  ASSERT_TRUE(backend) << error;
+  EXPECT_EQ(backend->encryptI64(), nullptr);
+  EXPECT_EQ(backend->decryptI64(), nullptr);
+  ASSERT_NE(backend->encryptVector(), nullptr);
+  ASSERT_NE(backend->decryptVector(), nullptr);
+  auto *buffer = backend->bufferAlloc()(backend->ctx());
+  const double input[] = {0.125, -4.5};
+  double output[2]{};
+  EXPECT_EQ(backend->encryptVector()(backend->ctx(), buffer, input, 2), 0);
+  EXPECT_EQ(backend->decryptVector()(backend->ctx(), buffer, output, 2), 0);
+  EXPECT_EQ(output[0], input[0]);
+  EXPECT_EQ(output[1], input[1]);
+  backend->bufferFree()(backend->ctx(), buffer);
+}
+
 TEST(CorpusBackend, MissingLibraryReportsError) {
   std::string error;
   auto backend = CorpusBackend::load("/nonexistent/libnope.so", "toyfhe_", &error);
@@ -165,7 +236,7 @@ TEST(CorpusBackend, ToyFheLevelModelResolves) {
 // high-water budget (per-spec sanity).
 TEST(CorpusShapes, AllShapesSatisfyInvariants) {
   auto shapes = allShapes();
-  ASSERT_EQ(shapes.size(), 12u);
+  ASSERT_EQ(shapes.size(), 13u);
 
   std::set<std::string> names;
   for (const auto &shape : shapes) {
@@ -210,4 +281,29 @@ TEST(CorpusShapes, ExecutableSubsetIsDepthSafe) {
                   op == FHN_NEGATE);
     }
   }
+}
+
+TEST(CorpusBackend, IsolatedNativeClientSurvivesMovesAndPreparesEvaluationKeys) {
+  std::string error;
+  auto loaded = CorpusBackend::load(CKKS_TEST_LIBRARY, "ckks_", &error);
+  ASSERT_TRUE(loaded) << error;
+  EXPECT_TRUE(loaded->hasVector());
+  EXPECT_EQ(loaded->encryptVector(), nullptr);
+  EXPECT_EQ(loaded->encryptI64(), nullptr);
+  EXPECT_EQ(loaded->encryptF64(), nullptr);
+  CorpusBackend moved(std::move(*loaded));
+  auto replacement = CorpusBackend::load(CKKS_TEST_LIBRARY, "ckks_", &error);
+  ASSERT_TRUE(replacement) << error;
+  *replacement = std::move(moved);
+  auto *input = replacement->bufferAlloc()(replacement->ctx());
+  ASSERT_NE(input, nullptr);
+  const double values[]{0.125, -1.5, 2.25, 0.75};
+  double actual[4]{};
+  EXPECT_EQ(replacement->encryptPacked(input, values, 4), 0);
+  EXPECT_EQ(replacement->decryptPacked(input, actual, 4), 0);
+  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], values[i], 1e-6);
+  FhnInstruction inst{}; inst.opcode = FHN_HMULT;
+  FhnProgram program{FHN_ABI_VERSION, 1, &inst, 0, nullptr, 0, nullptr};
+  EXPECT_EQ(replacement->prepare(&program), 0);
+  replacement->bufferFree()(replacement->ctx(), input);
 }

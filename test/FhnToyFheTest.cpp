@@ -5,6 +5,7 @@
 #include <cstring>
 #include <gtest/gtest.h>
 #include <memory>
+#include <limits>
 #include <vector>
 
 class FhnToyFheTest : public ::testing::Test {
@@ -466,4 +467,143 @@ TEST_F(FhnToyFheTest, ReductionFusedMatchesDecomposed) {
     toyfhe_fhn_buffer_free(ctx_, bufs[i]);
   }
   fhn_program_free(prog);
+}
+
+
+TEST_F(FhnToyFheTest, VectorScalarSubtractNegateAreSlotwiseAndAliasSafe) {
+  const int64_t a[] = {2, -4, 6, 0};
+  const int64_t b[] = {1, 3, -2, 5};
+  struct Case { FhnOpCode opcode; std::vector<int64_t> expected; };
+  const Case cases[] = {{FHN_ADD_CS, {5, -1, 9, 3}}, {FHN_MULT_CS, {6, -12, 18, 0}},
+                        {FHN_SUB_CC, {1, -7, 8, -5}}, {FHN_NEGATE, {-2, 4, -6, 0}}};
+  for (const auto &test : cases) {
+    for (int alias = 0; alias < 3; ++alias) {
+      SCOPED_TRACE(static_cast<int>(test.opcode));
+      SCOPED_TRACE(alias);
+      auto *prog = fhn_program_alloc(1, 2, 1);
+      prog->input_ids[0] = 1; prog->input_ids[1] = 2; prog->output_ids[0] = 3;
+      auto &inst = prog->instructions[0];
+      inst.opcode = test.opcode; inst.result_id = 3; inst.operands[0] = 1;
+      inst.operands[1] = test.opcode == FHN_SUB_CC ? 2 : 0; inst.fparams[0] = 3;
+      auto *av = toyfhe_fhn_buffer_alloc(ctx_);
+      auto *bv = toyfhe_fhn_buffer_alloc(ctx_);
+      auto *out = toyfhe_fhn_buffer_alloc(ctx_);
+      ASSERT_EQ(toyfhe_fhn_encrypt_vec_i64(ctx_, av, a, 4), 0);
+      ASSERT_EQ(toyfhe_fhn_encrypt_vec_i64(ctx_, bv, b, 4), 0);
+      FhnBuffer *buffers[] = {nullptr, av, bv, alias == 1 ? av : alias == 2 ? bv : out};
+      EXPECT_EQ(executor_->execute(ctx_, prog, buffers), 0);
+      std::vector<int64_t> actual(4, -999);
+      EXPECT_EQ(toyfhe_fhn_decrypt_vec_i64(ctx_, buffers[3], actual.data(), 4), 0);
+      EXPECT_EQ(actual, test.expected);
+      toyfhe_fhn_buffer_free(ctx_, av); toyfhe_fhn_buffer_free(ctx_, bv); toyfhe_fhn_buffer_free(ctx_, out);
+      fhn_program_free(prog);
+    }
+  }
+}
+
+TEST_F(FhnToyFheTest, ArithmeticRejectsMalformedKindsWithoutChangingResult) {
+  const int64_t v[] = {3, 4};
+  for (auto opcode : {FHN_ADD_CS, FHN_MULT_CS, FHN_SUB_CC, FHN_NEGATE, FHN_ADD_CC, FHN_MULT_CC}) {
+    SCOPED_TRACE(static_cast<int>(opcode));
+    FhnKernelFn kernel = nullptr;
+    for (uint32_t i = 0; i < table_->num_kernels; ++i)
+      if (table_->kernels[i].opcode == opcode) kernel = table_->kernels[i].fn;
+    ASSERT_NE(kernel, nullptr);
+    auto *empty = toyfhe_fhn_buffer_alloc(ctx_);
+    auto *vec = toyfhe_fhn_buffer_alloc(ctx_);
+    auto *scalar = toyfhe_fhn_buffer_alloc(ctx_);
+    auto *out = toyfhe_fhn_buffer_alloc(ctx_);
+    ASSERT_EQ(toyfhe_fhn_encrypt_vec_i64(ctx_, vec, v, 2), 0);
+    ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, scalar, 5), 0);
+    ASSERT_EQ(toyfhe_fhn_encrypt_i64(ctx_, out, 99), 0);
+    const int64_t params[4] = {}; const double fparams[2] = {2, 0};
+    const FhnBuffer *ops[] = {empty, scalar, nullptr, nullptr};
+    EXPECT_NE(kernel(ctx_, out, ops, params, fparams), 0);
+    int64_t result = 0;
+    EXPECT_EQ(toyfhe_fhn_decrypt_i64(ctx_, out, &result), 0);
+    EXPECT_EQ(result, 99);
+    if (opcode == FHN_SUB_CC || opcode == FHN_ADD_CC || opcode == FHN_MULT_CC) {
+      ops[0] = vec;
+      EXPECT_NE(kernel(ctx_, out, ops, params, fparams), 0);
+      ASSERT_EQ(toyfhe_fhn_encrypt_vec_i64(ctx_, scalar, v, 1), 0);
+      EXPECT_NE(kernel(ctx_, out, ops, params, fparams), 0);
+      EXPECT_EQ(toyfhe_fhn_decrypt_i64(ctx_, out, &result), 0);
+      EXPECT_EQ(result, 99);
+    }
+    toyfhe_fhn_buffer_free(ctx_, empty); toyfhe_fhn_buffer_free(ctx_, vec);
+    toyfhe_fhn_buffer_free(ctx_, scalar); toyfhe_fhn_buffer_free(ctx_, out);
+  }
+}
+
+
+TEST_F(FhnToyFheTest, PackedDoubleRoundTripAndScalarVectorOperations) {
+  const std::vector<double> input = {1.25, -2.5, 0.125, 3.75};
+  const std::vector<double> other = {2.0, 1.5, -0.25, 0.5};
+  auto *a = toyfhe_fhn_buffer_alloc(ctx_);
+  auto *b = toyfhe_fhn_buffer_alloc(ctx_);
+  auto *out = toyfhe_fhn_buffer_alloc(ctx_);
+  ASSERT_EQ(toyfhe_fhn_encrypt_vec_f64(ctx_, a, input.data(), 4), 0);
+  ASSERT_EQ(toyfhe_fhn_encrypt_vec_f64(ctx_, b, other.data(), 4), 0);
+  std::vector<double> actual(4);
+  ASSERT_EQ(toyfhe_fhn_decrypt_vec_f64(ctx_, a, actual.data(), 4), 0);
+  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], input[i], 1e-4);
+  struct Case { FhnOpCode opcode; std::vector<double> expected; };
+  const Case cases[] = {{FHN_ADD_CS, {1.75, -2.0, 0.625, 4.25}},
+                        {FHN_MULT_CS, {0.625, -1.25, 0.0625, 1.875}},
+                        {FHN_ADD_CC, {3.25, -1.0, -0.125, 4.25}},
+                        {FHN_SUB_CC, {-0.75, -4.0, 0.375, 3.25}},
+                        {FHN_HMULT, {2.5, -3.75, -0.03125, 1.875}},
+                        {FHN_NEGATE, {-1.25, 2.5, -0.125, -3.75}}};
+  for (const auto &test : cases) {
+    SCOPED_TRACE(static_cast<int>(test.opcode));
+    auto *prog = fhn_program_alloc(1, 2, 1);
+    prog->input_ids[0] = 1;
+    prog->input_ids[1] = 2;
+    prog->output_ids[0] = 3;
+    auto &inst = prog->instructions[0];
+    inst.opcode = test.opcode;
+    inst.result_id = 3;
+    inst.operands[0] = 1;
+    inst.operands[1] = 2;
+    inst.fparams[0] = 0.5;
+    FhnBuffer *buffers[] = {nullptr, a, b, out};
+    EXPECT_EQ(executor_->execute(ctx_, prog, buffers), 0);
+    EXPECT_EQ(toyfhe_fhn_decrypt_vec_f64(ctx_, out, actual.data(), 4), 0);
+    for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], test.expected[i], 1e-4);
+    fhn_program_free(prog);
+  }
+  toyfhe_fhn_buffer_free(ctx_, a);
+  toyfhe_fhn_buffer_free(ctx_, b);
+  toyfhe_fhn_buffer_free(ctx_, out);
+}
+
+TEST_F(FhnToyFheTest, PackedDoubleInvalidRequestsPreserveBuffersAndReadback) {
+  auto *buf = toyfhe_fhn_buffer_alloc(ctx_);
+  auto *empty = toyfhe_fhn_buffer_alloc(ctx_);
+  const double original[] = {1.25, -2.5, 0.125};
+  ASSERT_EQ(toyfhe_fhn_encrypt_vec_f64(ctx_, buf, original, 3), 0);
+  EXPECT_NE(toyfhe_fhn_encrypt_vec_f64(nullptr, buf, original, 3), 0);
+  EXPECT_NE(toyfhe_fhn_encrypt_vec_f64(ctx_, nullptr, original, 3), 0);
+  EXPECT_NE(toyfhe_fhn_encrypt_vec_f64(ctx_, buf, nullptr, 3), 0);
+  EXPECT_NE(toyfhe_fhn_encrypt_vec_f64(ctx_, buf, original, 0), 0);
+  for (double bad : {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity(),
+                     -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::max(), 32768.0, -32768.0}) {
+    const double invalid[] = {42.0, bad, 13.0};
+    EXPECT_NE(toyfhe_fhn_encrypt_vec_f64(ctx_, buf, invalid, 3), 0);
+    double restored[3] = {};
+    ASSERT_EQ(toyfhe_fhn_decrypt_vec_f64(ctx_, buf, restored, 3), 0);
+    for (int i = 0; i < 3; ++i) EXPECT_NEAR(restored[i], original[i], 1e-4);
+  }
+  std::vector<double> sentinel(4, 123.0);
+  EXPECT_NE(toyfhe_fhn_decrypt_vec_f64(nullptr, buf, sentinel.data(), 3), 0);
+  EXPECT_NE(toyfhe_fhn_decrypt_vec_f64(ctx_, nullptr, sentinel.data(), 3), 0);
+  EXPECT_NE(toyfhe_fhn_decrypt_vec_f64(ctx_, buf, nullptr, 3), 0);
+  EXPECT_NE(toyfhe_fhn_decrypt_vec_f64(ctx_, empty, sentinel.data(), 3), 0);
+  for (uint32_t count : {0u, 2u, 4u, std::numeric_limits<uint32_t>::max()})
+    EXPECT_NE(toyfhe_fhn_decrypt_vec_f64(ctx_, buf, sentinel.data(), count), 0);
+  EXPECT_EQ(sentinel, (std::vector<double>{123.0, 123.0, 123.0, 123.0}));
+  ASSERT_EQ(toyfhe_fhn_encrypt_f64(ctx_, empty, 1.5), 0);
+  EXPECT_NE(toyfhe_fhn_decrypt_vec_f64(ctx_, empty, sentinel.data(), 1), 0);
+  toyfhe_fhn_buffer_free(ctx_, buf);
+  toyfhe_fhn_buffer_free(ctx_, empty);
 }

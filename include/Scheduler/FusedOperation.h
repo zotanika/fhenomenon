@@ -54,10 +54,17 @@ template <typename T> class FusedKernelNode : public ASTNode {
   }
 
   void print(int depth = 0) const override {
+    std::unordered_set<const ASTNode *> visited;
+    printWithVisited(depth, visited);
+  }
+
+  void printWithVisited(int depth, std::unordered_set<const ASTNode *> &visited) const override {
+    if (!visited.insert(this).second)
+      return;
     std::string indent(static_cast<std::string::size_type>(depth * 2), ' ');
     std::cout << indent << "FusedKernel" << std::endl;
     for (const auto &dep : dependencies_) {
-      dep->print(depth + 1);
+      dep->printWithVisited(depth + 1, visited);
     }
   }
 

@@ -1,22 +1,113 @@
 #include "CKKS/Params.h"
 
 #include <algorithm>
-#include <cmath>
 #include <unordered_set>
 
 namespace fhenomenon::ckks {
 
 namespace {
 
-// Sum of log2 of a half-open prime range. Used instead of a big-integer
-// product because every check here is a magnitude comparison, and the primes
-// are bounded well inside double's 53-bit mantissa.
-double log2Product(const std::vector<uint64_t> &primes, uint32_t begin, uint32_t end) {
-  double bits = 0.0;
-  for (uint32_t i = begin; i < end; ++i) {
-    bits += std::log2(static_cast<double>(primes[i]));
+// Exact products in base 2^32, least-significant limb first. Parameter
+// validation is a setup path; its temporary vectors need no external bigint
+// library, no compiler-specific integer type and no dependency on L1.
+using Product = std::vector<uint32_t>;
+
+Product primeProduct(const std::vector<uint64_t> &primes, std::size_t begin, std::size_t end) {
+  Product product{1};
+  for (std::size_t index = begin; index < end; ++index) {
+    const uint32_t factor[] = {static_cast<uint32_t>(primes[index]), static_cast<uint32_t>(primes[index] >> 32U)};
+    Product next(product.size() + 2, 0);
+    for (std::size_t i = 0; i < product.size(); ++i) {
+      uint64_t carry = 0;
+      for (std::size_t j = 0; j < 2; ++j) {
+        // (2^32-1)^2 + two 32-bit addends fits in uint64_t.
+        const uint64_t word = uint64_t{product[i]} * factor[j] + next[i + j] + carry;
+        next[i + j] = static_cast<uint32_t>(word);
+        carry = word >> 32U;
+      }
+      next[i + 2] = static_cast<uint32_t>(carry);
+    }
+    while (next.size() > 1 && next.back() == 0) {
+      next.pop_back();
+    }
+    product = std::move(next);
   }
-  return bits;
+  return product;
+}
+
+bool productLess(const Product &left, const Product &right) {
+  if (left.size() != right.size()) {
+    return left.size() < right.size();
+  }
+  return std::lexicographical_compare(left.rbegin(), left.rend(), right.rbegin(), right.rend());
+}
+
+// Portable modular multiplication for validation only. The caller has already
+// bounded q below 2^62, so each addition of two residues fits in uint64_t.
+// L0 cannot use L1's faster 128-bit arithmetic helper without an upward edge.
+uint64_t multiplyMod(uint64_t a, uint64_t b, uint64_t q) {
+  uint64_t result = 0;
+  while (b != 0) {
+    if ((b & 1U) != 0) {
+      result += a;
+      if (result >= q) {
+        result -= q;
+      }
+    }
+    a += a;
+    if (a >= q) {
+      a -= q;
+    }
+    b >>= 1U;
+  }
+  return result;
+}
+
+uint64_t powerMod(uint64_t base, uint64_t exponent, uint64_t q) {
+  uint64_t result = 1;
+  while (exponent != 0) {
+    if ((exponent & 1U) != 0) {
+      result = multiplyMod(result, base, q);
+    }
+    base = multiplyMod(base, base, q);
+    exponent >>= 1U;
+  }
+  return result;
+}
+
+// Deterministic Miller-Rabin: these twelve bases cover all uint64_t values,
+// and therefore the narrower 62-bit input range checked before this call.
+bool isPrime(uint64_t n) {
+  constexpr uint64_t bases[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
+  for (uint64_t base : bases) {
+    if (n % base == 0) {
+      return n == base;
+    }
+  }
+  uint64_t odd = n - 1;
+  uint32_t twos = 0;
+  while ((odd & 1U) == 0) {
+    odd >>= 1U;
+    ++twos;
+  }
+  for (uint64_t base : bases) {
+    uint64_t x = powerMod(base, odd, n);
+    if (x == 1 || x == n - 1) {
+      continue;
+    }
+    bool passed = false;
+    for (uint32_t i = 1; i < twos; ++i) {
+      x = multiplyMod(x, x, n);
+      if (x == n - 1) {
+        passed = true;
+        break;
+      }
+    }
+    if (!passed) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool fail(std::string *error, std::string reason) {
@@ -43,6 +134,9 @@ bool checkPrimeList(const std::vector<uint64_t> &primes, const char *what, uint6
     if (p % two_n != 1) {
       return fail(error, std::string(what) + ": " + std::to_string(p) + " is not 1 mod 2N (" + std::to_string(two_n) +
                            "), so it admits no primitive 2N-th root of unity");
+    }
+    if (!isPrime(p)) {
+      return fail(error, std::string(what) + ": " + std::to_string(p) + " is not prime");
     }
     if (!seen.insert(p).second) {
       return fail(error, std::string(what) + ": " + std::to_string(p) + " appears more than once");
@@ -107,22 +201,16 @@ std::optional<Params> Params::create(Spec spec, std::string *error) {
   // Q and why this check rejects it unless the caller actually supplied one.
   Params params(std::move(spec));
   const std::vector<uint64_t> &aux = params.spec_.aux_primes;
-  const double aux_bits = log2Product(aux, 0, static_cast<uint32_t>(aux.size()));
-  double widest_digit_bits = 0.0;
-  uint32_t widest_digit = 0;
+  const Product aux_product = primeProduct(aux, 0, aux.size());
   for (uint32_t digit = 0; digit < params.dnum(); ++digit) {
     const auto range = params.digitRange(digit);
-    const double bits = log2Product(params.spec_.main_primes, range.first, range.second);
-    if (bits > widest_digit_bits) {
-      widest_digit_bits = bits;
-      widest_digit = digit;
+    const Product digit_product = primeProduct(params.spec_.main_primes, range.first, range.second);
+    if (!productLess(digit_product, aux_product)) {
+      fail(error, "aux_primes product does not exceed digit " + std::to_string(digit) + " of " +
+                    std::to_string(params.dnum()) +
+                    ": P must exceed the widest key-switching digit (raise dnum, or add special primes)");
+      return std::nullopt;
     }
-  }
-  if (aux_bits <= widest_digit_bits) {
-    fail(error, "aux_primes carry " + std::to_string(aux_bits) + " bits but digit " + std::to_string(widest_digit) +
-                  " of " + std::to_string(params.dnum()) + " carries " + std::to_string(widest_digit_bits) +
-                  " bits: P must exceed the widest key-switching digit (raise dnum, or add special primes)");
-    return std::nullopt;
   }
 
   if (error != nullptr) {

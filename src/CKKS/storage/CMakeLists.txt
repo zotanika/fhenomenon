@@ -8,4 +8,4 @@
 # so "arena-allocated RnsPoly" is not a concept this layer can express. Which
 # allocation a polynomial's words came from is a fact about an L4 call site,
 # the one layer that sees both.
-fhn_ckks_layer(fhn_ckks_storage LAYER 2 SOURCES Layout.cpp DEPENDS fhn_ckks_params)
+fhn_ckks_layer(fhn_ckks_storage LAYER 2 SOURCES Layout.cpp Storage.cpp DEPENDS fhn_ckks_params)

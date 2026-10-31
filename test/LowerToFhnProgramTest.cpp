@@ -4,6 +4,7 @@
 #include "Scheduler/ASTNode.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Planner.h"
+#include "Scheduler/ASTPass.h"
 #include <gtest/gtest.h>
 
 using namespace fhenomenon;
@@ -239,4 +240,41 @@ TEST(LowerToFhnProgram, SharedOperand) {
   EXPECT_EQ(prog->instructions[0].operands[0], prog->instructions[0].operands[1]);
 
   fhn_program_free(prog);
+}
+
+TEST(LowerToFhnProgram, ExplicitAstPrintingVisitsSharedNodesOnceAcrossRoots) {
+  auto a = std::make_shared<Fhenon<int>>(1);
+  std::shared_ptr<ASTNode> previous = std::make_shared<OperandNode<int>>(a);
+  Planner<int> plan;
+  for (int i = 0; i < 12; ++i) {
+    auto result = std::make_shared<Fhenon<int>>(0);
+    auto operation = std::make_shared<Operation<int>>(OperationType::Add, a, a, result);
+    previous = std::make_shared<OperatorNode<int>>(operation, OperationType::Add, previous, previous, result);
+    plan.addRoot(previous);
+  }
+  testing::internal::CaptureStdout();
+  PrintASTPass{}.apply(plan);
+  const auto output = testing::internal::GetCapturedStdout();
+  EXPECT_NE(output.find("ADD"), std::string::npos);
+  EXPECT_LT(output.size(), 10000u); // DAG has 13 nodes; tree expansion has thousands.
+}
+
+TEST(LowerToFhnProgram, AssignmentDoesNotRequireTheOverwrittenValueAsAnInput) {
+  auto destination = std::make_shared<Fhenon<int>>(0);
+  auto source = std::make_shared<Fhenon<int>>(5);
+  auto op = std::make_shared<Operation<int>>(OperationType::Assignment, destination, source);
+  Planner<int> plan;
+  plan.addRoot(std::make_shared<OperatorNode<int>>(
+      op, OperationType::Assignment, std::make_shared<OperandNode<int>>(destination),
+      std::make_shared<OperandNode<int>>(source), destination));
+  LowerToFhnProgram::EntityBindings<int> bindings;
+  auto *program = LowerToFhnProgram{}.lower(plan, &bindings);
+  ASSERT_NE(program, nullptr);
+  EXPECT_EQ(program->num_inputs, 1u);
+  ASSERT_EQ(program->num_outputs, 1u);
+  EXPECT_EQ(program->output_ids[0], program->input_ids[0]);
+  ASSERT_EQ(bindings.size(), 2u);
+  EXPECT_EQ(bindings[0].second, source);
+  EXPECT_EQ(bindings[1].second, destination);
+  fhn_program_free(program);
 }

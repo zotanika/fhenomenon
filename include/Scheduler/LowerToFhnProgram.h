@@ -107,7 +107,9 @@ void LowerToFhnProgram::lowerNode(ASTNode *node, std::vector<FhnInstruction> &in
     }
 
     // Visit children first (post-order)
-    if (op_node->getLeft())
+    // Assignment reads only its new value. Its overwritten destination is
+    // not a program input; earlier writes are already roots in recording order.
+    if (op_node->getLeft() && (op_node->getType() != OperationType::Assignment || !op_node->getRight()))
       lowerNode<T>(op_node->getLeft().get(), instructions, inputs, next_id, node_ids, bindings, supported);
     if (op_node->getRight() && !scalar)
       lowerNode<T>(op_node->getRight().get(), instructions, inputs, next_id, node_ids, bindings, supported);

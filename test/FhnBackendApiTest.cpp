@@ -3,6 +3,7 @@
 #include "FHN/fhn_backend_api.h"
 
 #include <cstring>
+#include <limits>
 
 TEST(FhnBackendApi, BackendInfoLayout) {
   FhnBackendInfo info;
@@ -75,4 +76,17 @@ TEST(FhnBackendApi, DeviceTypeEnum) {
   EXPECT_EQ(FHN_DEVICE_GPU, 1);
   EXPECT_EQ(FHN_DEVICE_FPGA, 2);
   EXPECT_EQ(FHN_DEVICE_ASIC, 3);
+}
+
+
+// FhnLevelEffect crosses the backend C ABI as a 32-bit integer. Unknown
+// values must survive transport so the planner can reject them safely.
+static_assert(sizeof(FhnLevelEffect) == sizeof(uint32_t), "ABI 1 level effect width changed");
+static_assert(alignof(FhnLevelEffect) == alignof(uint32_t), "ABI 1 level effect alignment changed");
+
+TEST(FhnBackendApi, UnknownLevelEffectValuesRemainRepresentable) {
+  for (uint32_t raw : {uint32_t{42}, uint32_t{0x80000000}, std::numeric_limits<uint32_t>::max()}) {
+    const FhnLevelEffect effect = static_cast<FhnLevelEffect>(raw);
+    EXPECT_EQ(static_cast<uint32_t>(effect), raw);
+  }
 }

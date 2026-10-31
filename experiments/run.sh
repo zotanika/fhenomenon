@@ -50,13 +50,13 @@ case "$kind" in
   gpu-test)
     # -V so per-test stdout (context+keygen, per-op latency) is captured even
     # when the tests pass; --output-on-failure would swallow it on success.
-    CMD=(ctest --test-dir "$BUILD_DIR" -R FhnCheddarGpuTest -V)
+    CMD=(ctest --test-dir "$BUILD_DIR" -R FhnCheddarGpuTest --no-tests=error -V)
     ;;
   corpus)
     [[ -f "$CHEDDAR_LIB" ]] || { echo "error: $CHEDDAR_LIB not built"; exit 1; }
     local_bin="$(find "$BUILD_DIR" -name fhn-corpus -type f 2>/dev/null | head -1)"
     [[ -n "$local_bin" ]] || { echo "error: fhn-corpus binary not found in $BUILD_DIR"; exit 1; }
-    CMD=("$local_bin" --backend "$CHEDDAR_LIB" "$@")
+    CMD=("$local_bin" --backend "$CHEDDAR_LIB" --prefix "" "$@")
     ;;
   raw)
     label="${1:-raw}"; shift || true
@@ -68,9 +68,14 @@ case "$kind" in
   *) echo "unknown kind: $kind"; exit 2 ;;
 esac
 
+# Preserve argument boundaries, including Cheddar's empty symbol prefix.
+printf -v command_display '%q ' "${CMD[@]}"
+command_json="${command_display//\\/\\\\}"
+command_json="${command_json//\"/\\\"}"
+
 # --- Execute, timing the wall clock -----------------------------------------
 echo "[$run_id] $ISO" | tee "$out_log"
-echo "cmd: ${CMD[*]}" | tee -a "$out_log"
+echo "cmd: $command_display" | tee -a "$out_log"
 echo "env: $env_json" | tee -a "$out_log"
 echo "---" | tee -a "$out_log"
 
@@ -86,19 +91,22 @@ outcome="pass"; [[ $status -ne 0 ]] && outcome="fail"
 # Pull the number adjacent to the us/ms unit, so labels like ROTATE(+1) don't
 # leak their own digits into the reading.
 num() { grep -oE "$1" "$out_log" | grep -oE '[0-9]+ (us|ms)' | grep -oE '[0-9]+' | head -1; }
-setup_ms="$(num 'Context \+ keys: [0-9]+ ms')"
-addcc_us="$(num 'ADD_CC pipeline: [0-9]+ us')"
-hmult_us="$(num 'HMULT pipeline: [0-9]+ us')"
-rot_us="$(num 'ROTATE\(\+1\)\+ROTATE\(-1\) pipeline: [0-9]+ us')"
+setup_ms="$(num 'Completed context \+ keys pipeline: [0-9]+ ms')"
+addcc_us="$(num 'ADD_CC completed pipeline: [0-9]+ us')"
+hmult_us="$(num 'HMULT completed pipeline: [0-9]+ us')"
+rot_us="$(num 'ROTATE\(\+1\)\+ROTATE\(-1\) completed pipeline: [0-9]+ us')"
 tests_passed="$(grep -oE '\[  PASSED  \] [0-9]+ tests?' "$out_log" | grep -oE '[0-9]+' | head -1)"
-belady_savings="$(grep -oE 'median per-shape savings @B_mid: [0-9.]+%' "$out_log" | grep -oE '[0-9.]+' | head -1)"
+belady_savings="$(grep -oE 'planned median per-shape savings @B_mid: [0-9.]+%' "$out_log" | grep -oE '[0-9.]+' | head -1)"
 
-metrics_json="$(printf '{"setup_ms":%s,"add_cc_us":%s,"hmult_us":%s,"rotate_pair_us":%s,"tests_passed":%s,"belady_savings_pct":%s}' \
+timing_kind=null
+[[ -n "$setup_ms$addcc_us$hmult_us$rot_us" ]] && timing_kind='"synchronized_host_wall"'
+metrics_json="$(printf '{"timing_kind":%s,"movement_kind":"planning_estimate","setup_ms":%s,"add_cc_us":%s,"hmult_us":%s,"rotate_pair_us":%s,"tests_passed":%s,"belady_savings_pct":%s}' \
+  "$timing_kind" \
   "${setup_ms:-null}" "${addcc_us:-null}" "${hmult_us:-null}" "${rot_us:-null}" "${tests_passed:-null}" "${belady_savings:-null}")"
 
 # --- Append machine-readable record -----------------------------------------
 rec="$(printf '{"id":"%s","ts":"%s","kind":"%s","cmd":"%s","outcome":"%s","exit":%s,"wall_s":%s,"metrics":%s,"env":%s,"note":"%s","log":"experiments/runs/%s/output.log"}' \
-  "$run_id" "$ISO" "$kind" "${CMD[*]//\"/\\\"}" "$outcome" "$status" "$wall_s" "$metrics_json" "$env_json" "${NOTE//\"/\\\"}" "$run_id")"
+  "$run_id" "$ISO" "$kind" "$command_json" "$outcome" "$status" "$wall_s" "$metrics_json" "$env_json" "${NOTE//\"/\\\"}" "$run_id")"
 printf '%s\n' "$rec" >> "$LOG_JSONL"
 
 # --- Append human-readable journal entry ------------------------------------
@@ -107,7 +115,7 @@ printf '%s\n' "$rec" >> "$LOG_JSONL"
   echo "### $ISO — \`$kind\` — **${outcome^^}** (${wall_s}s)"
   echo ""
   echo "- run id: \`$run_id\`  ·  fhn \`$(echo "$env_json" | grep -oE '"fhn_sha":"[^"]*"' | cut -d'"' -f4)\`  ·  cheddar \`$(echo "$env_json" | grep -oE '"cheddar_sha":"[^"]*"' | cut -d'"' -f4)\`"
-  echo "- cmd: \`${CMD[*]}\`"
+  echo "- cmd: \`$command_display\`"
   [[ -n "$setup_ms" ]]       && echo "- context+keygen: ${setup_ms} ms (one-time)"
   [[ -n "$addcc_us" ]]       && echo "- ADD_CC: ${addcc_us} µs · HMULT: ${hmult_us:-?} µs · rotate-pair: ${rot_us:-?} µs"
   [[ -n "$tests_passed" ]]   && echo "- tests passed: ${tests_passed}"

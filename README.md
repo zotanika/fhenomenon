@@ -2,17 +2,39 @@
 
 Fhenomenon is an early C++17 systems project for a practical, FHE-native programming model.
 
+Its intended contribution model is broad: independently supplied kernels at
+different granularities should compete and compose to execute high-level
+programs under explicit application requirements. The
+[lightweight runtime](docs/lightweight-runtime.md) executes registered recipes
+immediately and retains shared intermediate artifacts across commands. Native
+CKKS rotation preparation is one implemented example; the existing circuit
+compiler attaches only to explicitly requested regions. The earlier global
+planning proposal is superseded. Automatic whole-program optimization and
+CGGI↔CKKS/BFV switching are not implemented.
+
+[Contributed statistics and packed-dot kernels](docs/coarse-statistics-kernels.md)
+demonstrate larger native kernels sharing ordinary intermediate values through
+this API, without changes to either runtime core or native adapter.
+[Prepared matvec kernels](docs/matvec-preparation.md) additionally share explicit
+source/key companions across commands while preserving the original formula and
+ciphertext residues; [measurements](docs/matvec-preparation-validation-2026-10-31.md)
+include component comparisons, preparation cost and retained memory.
+
 The core bet is simple: fully homomorphic encryption will not become practical by pretending that arbitrary software can be compiled unchanged into encrypted execution. It will also not become practical by making every backend maximally general and then accepting unusable speed. The useful boundary is closer to GPU computing. A trusted host should orchestrate public control flow, while an untrusted executor runs branchless, data-oblivious, coarse-grained encrypted kernels.
 
 Fhenomenon treats constraints as performance contracts. A fast kernel that only works for a particular scheme, parameter set, packing layout, tensor shape, device residency, or application pattern is not a second-class hack. It is a valuable fast path, as long as its constraints are explicit enough for the runtime to dispatch, compose, benchmark, and replace it safely.
 
 This repository is building the small runtime and backend interface for that world.
 
-- A flat FHN program IR that is easy to generate, inspect, and execute.
+- An immediate recipe runtime with shared resource identities, dependencies,
+  retained-memory budgets, and bounded dispatch diagnostics.
+- Optional semantic circuit compilation for explicitly selected native regions.
+- A flat FHN program IR for explicit kernel dispatch and reference execution.
 - A C ABI kernel table that FHE library and hardware developers can extend without learning a complex compiler pipeline.
 - A default executor that dispatches kernels and decomposes fused opcodes when a backend only exposes primitives.
 - Optional async backend hooks for accelerator-oriented submission, polling, waiting, and output collection.
-- A self-contained ToyFHE backend for CI, examples, and backend-author education.
+- A native CPU RNS-CKKS backend with public-key encryption, packed real arithmetic, hybrid key switching, and a separate trusted client.
+- A self-contained ToyFHE reference backend for CI, examples, and backend-author education.
 - An external backend loader and an optional Cheddar-FHE GPU CKKS backend.
 
 Fhenomenon is not production cryptography yet, and it is not a complete industrial platform. It is an engineering scaffold for finding the right offloading boundary between application code, encrypted kernels, and accelerator-aware orchestration.
@@ -36,8 +58,8 @@ So Fhenomenon does not start with "compile any program." It starts with a narrow
 Trusted host
   owns application control flow, public scheduling, keys, policies
 
-FHN program
-  a public, topologically sorted list of encrypted-kernel instructions
+Public circuit or FHN program
+  application value graph, or explicit encrypted-kernel instructions
 
 Secure kernel executor
   runs branchless FHE kernels through a backend-specific implementation
@@ -45,7 +67,7 @@ Secure kernel executor
 
 This makes Fhenomenon closer to a CUDA-like runtime boundary for FHE than to a universal source-to-FHE compiler.
 
-The scalable object is the catalog, not a single universal kernel. In many FHE workloads, a generic implementation can be made more portable only by giving up the speed that would make adoption plausible. Fhenomenon therefore favors a growing catalog of narrow, fast kernels with explicit constraints, plus an executor that can choose the largest valid fast path, decompose when needed, and eventually overlap accelerator work through async submission and polling.
+Execution boundaries follow the application and backend constraints. The opcode table is a convenient integration surface; it does not make multiplication, relinearization, rescale, or their named composites atomic execution units. The native circuit path can combine a complete affine expression or sum of ciphertext products, choose a level schedule, and reuse intermediate storage. Progress is measured by correctly executed applications and their complete evaluation time under fixed parameters and accuracy requirements.
 
 ## Current Status
 
@@ -53,9 +75,11 @@ The repository already contains the first version of that boundary.
 
 | Area | Status |
 | --- | --- |
+| Circuit compiler | Optional `fhn_circuit_api.h`: copied value graphs, affine/quadratic regions, prepared public keys, reusable slots, allocation-free repeated execution. See [circuit execution](docs/circuit-execution.md). |
 | FHN IR | Implemented in `include/FHN/fhn_program.h` as a flat C ABI instruction array. |
 | Backend ABI | Implemented in `include/FHN/fhn_backend_api.h`: `fhn_get_info`, `fhn_create`, `fhn_destroy`, `fhn_get_kernels`, plus a host-side data plane (`fhn_buffer_alloc/free`, optional `fhn_encrypt_*`/`fhn_decrypt_*`). Key-consuming operations are not kernel-table entries and cannot appear in an `FhnProgram`. |
 | Default executor | Implemented in `FhnDefaultExecutor`; dispatches kernel-table entries and decomposes fused operations such as `FHN_HMULT`. |
+| Native CKKS backend | `ckks_fhn`: genuine CPU leveled RNS-CKKS, canonical packing, public-key encryption, relinearization, rescale and rotations. The evaluator has no secret-key reference. See [native CKKS](docs/native-ckks.md). |
 | ToyFHE backend | Implemented as a CPU reference backend. Useful for tests and examples, not secure. |
 | External backend loading | Implemented with `dlopen` for Linux/macOS style shared libraries. |
 | Cheddar-FHE backend | Optional GPU CKKS backend under `src/FHN/cheddar`, built only when the Cheddar submodule and CUDA-facing dependencies are available. |
@@ -63,9 +87,9 @@ The repository already contains the first version of that boundary.
 | Scheduler lowering | `LowerToFhnProgram` lowers scheduler ASTs into FHN programs. `Session::run` executes a recorded scope through that same path — lower, plan movement, dispatch — so scoped execution is the FHN path rather than an alternative to it. See [Scoped Execution](#scoped-execution). |
 | TFHE-rs experiment | A separate Rust FFI experiment exists for integer operations when `BUILTIN_BACKEND=TFHE`. |
 
-The current default developer path is ToyFHE plus unit tests. The Cheddar backend is the GPU-oriented CKKS target currently wired into this repository; the ABI is meant to host other accelerator backends and fast-path kernel catalogs as they become available.
+The default build produces both the native CKKS plugin and the ToyFHE reference. Native CKKS runs through the public client/compute ABI, the `fhn-bench-circuit` graph path, and the legacy `fhn-corpus` opcode path. The existing `Fhenon`/`Session` C++ frontend still selects ToyFHE by default; it is not yet adapted to the separate native client handle. Cheddar remains the optional GPU CKKS target.
 
-The current ABI is intentionally modest. It can load a backend, inspect its kernel table, and call uniform kernel functions. The next important design step is to make kernel constraints, estimated cost, device residency, batching behavior, and async execution state visible enough for an executor to schedule real accelerator work instead of merely dispatching opcodes in order.
+The native circuit compiler owns level/scale checks, evaluation-key requirements, region selection and intermediate storage. The existing kernel table remains useful for reference execution and external backends. Device residency, accelerator scheduling and async execution remain future work.
 
 ## Architecture
 
@@ -79,6 +103,9 @@ flowchart TD
     E --> G["External backend via dlopen"]
     G --> H["Cheddar-FHE GPU CKKS"]
     D --> I["Decomposition fallback<br/>fused op to primitives"]
+    J["Value circuit / corpus importer"] --> K["Native circuit compiler"]
+    K --> L["Prepared regions + reusable slots"]
+    L --> M["Native CPU RNS-CKKS"]
 ```
 
 ### FHN Program
@@ -91,11 +118,11 @@ An `FhnProgram` is intentionally small:
 - integer and floating parameters for opcode-specific metadata;
 - explicit input and output id arrays.
 
-Backends do not parse arbitrary C++ ASTs, compiler IR modules, or graph objects. They receive a public instruction stream and buffers.
+This opcode path passes a public instruction stream and buffers. The separate circuit API passes a value graph that the native backend validates, copies and compiles; graph nodes do not prescribe kernel boundaries.
 
 That simplicity is a design principle. Fhenomenon should let cryptographers, FHE library authors, and hardware engineers contribute useful kernels without becoming compiler-pipeline engineers. A backend author should be able to say: "I can implement this operation at this granularity," register it in the table, test it, benchmark it, and move on to the next kernel.
 
-This is patient catalog-building work. Practical FHE will need many kernels at many granularities: primitive arithmetic, scalar helpers, rotations, rescale/relinearize steps, fused multiply-add patterns, reductions, matrix tiles, convolutions, scans, and domain-specific kernels. FHN is designed so those kernels can be added one by one.
+Kernel-table entries can be added independently. Application-level optimization can also bypass that dispatch granularity through the circuit API; adding another opcode is not required to combine a larger expression.
 
 ### Backend Kernel Table
 
@@ -155,6 +182,12 @@ are optional by design: a production evaluation-only executor never holds keys,
 and ciphertexts then enter and leave through serialized buffers. Backends that
 do export them (ToyFHE, the Cheddar demo) are declaring that they hold key
 material and are suitable only for development and single-process use.
+
+The native CKKS plugin instead exports the optional `fhn_client_*` group.
+A separate trusted client owns the secret and evaluation keys; its compute
+context stores only weak evaluation-key observers. This enforces object and
+call-path separation inside the current process. It does not yet supply
+cross-process ciphertext transport or an operating-system isolation boundary.
 
 The instruction stream itself is public by design. Opcode sequences, rotation
 distances, loop trip counts, and program shape are all visible to the executor
@@ -249,7 +282,33 @@ reference backend the deltas reflect dispatch and memory-pass overhead only;
 the same program runs unchanged on a hardware backend, where the fusion win
 measures real kernel-launch and key-switch costs.
 
-The default build uses the ToyFHE backend. It is intentionally small and insecure. Its purpose is to make the architecture runnable from a fresh clone.
+Run the genuine CPU CKKS path (use `.so` on Linux):
+
+```bash
+./build/bin/fhn-corpus --backend ./build/lib/libckks_fhn.dylib --prefix ckks_ \
+  --shape matvec-fused --require-execution --compare-fallback \
+  --atol 1e-4 --rtol 1e-6 --budget-bytes min
+```
+
+This encrypts an 8×8 matrix and vector with actual RLWE public-key encryption,
+checks all output slots, and compares fused and primitive execution. The native
+default profile supports two sequential multiplication levels. See
+[native CKKS configuration and limits](docs/native-ckks.md). The earlier C++
+examples and `fhn-bench-matvec` remain ToyFHE reference programs.
+
+Run the reusable semantic circuit path:
+
+```bash
+./build/bin/fhn-bench-circuit --backend ./build/lib/libckks_fhn.dylib --prefix ckks_ \
+  --shape wide-front --warmup 2 --reps 7 --require-execution
+```
+
+The default profile executes ten of the thirteen current corpus apps through
+this path. `horner15` and `logreg` exhaust the modulus chain; `psi-eq` requires
+exact Boolean semantics. [Circuit execution](docs/circuit-execution.md) explains
+the API, timing boundaries, memory accounting and frontend limitations.
+[Measured results](docs/circuit-execution-validation-2026-10-28.md) compare the
+compiled path with the preserved prior native backend.
 
 ## Minimal User-Side Shape
 
@@ -299,7 +358,7 @@ session->run([&]() {
 - **Outside a session**, operations execute immediately. This is the useful mode for setup and debugging, and `test/NoSessionTest.cpp` deliberately never creates a `Session` so the eager paths stay pinned.
 - **Inside a session**, operations are recorded rather than executed. On leaving the scope, `Session::run` lowers the recorded graph through `LowerToFhnProgram` into a single `FhnProgram`, plans its data movement with `FhnMovementPlan::analyze`, and dispatches the whole program through the backend's FHN runtime.
 
-The distinction is not a convenience. `FhnMovementPlan` can compute exact liveness, JIT prefetch, and Belady-optimal eviction only because an `FhnProgram` is straight-line and fully known before it runs — so the def-use chain of every buffer is exact at plan time. **A session scope is what draws that boundary.** Opening one is a statement that everything inside it is a single program to be planned as a unit; outside it, there is no program, only individual operations.
+`FhnMovementPlan` computes exact liveness and just-in-time prefetch because an `FhnProgram` is straight-line and fully known before it runs. Belady eviction has its optimality guarantee for equal-size cache entries; the varying-size byte-budget mode is a heuristic. A Session scope draws the program boundary: everything inside it is planned as a unit; outside it, operations execute individually. See [portable packed verification](benchmarks/corpus/README.md) for executable checks and the limits of movement estimates.
 
 That is also why the scope matters more as backends get more constrained, not less. Byte-budgeted residency, level-aware sizing, and the planned scratch arena of an accelerator backend all consume the same plan, and all of them need a program to plan over.
 

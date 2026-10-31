@@ -10,10 +10,10 @@
 
 namespace fhenomenon {
 
-// Eviction policy for budgeted planning. Belady (exact optimal, enabled by
-// the data-oblivious IR's perfect future knowledge) is the default and the
-// only policy production paths use. Lru exists SOLELY as a benchmarking
-// baseline so the corpus can quantify what exact future knowledge saves.
+// Eviction policy for budgeted planning. Belady uses farthest next use,
+// optimal for equal-size paging with uniform transfer costs. With variable
+// buffer sizes it is a heuristic, not a minimum-transfer/byte guarantee.
+// Lru is a benchmarking baseline.
 enum class FhnEvictionPolicy { Belady, Lru };
 
 // A backend's declared level semantics, pre-queried by the caller — the
@@ -41,17 +41,20 @@ struct FhnMovementActions {
 // FhnPrograms are straight-line and data-oblivious, so the full def-use
 // chain of every buffer id is exact at plan time. analyze() turns that into
 // alloc-at-def / free-after-last-use / prefetch-before-use actions, and —
-// under a device budget — Belady-optimal eviction (evict the resident
-// buffer whose next use is farthest; exact here, not a heuristic, because
-// the future is fully known).
+// under a device budget — farthest-next-use eviction. Perfect future
+// knowledge does not make this greedy policy optimal for variable sizes.
 class FhnMovementPlan {
   public:
   struct Stats {
-    uint32_t high_water = 0; // max simultaneously device-resident buffers
+    // Scheduled residency after input normalization; excludes the caller
+    // state on entry, backend scratch and reserved allocation capacity.
+    // With absent movement hooks these are modeled, not measured, values.
+    uint32_t high_water = 0; // max simultaneously scheduled resident buffers
     uint32_t alloc_count = 0;
     uint32_t prefetch_count = 0;
-    uint32_t evict_count = 0;
+    uint32_t evict_count = 0; // instruction-scheduled evictions only
     uint64_t high_water_bytes = 0; // max simultaneously resident bytes (model only, else 0)
+    uint32_t initial_evict_count = 0; // normalization calls, separate from transfers
   };
 
   // pinned: ids that must survive execution; the plan never frees them.
@@ -63,11 +66,15 @@ class FhnMovementPlan {
   // non-null, device_budget is byte-denominated and the plan is rejected
   // (nullopt) if the model is malformed or the program's level trace is
   // invalid (underflow, a raise, or an opcode the model does not declare).
-  // When null (the default), planning is slot-count based and behavior is
-  // bit-identical to before this parameter existed.
+  // When null (the default), planning is slot-count based.
+  // Budgeted plans include initialEvictions(): every input is demoted before
+  // any allocation, establishing the empty initial residency used below.
+  // The budget applies after this prelude, not to caller residency on entry.
+  // Pinned means lifetime preservation, not permanent device residency.
   // nullopt: invalid program (zero/duplicate defs, operand used before or
   // without a def), infeasible budget (one instruction's working set
-  // exceeds it), or (byte mode) an invalid model/level trace.
+  // exceeds it), or (byte mode) an invalid model/level trace or cost sum
+  // that cannot be represented in uint64_t.
   // A zero-instruction program has no action slots, so unused unpinned
   // inputs are not freed in that (degenerate) case; callers that can
   // produce such programs must pin or free their inputs themselves.
@@ -78,13 +85,21 @@ class FhnMovementPlan {
 
   const FhnMovementActions &at(uint32_t inst_index) const { return actions_[inst_index]; }
   const Stats &stats() const { return stats_; }
-  // Used to reject executing a plan against a different program.
   uint32_t instructionCount() const { return static_cast<uint32_t>(actions_.size()); }
+  // An owned semantic snapshot detects changes even to the original object.
+  bool matches(const FhnProgram &program) const;
+  bool budgeted() const { return budgeted_; }
+  const std::vector<uint32_t> &initialEvictions() const { return initial_evictions_; }
 
   private:
   FhnMovementPlan() = default;
 
   std::vector<FhnMovementActions> actions_;
+  uint32_t version_ = FHN_ABI_VERSION;
+  std::vector<FhnInstruction> instructions_;
+  std::vector<uint32_t> inputs_, outputs_;
+  bool budgeted_ = false;
+  std::vector<uint32_t> initial_evictions_;
   Stats stats_;
 };
 

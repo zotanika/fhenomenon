@@ -1,6 +1,8 @@
 #pragma once
 #include "Scheduler/Operation.h"
 
+#include <unordered_set>
+
 namespace fhenomenon {
 namespace scheduler {
 
@@ -9,6 +11,10 @@ class ASTNode {
   virtual ~ASTNode() = default;
   virtual void evaluate() = 0;
   virtual void print(int depth = 0) const = 0;
+  virtual void printWithVisited(int depth, std::unordered_set<const ASTNode *> &visited) const {
+    if (visited.insert(this).second)
+      print(depth);
+  }
 };
 
 template <typename T> class OperatorNode : public ASTNode {
@@ -35,6 +41,13 @@ template <typename T> class OperatorNode : public ASTNode {
   }
 
   void print(int depth = 0) const override {
+    std::unordered_set<const ASTNode *> visited;
+    printWithVisited(depth, visited);
+  }
+
+  void printWithVisited(int depth, std::unordered_set<const ASTNode *> &visited) const override {
+    if (!visited.insert(this).second)
+      return;
     std::string indent(static_cast<std::string::size_type>(depth * 2), ' ');
     std::cout << indent << "Operation: "
               << (type_ == OperationType::Add        ? "ADD"
@@ -42,9 +55,9 @@ template <typename T> class OperatorNode : public ASTNode {
                                                      : "Assignment")
               << std::endl;
     if (left_)
-      left_->print(depth + 1);
+      left_->printWithVisited(depth + 1, visited);
     if (right_)
-      right_->print(depth + 1);
+      right_->printWithVisited(depth + 1, visited);
   }
 
   private:

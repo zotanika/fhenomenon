@@ -17,10 +17,10 @@ bool fail(std::string *error, std::string reason) {
   return false;
 }
 
-// FNV-1a over bytes. Chosen for being short enough to read and verify in one
-// sitting, and for having a fixed published definition — the fingerprint is a
-// compatibility surface, so an implementation whose behaviour could drift with
-// a library version would defeat the point of not using std::hash.
+// Custom-seeded FNV-1a over bytes. This historical seed is deliberately kept
+// stable; it is NOT the standard FNV-1a-64 offset basis. The seed, multiplier,
+// little-endian word encoding and field order together define ParamsId's
+// compatibility surface, pinned by a literal known-answer test.
 constexpr uint64_t kFnvOffset = 1469598103934665603ULL;
 constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
@@ -78,12 +78,15 @@ bool RnsBasis::wellFormed(std::string *error) const {
   if (aux_end < aux_begin) {
     return fail(error, "aux range [" + std::to_string(aux_begin) + ", " + std::to_string(aux_end) + ") is inverted");
   }
-  if (limbCount() == 0) {
+  // Widen before adding: two valid uint32_t range lengths can wrap their sum
+  // to a small, apparently valid limb count.
+  const uint64_t limbs = uint64_t{mainCount()} + auxCount();
+  if (limbs == 0) {
     return fail(error, "basis has no limbs");
   }
-  if (limbCount() > kMaxLimbs) {
+  if (limbs > kMaxLimbs) {
     return fail(error,
-                "basis has " + std::to_string(limbCount()) + " limbs, over the bound of " + std::to_string(kMaxLimbs));
+                "basis has " + std::to_string(limbs) + " limbs, over the bound of " + std::to_string(kMaxLimbs));
   }
   return true;
 }
@@ -100,6 +103,9 @@ bool PolyLayout::wellFormed(std::string *error) const {
   if (log_degree < kMinLogDegree || log_degree > kMaxLogDegree) {
     return fail(error, "log_degree " + std::to_string(log_degree) + " outside [" + std::to_string(kMinLogDegree) +
                          ", " + std::to_string(kMaxLogDegree) + "]");
+  }
+  if (form != NttForm::Coefficient && form != NttForm::Evaluation) {
+    return fail(error, "unknown NTT form");
   }
   return true;
 }
@@ -121,6 +127,9 @@ bool CiphertextLayout::wellFormed(std::string *error) const {
                          "; level() is main_end - 1 and means nothing "
                          "otherwise, so a key-switching digit is a "
                          "PolyLayout and never a CiphertextLayout");
+  }
+  if (poly.basis.mainCount() == 0) {
+    return fail(error, "a ciphertext basis must contain at least one main prime");
   }
   if (!std::isfinite(scale) || scale <= 0.0) {
     return fail(error, "scale must be finite and positive; decryption divides by it");

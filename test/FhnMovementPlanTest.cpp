@@ -5,6 +5,9 @@
 
 #include <algorithm>
 #include <vector>
+#include <map>
+#include <limits>
+#include <set>
 
 using namespace fhenomenon;
 using fhenomenon::testutil::ProgramBuilder;
@@ -401,6 +404,135 @@ TEST(FhnMovementPlan, ByteBudgetEvictsMultipleSmallForBigWorkingSet) {
 TEST(FhnMovementPlan, OutOfRangeEffectIsRejected) {
   auto prog = ProgramBuilder().input(1).inst(FHN_ADD_CC, 3, 1, 1).output(3).build();
   FhnLevelModel model = testModel();
-  model.effects[FHN_ADD_CC] = static_cast<FhnLevelEffect>(42);
-  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+  for (uint32_t raw : {uint32_t{42}, uint32_t{0x80000000}, std::numeric_limits<uint32_t>::max()}) {
+    SCOPED_TRACE(raw);
+    model.effects[FHN_ADD_CC] = static_cast<FhnLevelEffect>(raw);
+    EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {3}, 0, FhnEvictionPolicy::Belady, &model).has_value());
+  }
+}
+
+
+// Regression documentation of the byte-mode policy's limit: knowing all
+// future uses does not make greedy farthest-use eviction globally optimal
+// when buffer sizes differ. Both schedules start after input normalization.
+TEST(FhnMovementPlan, VariableSizeFarthestUseHasCheaperFeasibleAlternative) {
+  auto prog = ProgramBuilder().input(2).input(3)
+    .inst_p0(FHN_LEVEL_DOWN, 4, 3, 0)
+    .inst_p0(FHN_LEVEL_DOWN, 5, 2, 2)
+    .inst_p0(FHN_LEVEL_DOWN, 6, 5, 0)
+    .inst_p0(FHN_LEVEL_DOWN, 7, 3, 1)
+    .inst_p0(FHN_LEVEL_DOWN, 8, 2, 2)
+    .inst_p0(FHN_LEVEL_DOWN, 9, 4, 0)
+    .inst_p0(FHN_LEVEL_DOWN, 10, 6, 0)
+    .inst_p0(FHN_LEVEL_DOWN, 11, 4, 0)
+    .inst_p0(FHN_LEVEL_DOWN, 12, 10, 0).output(12).build();
+  FhnLevelModel model;
+  model.fresh_level = 2;
+  model.bytes_by_level = {1, 2, 3};
+  model.effects[FHN_LEVEL_DOWN] = FHN_LEVEL_SET_PARAM0;
+  auto plan = FhnMovementPlan::analyze(*prog, {12}, 7, FhnEvictionPolicy::Belady, &model);
+  ASSERT_TRUE(plan);
+  const std::map<uint32_t, uint64_t> bytes = {{2,3}, {3,3}, {4,1}, {5,3}, {6,1}, {7,2},
+                                            {8,3}, {9,1}, {10,1}, {11,1}, {12,1}};
+  uint64_t greedy_bytes = 0;
+  for (uint32_t i = 0; i < 9; ++i) {
+    for (auto id : plan->at(i).evict) greedy_bytes += bytes.at(id);
+    for (auto id : plan->at(i).prefetch) greedy_bytes += bytes.at(id);
+  }
+  EXPECT_EQ(plan->stats().evict_count + plan->stats().prefetch_count, 10u);
+  EXPECT_EQ(greedy_bytes, 22u);
+
+  // Hand-checked alternative: retain the small buffer 4 at i1, evict only
+  // the larger buffer 3; later drop 2 at i2 and 4 at i4. Check every peak
+  // and each use, rather than merely asserting a claimed oracle score.
+  const std::vector<std::vector<uint32_t>> evictions = {{}, {3}, {2}, {}, {4}, {}, {}, {}, {}};
+  const std::vector<std::vector<uint32_t>> frees = {{}, {}, {5}, {3,7}, {2,8}, {9}, {6}, {4,11}, {10}};
+  std::set<uint32_t> resident;
+  uint64_t alternative_transfers = 0, alternative_bytes = 0;
+  for (uint32_t i = 0; i < 9; ++i) {
+    const auto &inst = prog->instructions[i];
+    for (auto id : evictions[i]) {
+      ASSERT_NE(id, inst.operands[0]);
+      ASSERT_EQ(resident.erase(id), 1u);
+      ++alternative_transfers;
+      alternative_bytes += bytes.at(id);
+    }
+    if (resident.insert(inst.operands[0]).second) {
+      ++alternative_transfers;
+      alternative_bytes += bytes.at(inst.operands[0]);
+    }
+    ASSERT_TRUE(resident.insert(inst.result_id).second);
+    uint64_t peak_bytes = 0;
+    for (auto id : resident) peak_bytes += bytes.at(id);
+    EXPECT_LE(peak_bytes, 7u);
+    for (auto id : frees[i]) ASSERT_EQ(resident.erase(id), 1u);
+  }
+  EXPECT_EQ(resident, (std::set<uint32_t>{12}));
+  EXPECT_EQ(alternative_transfers, 8u);
+  EXPECT_EQ(alternative_bytes, 20u);
+  EXPECT_LT(alternative_bytes, greedy_bytes);
+}
+
+TEST(FhnMovementPlan, BudgetPreludeAndMetricsDeclareNormalizationSeparately) {
+  auto prog = ProgramBuilder().input(1).input(2).input(3).inst(FHN_ADD_CC, 4, 1, 2).output(4).build();
+  auto budgeted = FhnMovementPlan::analyze(*prog, {1, 2, 3, 4}, 3);
+  auto unlimited = FhnMovementPlan::analyze(*prog, {1, 2, 3, 4});
+  ASSERT_TRUE(budgeted);
+  ASSERT_TRUE(unlimited);
+  EXPECT_EQ(budgeted->initialEvictions(), (std::vector<uint32_t>{1, 2, 3}));
+  EXPECT_EQ(budgeted->stats().initial_evict_count, 3u);
+  EXPECT_EQ(budgeted->stats().evict_count, 0u);
+  EXPECT_EQ(budgeted->stats().high_water, 3u);
+  EXPECT_TRUE(unlimited->initialEvictions().empty());
+  EXPECT_EQ(unlimited->stats().initial_evict_count, 0u);
+}
+
+TEST(FhnMovementPlan, SemanticSnapshotAcceptsEqualCopiesAndDetectsEveryArrayField) {
+  auto original = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  auto copy = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).output(3).build();
+  auto plan = FhnMovementPlan::analyze(*original, {3});
+  ASSERT_TRUE(plan);
+  ASSERT_TRUE(plan->matches(*copy));
+  for (int j = 0; j < 4; ++j) {
+    copy->instructions[0].operands[j] ^= 1;
+    EXPECT_FALSE(plan->matches(*copy));
+    copy->instructions[0].operands[j] ^= 1;
+    copy->instructions[0].params[j] = 123;
+    EXPECT_FALSE(plan->matches(*copy));
+    copy->instructions[0].params[j] = 0;
+  }
+  for (int j = 0; j < 2; ++j) {
+    copy->instructions[0].fparams[j] = -0.0;
+    EXPECT_FALSE(plan->matches(*copy));
+    copy->instructions[0].fparams[j] = 0.0;
+  }
+  EXPECT_TRUE(plan->matches(*copy));
+}
+
+
+TEST(FhnMovementPlan, RejectsUnrepresentableByteWorkingSet) {
+  auto prog = ProgramBuilder().input(1).inst(FHN_NEGATE, 2, 1).output(2).build();
+  FhnLevelModel model;
+  model.fresh_level = 0;
+  model.bytes_by_level = {uint64_t{1} << 63};
+  model.effects[FHN_NEGATE] = FHN_LEVEL_PRESERVE;
+  for (uint64_t budget : {uint64_t{0}, uint64_t{1}, std::numeric_limits<uint64_t>::max()})
+    EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {1, 2}, budget, FhnEvictionPolicy::Belady, &model));
+}
+
+TEST(FhnMovementPlan, ByteBudgetAdmissionDoesNotWrapAccumulatedResidency) {
+  auto prog = ProgramBuilder().input(1).inst(FHN_NEGATE, 2, 1)
+                .inst(FHN_NEGATE, 3, 1).inst(FHN_NEGATE, 4, 1).output(4).build();
+  FhnLevelModel model;
+  model.fresh_level = 0;
+  model.bytes_by_level = {uint64_t{1} << 62};
+  model.effects[FHN_NEGATE] = FHN_LEVEL_PRESERVE;
+  auto plan = FhnMovementPlan::analyze(*prog, {1, 2, 3, 4}, std::numeric_limits<uint64_t>::max(),
+                                       FhnEvictionPolicy::Belady, &model);
+  ASSERT_TRUE(plan);
+  EXPECT_EQ(plan->at(2).evict, (std::vector<uint32_t>{2}));
+  EXPECT_EQ(plan->stats().high_water_bytes, (uint64_t{3} << 62));
+  // Unlimited mode still reports high-water honestly; a sum exceeding the
+  // statistic's representable range must not silently wrap back to zero.
+  EXPECT_FALSE(FhnMovementPlan::analyze(*prog, {1, 2, 3, 4}, 0, FhnEvictionPolicy::Belady, &model));
 }

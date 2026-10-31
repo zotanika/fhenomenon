@@ -1,0 +1,283 @@
+{
+  "benchmark": "fixed matvec-fused 8x8 phase diagnostic",
+  "checked_logical_slots": 64,
+  "consumed_checksum": 3145768,
+  "exact_layout_and_residues": true,
+  "exclusions": [
+    "context/table creation",
+    "key generation",
+    "encryption",
+    "decryption",
+    "checksum",
+    "correctness checks",
+    "JSON formatting"
+  ],
+  "max_absolute_oracle_error": 3.2363817040276193e-07,
+  "modular_product_microprobe": {
+    "exact_residues": true,
+    "excluded": "factor precomputation, vector allocation, checksum and exactness checking",
+    "factor_bytes": 1572864,
+    "fixed_coefficient_shoup": {
+      "median_ms": 0.086334,
+      "minimum_ms": 0.082333,
+      "operations_per_sample": 1,
+      "samples_ms": [
+        0.082333,
+        0.087542,
+        0.083375,
+        0.084042,
+        0.090042,
+        0.086334,
+        0.086709
+      ]
+    },
+    "general_checksum": 9152909815977639008,
+    "general_mulMod": {
+      "median_ms": 1.110333,
+      "minimum_ms": 1.091458,
+      "operations_per_sample": 1,
+      "samples_ms": [
+        1.1605,
+        1.189917,
+        1.107166,
+        1.100958,
+        1.114417,
+        1.091458,
+        1.110333
+      ]
+    },
+    "products_per_sample": 196608,
+    "scope": "isolated modular products using actual immutable relin-key coefficients and live input residues; no key switching",
+    "shoup_checksum": 9152909815977639008
+  },
+  "oracle": [
+    -7.0,
+    6.0,
+    -6.0,
+    7.0,
+    0.0,
+    -7.0,
+    6.0,
+    -6.0
+  ],
+  "ordinary_native_kernels_total": {
+    "median_ms": 74.747708,
+    "minimum_ms": 74.247541,
+    "operations_per_sample": 32,
+    "samples_ms": [
+      75.334042,
+      75.625625,
+      76.133417,
+      74.247541,
+      74.391791,
+      74.747708,
+      74.557666
+    ]
+  },
+  "parameters": {
+    "aux_primes": [
+      1152921504606830593
+    ],
+    "dnum": 3,
+    "log_default_scale": 40,
+    "log_degree": 13,
+    "main_primes": [
+      1125899906826241,
+      1099511480321,
+      1099510890497
+    ]
+  },
+  "phase_warning": "Phase clocks are diagnostic boundaries, not precise accounting; outer total includes staging, clock overhead and lease/scope destruction. Separate probe medians cannot be subtracted from total.",
+  "phases": {
+    "input_and_four_key_validation": {
+      "median_ms": 1.709208,
+      "minimum_ms": 1.656167,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        1.6578330000000001,
+        1.7067489999999996,
+        1.709208,
+        1.656167,
+        1.759833,
+        1.7758310000000002,
+        1.744375
+      ]
+    },
+    "output_copy": {
+      "median_ms": 0.027872999999999995,
+      "minimum_ms": 0.026209,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        0.026416,
+        0.027872999999999995,
+        0.026209,
+        0.026706999999999998,
+        0.028209,
+        0.028916999999999998,
+        0.041918
+      ]
+    },
+    "region_multiply": {
+      "median_ms": 31.299625999999996,
+      "minimum_ms": 30.555874,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        31.043165999999996,
+        30.760542,
+        30.555874,
+        31.299625999999996,
+        31.362707999999998,
+        31.484125000000002,
+        31.384040999999996
+      ]
+    },
+    "region_rotateAdd_1": {
+      "median_ms": 13.568500999999998,
+      "minimum_ms": 13.351917,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        13.396751000000002,
+        13.568500999999998,
+        13.54229,
+        13.351917,
+        13.790417,
+        13.956624999999999,
+        13.581625
+      ]
+    },
+    "region_rotateAdd_2": {
+      "median_ms": 13.616333000000001,
+      "minimum_ms": 13.450539999999998,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        13.74204,
+        13.450539999999998,
+        13.616333000000001,
+        13.574126,
+        13.692457999999998,
+        13.678208000000001,
+        13.518585
+      ]
+    },
+    "region_rotateAdd_4": {
+      "median_ms": 13.592459999999999,
+      "minimum_ms": 13.412250000000002,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        13.592459999999999,
+        13.412250000000002,
+        13.480499,
+        13.634123000000002,
+        13.588291,
+        13.746875,
+        13.679999
+      ]
+    }
+  },
+  "probes": {
+    "FhnBuffer_allocate_free": {
+      "median_ms": 0.002292,
+      "minimum_ms": 0.002291,
+      "operations_per_sample": 32,
+      "samples_ms": [
+        0.002333,
+        0.002333,
+        0.002291,
+        0.002291,
+        0.002292,
+        0.002334,
+        0.002291
+      ]
+    },
+    "four_key_canonical_scans": {
+      "median_ms": 1.453458,
+      "minimum_ms": 1.429625,
+      "operations_per_sample": 32,
+      "samples_ms": [
+        1.556375,
+        1.429625,
+        1.453458,
+        1.469791,
+        1.450917,
+        1.447208,
+        1.472584
+      ]
+    },
+    "native_ADD_CS_zero_publication": {
+      "median_ms": 0.174833,
+      "minimum_ms": 0.17425,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        0.176042,
+        0.175292,
+        0.179042,
+        0.17425,
+        0.174583,
+        0.174625,
+        0.174833
+      ],
+      "scope": "checked native ADD_CS(0): validation, staging, scalar-zero copy and publication, not a pure memcpy"
+    },
+    "same_live_shared_vector_input_validation": {
+      "median_ms": 0.093292,
+      "minimum_ms": 0.090833,
+      "operations_per_sample": 8,
+      "samples_ms": [
+        0.090833,
+        0.095084,
+        0.093417,
+        0.093292,
+        0.09325,
+        0.093334,
+        0.093208
+      ]
+    }
+  },
+  "process_elapsed_ms_including_setup": 2340.860417,
+  "profiled_total": {
+    "median_ms": 73.544417,
+    "minimum_ms": 72.928042,
+    "operations_per_sample": 8,
+    "samples_ms": [
+      73.461667,
+      72.928042,
+      72.931834,
+      73.544417,
+      74.223625,
+      74.672792,
+      73.952958
+    ]
+  },
+  "public_coarse_c_function_total": {
+    "median_ms": 74.342542,
+    "minimum_ms": 72.917917,
+    "operations_per_sample": 8,
+    "samples_ms": [
+      74.677,
+      74.693792,
+      74.342542,
+      74.498333,
+      72.917917,
+      74.1865,
+      73.496875
+    ]
+  },
+  "reduction_distances": [
+    4,
+    2,
+    1
+  ],
+  "repetitions": 7,
+  "row_formula": "rows[j][k] = (j*3+k*2)%5-2",
+  "warmup": 2,
+  "x": [
+    1.0,
+    -2.0,
+    3.0,
+    0.0,
+    -1.0,
+    2.0,
+    1.0,
+    -3.0
+  ]
+}

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <unordered_set>
 
 namespace fhenomenon {
 
@@ -65,8 +66,22 @@ int FhnDefaultExecutor::execute(const FhnMovementHooks &hooks, const FhnProgram 
   // A stale plan analyzed against a different (e.g. re-lowered) program
   // would index this buffer table out of bounds; reject the mismatch
   // instead of dispatching against it.
-  if (plan.instructionCount() != program->num_instructions)
+  if (!plan.matches(*program))
     return -1;
+  if (static_cast<bool>(hooks.prefetch) != static_cast<bool>(hooks.evict))
+    return -1;
+  // Validate the complete prelude before changing any input's residency.
+  // Plans model distinct ids as distinct residency and lifetime units.
+  // Reject aliases rather than evict/free a handle still used by another id.
+  std::unordered_set<FhnBuffer *> input_handles;
+  for (uint32_t i = 0; i < program->num_inputs; ++i) {
+    auto *input = buffers[program->input_ids[i]];
+    if (!input || !input_handles.insert(input).second)
+      return -1;
+  }
+  for (uint32_t id : plan.initialEvictions())
+    if (hooks.evict && hooks.evict(hooks.ctx, buffers[id]) != 0)
+      return -1;
 
   std::vector<uint32_t> owned; // plan-allocated ids not yet freed
   auto fail = [&](int rc) {
@@ -134,26 +149,20 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
 
   switch (inst.opcode) {
   case FHN_HMULT: {
-    // Must have MULT_CC at minimum
-    if (dispatch_.find(static_cast<int>(FHN_MULT_CC)) == dispatch_.end())
+    // HMULT promises all three stages. Validate the complete decomposition
+    // before MULT_CC can change the result.
+    if (!supports(FHN_MULT_CC) || !supports(FHN_RELINEARIZE) || !supports(FHN_RESCALE))
       return false;
 
     const FhnBuffer *ops[] = {buffers[inst.operands[0]], buffers[inst.operands[1]], nullptr, nullptr};
     if (call(FHN_MULT_CC, buffers[inst.result_id], ops, inst.params, inst.fparams) != 0)
       return false;
 
-    // RELINEARIZE and RESCALE are optional in the sense that a backend may
-    // not register them — but if a registered kernel fails, that failure
-    // must propagate, not be swallowed.
     const FhnBuffer *self_ops[] = {buffers[inst.result_id], nullptr, nullptr, nullptr};
-    if (dispatch_.count(static_cast<int>(FHN_RELINEARIZE))) {
-      if (call(FHN_RELINEARIZE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) != 0)
-        return false;
-    }
-    if (dispatch_.count(static_cast<int>(FHN_RESCALE))) {
-      if (call(FHN_RESCALE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) != 0)
-        return false;
-    }
+    if (call(FHN_RELINEARIZE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) != 0)
+      return false;
+    if (call(FHN_RESCALE, buffers[inst.result_id], self_ops, inst.params, inst.fparams) != 0)
+      return false;
 
     return true;
   }
@@ -168,6 +177,9 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
     return call(FHN_ROTATE, buffers[inst.result_id], ops, inst.params, inst.fparams) == 0;
   }
   case FHN_HROT_ADD: {
+    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] ||
+        buffers[inst.result_id] == buffers[inst.operands[1]] || !supports(FHN_ADD_CC))
+      return false;
     // Decompose HROT part first
     FhnInstruction hrot_inst = inst;
     hrot_inst.opcode = FHN_HROT;
@@ -178,12 +190,15 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
     } else {
       ok = decompose(ctx, hrot_inst, buffers);
     }
-    if (!ok || !dispatch_.count(static_cast<int>(FHN_ADD_CC)))
+    if (!ok)
       return false;
     const FhnBuffer *add_ops[] = {buffers[inst.result_id], buffers[inst.operands[1]], nullptr, nullptr};
     return call(FHN_ADD_CC, buffers[inst.result_id], add_ops, inst.params, inst.fparams) == 0;
   }
   case FHN_HCONJ_ADD: {
+    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] ||
+        buffers[inst.result_id] == buffers[inst.operands[1]])
+      return false;
     if (!dispatch_.count(static_cast<int>(FHN_CONJUGATE)) || !dispatch_.count(static_cast<int>(FHN_ADD_CC)))
       return false;
     const FhnBuffer *ops[] = {buffers[inst.operands[0]], nullptr, nullptr, nullptr};
@@ -195,7 +210,8 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
   case FHN_MAD: {
     // res = a * fparams[0] + b. The multiply lands in the result buffer
     // before b is read, so b must be present and must not alias res.
-    if (inst.operands[1] == 0 || inst.operands[1] == inst.result_id)
+    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] ||
+        buffers[inst.result_id] == buffers[inst.operands[1]])
       return false;
     if (!dispatch_.count(static_cast<int>(FHN_MULT_CS)) || !dispatch_.count(static_cast<int>(FHN_ADD_CC)))
       return false;

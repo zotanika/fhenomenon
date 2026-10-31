@@ -38,31 +38,13 @@ class Arena {
 
   Arena(const Arena &) = delete;
   Arena &operator=(const Arena &) = delete;
-  ~Arena() = default;
+  ~Arena();
 
-  // Move leaves the source empty rather than defaulted: a defaulted move
-  // would carry capacity_ across while the slab pointer went null, so the
-  // moved-from arena would hand out pointers into nothing.
-  Arena(Arena &&other) noexcept
-    : slab_(std::move(other.slab_)), capacity_(other.capacity_), offset_(other.offset_),
-      high_water_(other.high_water_) {
-    other.capacity_ = 0;
-    other.offset_ = 0;
-    other.high_water_ = 0;
-  }
-
-  Arena &operator=(Arena &&other) noexcept {
-    if (this != &other) {
-      slab_ = std::move(other.slab_);
-      capacity_ = other.capacity_;
-      offset_ = other.offset_;
-      high_water_ = other.high_water_;
-      other.capacity_ = 0;
-      other.offset_ = 0;
-      other.high_water_ = 0;
-    }
-    return *this;
-  }
+  // Move transfers the slab, cursor and high water, leaving the source empty.
+  // Outstanding Scope guards on BOTH arenas are invalidated: they never
+  // rewind the transferred or replaced storage. Self-move is a no-op.
+  Arena(Arena &&other) noexcept;
+  Arena &operator=(Arena &&other) noexcept;
 
   // Bump-allocate space for `count` objects of type T, kAlignment-aligned.
   // Returns nullptr if the arena cannot satisfy the request. The storage is
@@ -85,7 +67,8 @@ class Arena {
   void *allocateBytes(std::size_t bytes);
 
   // Rewind to empty. Frees nothing and keeps the slab, so the next program
-  // reuses the same memory. highWater() survives a reset.
+  // reuses the same memory. highWater() survives a reset. Existing Scope
+  // guards are invalidated so they cannot rewind allocations made afterward.
   void reset();
 
   std::size_t capacity() const { return capacity_; }
@@ -99,10 +82,14 @@ class Arena {
   // RAII rewind for nested temporaries: an operation takes a Scope, allocates
   // freely, and everything it took is reclaimed when the Scope dies. This is
   // what lets composite kernels nest without the caller sizing each level.
+  // A rewind also invalidates younger guards that are still alive, making
+  // out-of-order destruction safe. Reset, move and Arena destruction likewise
+  // detach guards; destroying a detached guard has no effect. Tracking uses
+  // links in the guards themselves and never allocates.
   class Scope {
 public:
-    explicit Scope(Arena &arena) : arena_(&arena), saved_(arena.offset_) {}
-    ~Scope() { arena_->offset_ = saved_; }
+    explicit Scope(Arena &arena);
+    ~Scope();
 
     Scope(const Scope &) = delete;
     Scope &operator=(const Scope &) = delete;
@@ -110,8 +97,10 @@ public:
     Scope &operator=(Scope &&) = delete;
 
 private:
+    friend class Arena;
     Arena *arena_;
     std::size_t saved_;
+    Scope *previous_;
   };
 
   private:
@@ -120,11 +109,14 @@ private:
   };
 
   static std::size_t roundUp(std::size_t bytes);
+  // Detach guards down to (but excluding) the specified older guard.
+  void invalidateScopes(Scope *stop = nullptr) noexcept;
 
   std::unique_ptr<std::byte, SlabDeleter> slab_;
   std::size_t capacity_ = 0;
   std::size_t offset_ = 0;
   std::size_t high_water_ = 0;
+  Scope *scope_ = nullptr;
 };
 
 } // namespace fhenomenon::ckks

@@ -43,6 +43,10 @@ enum class NttForm : uint8_t { Coefficient = 0, Evaluation = 1 };
 //
 // A necessary condition, never a proof. Two parameter sets sharing a 64-bit
 // fingerprint pass this check; at a trust boundary compare Params directly.
+// Encoding: FNV-1a byte mixing with custom seed 1469598103934665603,
+// multiplier 1099511628211, and little-endian 64-bit words. This intentionally
+// preserves the established identity bytes rather than adopting the standard
+// FNV offset basis. Prime lists carry a 64-bit length prefix.
 class ParamsId {
   public:
   static ParamsId of(const Params &params);
@@ -84,6 +88,8 @@ struct RnsBasis {
   uint32_t aux_begin = 0;
   uint32_t aux_end = 0;
 
+  // Arithmetic accessors require wellFormed() first; raw values may describe
+  // inverted/oversized ranges. Validation does not use the narrow sum below.
   uint32_t mainCount() const { return main_end - main_begin; }
   uint32_t auxCount() const { return aux_end - aux_begin; }
   uint32_t limbCount() const { return mainCount() + auxCount(); }

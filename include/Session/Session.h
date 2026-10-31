@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace fhenomenon {
 
@@ -25,6 +26,8 @@ struct SessionAliasDeleter {
 class Session final : public std::enable_shared_from_this<Session> {
   public:
   static std::shared_ptr<Session> create(const Backend &backend) {
+    if (isRecording())
+      throw std::logic_error("Session: cannot create a session during recording");
     session_ptr_ = std::shared_ptr<Session>(new Session(backend));
     return session_ptr_;
   }
@@ -95,7 +98,7 @@ class Session final : public std::enable_shared_from_this<Session> {
   template <typename T> void saveOp(std::shared_ptr<scheduler::Operation<T>> op);
   template <typename Op> void run(Op &&ops);
 
-  bool isActive() { return (session_ptr_ == nullptr) ? false : active_; }
+  bool isActive() const { return active_; }
 
   // Null-safe recording check: safe to call when no session was ever
   // created, unlike getSession()->isActive() (a member call on null).
@@ -110,11 +113,40 @@ class Session final : public std::enable_shared_from_this<Session> {
     }
   }
 
-  void eraseEntity(const void *key) { entity_map_.erase(key); }
+  void eraseEntity(const void *key) {
+    entity_map_.erase(key);
+    result_copies_.erase(key);
+  }
 
   void useBackend() const { (void)backend_; }
 
   private:
+  template <typename> friend class Fhenon;
+
+  // Provenance is explicit: shared ownership also occurs for user values.
+  template <typename T> std::shared_ptr<Fhenon<T>> makeTemporary(T value, std::shared_ptr<Profile> profile) {
+    auto result = std::make_shared<Fhenon<T>>(value);
+    result->setProfile(std::move(profile));
+    temporary_entities_.insert(result.get());
+    saveEntity(*result);
+    return result;
+  }
+
+  bool isTemporary(const FhenonBase *entity) const { return temporary_entities_.count(entity) != 0; }
+
+  template <typename T> void recordResultCopy(Fhenon<T> &copy, Fhenon<T> &source) {
+    // Each returned-value copy gets its own recorded value, so assigning to
+    // one surviving copy cannot overwrite another. Assignment lowers to an
+    // SSA alias and does not allocate a buffer.
+    auto value = makeTemporary(source.getValue(), source.getProfile());
+    value->ciphertext_ = source.ciphertext_;
+    value->isEncrypted_ = source.isEncrypted_;
+    auto original = trackEntity(source);
+    saveOp(std::make_shared<scheduler::Operation<T>>(scheduler::OperationType::Assignment, value, original));
+    setEntity(&copy, *value);
+    result_copies_[&copy] = {&copy, value.get()};
+  }
+
   // prevent direct instantiation
 
   explicit Session(const Backend &backend)
@@ -124,6 +156,7 @@ class Session final : public std::enable_shared_from_this<Session> {
   Session &operator=(const Session &) = delete;
 
   void optimize();
+  bool executeThroughFhnRuntime(scheduler::Planner<int> &planner, const FhnRuntime &runtime);
 
   // Drop all recording state so a later run() starts fresh: recorded
   // operations hold aliases to caller-owned variables, and entity_map_ holds
@@ -136,6 +169,9 @@ class Session final : public std::enable_shared_from_this<Session> {
     active_ = false;
     operations_.clear();
     entity_map_.clear();
+    temporary_entities_.clear();
+    result_copies_.clear();
+    unsupported_type_ = false;
     poisoned_ = false;
     poison_reason_.clear();
   }
@@ -143,6 +179,7 @@ class Session final : public std::enable_shared_from_this<Session> {
   bool active_;
   bool passes_registered_ = false;
   bool poisoned_ = false;
+  bool unsupported_type_ = false;
   std::string poison_reason_;
   const Backend &backend_;
   std::unique_ptr<scheduler::Scheduler> scheduler_; // Scheduler with backend delegate
@@ -150,6 +187,11 @@ class Session final : public std::enable_shared_from_this<Session> {
   std::vector<std::shared_ptr<scheduler::OperationBase>> operations_;
   // Map for reference of Fhenon
   std::unordered_map<const void *, std::any> entity_map_;
+
+  std::unordered_set<const FhenonBase *> temporary_entities_;
+  // Live returned-value shells and their canonical recording values. Shell
+  // destructors remove entries, leaving only caller-observable copies at run end.
+  std::unordered_map<const void *, std::pair<FhenonBase *, FhenonBase *>> result_copies_;
 
   // `thread_local` variable to save current session
   static thread_local std::shared_ptr<Session> session_ptr_;

@@ -35,6 +35,7 @@ include(LTO)
 include(CTest)
 include(CheckLanguage)
 include(CCache)
+include(GNUInstallDirs)
 
 option(BUILD_DOCUMENTATION "Build doxygen documentation (requires doxygen)" ON)
 option(BUILD_TEST "Build tests" ON)
@@ -47,9 +48,6 @@ endif()
 # set(SRCS src/Foo.cpp CACHE FILEPATH "Sources" FORCE)
 
 add_subdirectory(external)
-add_library(external-libs INTERFACE)
-target_link_libraries(external-libs INTERFACE fmt::fmt
-                                              nlohmann_json::nlohmann_json)
 
 macro(add_fhenomenon_sources)
   file(GLOB_RECURSE SUBDIR_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
@@ -124,11 +122,11 @@ set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(
   ${PROJECT_LIB_NAME}
-  PUBLIC $<INSTALL_INTERFACE:include>
+  PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-target_link_libraries(${PROJECT_LIB_NAME}
-                      PUBLIC $<BUILD_INTERFACE:external-libs>)
+target_compile_features(${PROJECT_LIB_NAME} PUBLIC cxx_std_17)
+target_link_libraries(${PROJECT_LIB_NAME} PUBLIC fmt::fmt nlohmann_json::nlohmann_json ${CMAKE_DL_LIBS})
 
 if(BUILTIN_BACKEND STREQUAL "TFHE")
   target_link_libraries(${PROJECT_LIB_NAME} PUBLIC tfhe_backend)
@@ -143,7 +141,6 @@ target_set_warnings_as_errors(${PROJECT_LIB_NAME})
 add_library(${PROJECT_LIB_NAME}::${PROJECT_LIB_NAME} ALIAS ${PROJECT_LIB_NAME})
 
 # Define exported target
-include(GNUInstallDirs)
 install(
   TARGETS ${PROJECT_LIB_NAME}
   EXPORT ${PROJECT_LIB_NAME}Targets
@@ -151,8 +148,8 @@ install(
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES
-  DESTINATION include
-  PUBLIC_HEADER DESTINATION include)
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Export the target
 install(
@@ -167,10 +164,11 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}/Version.hpp" @ONLY)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}/Version.hpp"
-        DESTINATION include/${PROJECT_LIB_NAME})
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_LIB_NAME})
 
 # Install include directory
-install(DIRECTORY include/${PROJECT_LIB_NAME} DESTINATION include)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp" PATTERN "*.tpp")
 
 # Make Config.cmake and ConfigVersion.cmake
 include(CMakePackageConfigHelpers)
@@ -182,12 +180,35 @@ write_basic_package_version_file(
 configure_package_config_file(
   ${CMAKE_CURRENT_LIST_DIR}/cmake/Config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}Config.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_LIB_NAME})
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_LIB_NAME}
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR)
 
 # Install them
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_LIB_NAME}ConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_LIB_NAME})
+
+# The reference plugin is useful to corpus users even when tests are disabled.
+add_library(toyfhe_fhn SHARED src/FHN/ToyFheKernels.cpp)
+target_link_libraries(toyfhe_fhn PRIVATE ${PROJECT_LIB_NAME})
+set_target_properties(toyfhe_fhn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# A separately linked contribution using only the public runtime interfaces.
+add_library(fhn_stats_contribution STATIC contributions/stats/StatsKernels.cpp)
+target_link_libraries(fhn_stats_contribution PUBLIC ${PROJECT_LIB_NAME})
+set_target_properties(fhn_stats_contribution PROPERTIES
+  POSITION_INDEPENDENT_CODE ON EXPORT_NAME StatsKernels)
+add_library(Fhenomenon::StatsKernels ALIAS fhn_stats_contribution)
+install(TARGETS fhn_stats_contribution EXPORT ${PROJECT_LIB_NAME}Targets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+add_library(fhn_matvec_contribution STATIC contributions/matvec/MatvecKernels.cpp)
+target_link_libraries(fhn_matvec_contribution PUBLIC ${PROJECT_LIB_NAME})
+set_target_properties(fhn_matvec_contribution PROPERTIES
+  POSITION_INDEPENDENT_CODE ON EXPORT_NAME MatvecKernels)
+add_library(Fhenomenon::MatvecKernels ALIAS fhn_matvec_contribution)
+install(TARGETS fhn_matvec_contribution EXPORT ${PROJECT_LIB_NAME}Targets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 add_subdirectory(benchmarks)
 

@@ -190,3 +190,58 @@ TEST(CkksParamsTest, SparseSecretNeedsAHammingWeight) {
   spec.terminal_primes = {114689};
   EXPECT_TRUE(Params::create(spec).has_value());
 }
+
+TEST(CkksParamsTest, RejectsAnAuxProductJustBelowTheDigitExactly) {
+  Params::Spec spec = goodSpec();
+  spec.dnum = 1;
+  spec.main_primes = {4611686018427277313ULL, 4611686018425989121ULL};
+  spec.aux_primes = {4611686018427365377ULL, 4611686018425901057ULL};
+  // All four are primes congruent to 1 mod 2048. Exact Q - P is
+  // 121198608384, but summing double log2 values incorrectly orders them.
+  std::string error;
+  EXPECT_FALSE(Params::create(spec, &error).has_value());
+  EXPECT_NE(error.find("P must exceed"), std::string::npos) << error;
+}
+
+TEST(CkksParamsTest, AcceptsAnAuxPrimeJustAboveTheDigitExactly) {
+  Params::Spec spec = goodSpec();
+  spec.dnum = 1;
+  spec.main_primes = {4611686018427199489ULL};
+  spec.aux_primes = {4611686018427215873ULL};
+  // P - Q = 16384, although their double log2 values are equal.
+  std::string error;
+  EXPECT_TRUE(Params::create(spec, &error).has_value()) << error;
+}
+
+TEST(CkksParamsTest, ComparesProductsBeyond128BitsExactly) {
+  Params::Spec spec = goodSpec();
+  spec.dnum = 1;
+  spec.main_primes = {4611686018427277313ULL, 4611686018425989121ULL, 4611686018427199489ULL};
+  spec.aux_primes = {4611686018427365377ULL, 4611686018425901057ULL, 4611686018427215873ULL};
+  // Multiplying the near-equal two-prime pair by the third pair makes P > Q.
+  // Both products require 186 bits, so a fixed 128-bit product is insufficient.
+  std::string error;
+  EXPECT_TRUE(Params::create(spec, &error).has_value()) << error;
+  std::swap(spec.main_primes, spec.aux_primes);
+  EXPECT_FALSE(Params::create(spec, &error).has_value());
+}
+
+TEST(CkksParamsTest, RejectsNttCongruentCompositesInEveryPrimeList) {
+  // 2049 = 3 * 683; 503369729 = 12289 * 40961. The latter passes small
+  // trial-divisor screening, so the Miller-Rabin rounds must reject it.
+  for (uint64_t composite : {2049ULL, 503369729ULL}) {
+    for (uint32_t list = 0; list < 3; ++list) {
+      Params::Spec spec = goodSpec();
+      if (list == 0) {
+        spec.main_primes[0] = composite;
+      } else if (list == 1) {
+        spec.aux_primes.push_back(composite);
+      } else {
+        spec.terminal_primes = {composite};
+      }
+      std::string error;
+      EXPECT_FALSE(Params::create(spec, &error).has_value()) << "list " << list << " composite " << composite;
+      EXPECT_NE(error.find("not prime"), std::string::npos) << error;
+    }
+  }
+}

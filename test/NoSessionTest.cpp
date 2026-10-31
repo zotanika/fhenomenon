@@ -35,3 +35,15 @@ TEST(NoSessionTest, EagerOpsWithoutAnySession) {
   b = a; // copy assignment
   EXPECT_EQ(b.decrypt(), 3);
 }
+
+TEST(NoSessionTest, FloatingArithmeticLinksAndEvaluatesWithoutSession) {
+  auto profile = Profile::createProfile(ParameterGen::createCKKSParam(CKKSParamPreset::FGb));
+  Fhenon<double> d = 1.5;
+  Fhenon<float> f = 2.5f;
+  d.belong(profile);
+  f.belong(profile);
+  auto dr = d + d;
+  auto fr = f * 2.0f;
+  EXPECT_DOUBLE_EQ(dr.decrypt(), 3.0);
+  EXPECT_FLOAT_EQ(fr.decrypt(), 5.0f);
+}

@@ -80,6 +80,12 @@ TEST(ParamsId, AgreesWithParameterSetEquality) {
   EXPECT_EQ(ParamsId::of(a), ParamsId::of(b));
 }
 
+TEST(ParamsId, PreservesTheCustomSeededWireIdentity) {
+  // Independent known answer for the little-endian, length-prefixed words
+  // of goodSpec(), using the established custom seed 1469598103934665603.
+  EXPECT_EQ(ParamsId::of(make(goodSpec())).value(), 0xe6126272e977ac87ULL);
+}
+
 // Every field Params::operator== compares must reach the fingerprint. A field
 // that does not is a silent wire-compatibility hole: two parameter sets that
 // compare unequal would produce ciphertexts that claim to be interchangeable.
@@ -218,6 +224,24 @@ TEST(RnsBasis, RejectsMoreLimbsThanTheLayoutBound) {
   EXPECT_NE(error.find("limbs"), std::string::npos) << error;
 }
 
+TEST(RnsBasis, RejectsLimbCountsThatWouldWrapBeforeValidation) {
+  for (const RnsBasis &basis : {basisOf(0, UINT32_MAX, 0, 2), basisOf(0, 2, 0, UINT32_MAX)}) {
+    std::string error;
+    EXPECT_FALSE(basis.wellFormed(&error));
+    EXPECT_FALSE(polyOf(basis).wellFormed());
+    EXPECT_NE(error.find("limbs"), std::string::npos) << error;
+  }
+}
+
+TEST(RnsBasis, EnforcesThe256LimbBoundaryAcrossBothRanges) {
+  EXPECT_TRUE(basisOf(0, 256).wellFormed());
+  EXPECT_TRUE(basisOf(0, 0, 0, 256).wellFormed());
+  EXPECT_TRUE(basisOf(UINT32_MAX - 128, UINT32_MAX, 5, 133).wellFormed());
+  EXPECT_FALSE(basisOf(0, 257).wellFormed());
+  EXPECT_FALSE(basisOf(0, 0, 0, 257).wellFormed());
+  EXPECT_FALSE(basisOf(0, 128, 0, 129).wellFormed());
+}
+
 TEST(RnsBasis, EqualityComparesEveryField) {
   const RnsBasis basis = basisOf(1, 4, 0, 2);
   EXPECT_EQ(basis, basisOf(1, 4, 0, 2));
@@ -259,6 +283,24 @@ TEST(PolyLayout, RejectsALogDegreeOutsideTheSupportedRange) {
   EXPECT_FALSE(polyOf(basisOf(0, 2), PolyLayout::kMinLogDegree - 1).wellFormed(&error));
   EXPECT_NE(error.find("log_degree"), std::string::npos) << error;
   EXPECT_FALSE(polyOf(basisOf(0, 2), PolyLayout::kMaxLogDegree + 1).wellFormed(&error));
+}
+
+TEST(PolyLayout, RejectsUnknownNttForms) {
+  EXPECT_TRUE(polyOf(basisOf(0, 2), 10, NttForm::Coefficient).wellFormed());
+  EXPECT_TRUE(polyOf(basisOf(0, 2), 10, NttForm::Evaluation).wellFormed());
+  for (uint8_t form : {uint8_t{2}, uint8_t{255}}) {
+    std::string error;
+    EXPECT_FALSE(polyOf(basisOf(0, 2), 10, static_cast<NttForm>(form)).wellFormed(&error));
+    EXPECT_NE(error.find("form"), std::string::npos) << error;
+  }
+}
+
+TEST(CiphertextLayout, RejectsAnAuxOnlyBasis) {
+  const PolyLayout aux_only = polyOf(basisOf(0, 0, 0, 1), 10);
+  ASSERT_TRUE(aux_only.wellFormed()); // still a useful standalone polynomial
+  std::string error;
+  EXPECT_FALSE((CiphertextLayout{aux_only, 1024.0, 2}.wellFormed(&error)));
+  EXPECT_NE(error.find("main"), std::string::npos) << error;
 }
 
 TEST(PolyLayout, RejectsAMalformedBasisRatherThanRepeatingItsChecks) {

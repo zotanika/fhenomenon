@@ -1,6 +1,7 @@
 #include "FHN/ToyFheKernels.h"
 #include "Crypto/ToyFHE.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <vector>
@@ -40,95 +41,103 @@ static std::size_t toyfhe_norm_rot(int64_t d, std::size_t n) {
   return static_cast<std::size_t>(((d % sn) + sn) % sn);
 }
 
-typedef fhenomenon::toyfhe::Ciphertext (fhenomenon::toyfhe::Engine::*ToyBinOp)(
-  const fhenomenon::toyfhe::Ciphertext &, const fhenomenon::toyfhe::Ciphertext &) const;
+// Validate kinds before touching the result, and compute through local values
+// so scalar and packed operations tolerate either physical operand alias.
+static bool toyfhe_is_cipher(const FhnBuffer *buf) {
+  return buf && (buf->kind == BufKind::Ciphertext ||
+                 (buf->kind == BufKind::CiphertextVec && !buf->ct_vec.empty()));
+}
 
-// Slot-wise binary engine op over two CiphertextVec operands of equal size.
-// Computes into a local vector first so the result may alias either operand —
-// the executor's decomposition paths issue in-place calls per the ABI
-// contract in fhn_backend_api.h.
-static int toyfhe_vec_binary(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *a, const FhnBuffer *b,
-                             ToyBinOp op) {
-  if (a->ct_vec.empty() || a->ct_vec.size() != b->ct_vec.size())
+template <typename Op>
+static int toyfhe_unary(FhnBuffer *result, const FhnBuffer *a, Op op) {
+  if (!result || !toyfhe_is_cipher(a))
     return -1;
-  std::vector<fhenomenon::toyfhe::Ciphertext> out;
-  out.reserve(a->ct_vec.size());
-  for (std::size_t i = 0; i < a->ct_vec.size(); ++i) {
-    out.push_back((ctx->engine.*op)(a->ct_vec[i], b->ct_vec[i]));
+  if (toyfhe_is_vec(a)) {
+    std::vector<fhenomenon::toyfhe::Ciphertext> out;
+    out.reserve(a->ct_vec.size());
+    for (const auto &ct : a->ct_vec)
+      out.push_back(op(ct));
+    result->ct_vec = std::move(out);
+    result->kind = BufKind::CiphertextVec;
+  } else {
+    result->ct = op(a->ct);
+    result->kind = BufKind::Ciphertext;
   }
-  result->ct_vec = std::move(out);
-  result->kind = BufKind::CiphertextVec;
   return 0;
+}
+
+template <typename Op>
+static int toyfhe_binary(FhnBuffer *result, const FhnBuffer *a, const FhnBuffer *b, Op op) {
+  if (!result || !toyfhe_is_cipher(a) || !toyfhe_is_cipher(b) || a->kind != b->kind)
+    return -1;
+  if (toyfhe_is_vec(a)) {
+    if (a->ct_vec.size() != b->ct_vec.size())
+      return -1;
+    std::vector<fhenomenon::toyfhe::Ciphertext> out;
+    out.reserve(a->ct_vec.size());
+    for (std::size_t i = 0; i < a->ct_vec.size(); ++i)
+      out.push_back(op(a->ct_vec[i], b->ct_vec[i]));
+    result->ct_vec = std::move(out);
+    result->kind = BufKind::CiphertextVec;
+  } else {
+    result->ct = op(a->ct, b->ct);
+    result->kind = BufKind::Ciphertext;
+  }
+  return 0;
+}
+
+static fhenomenon::toyfhe::Ciphertext toyfhe_negated(fhenomenon::toyfhe::Ciphertext ct) {
+  ct.c0 = -ct.c0;
+  ct.c1 = -ct.c1;
+  return ct;
 }
 
 // --- Kernel implementations ------------------------------------------------
 
 static int toyfhe_add_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t * /*params*/, const double * /*fparams*/) {
-  const FhnBuffer *a = operands[0];
-  const FhnBuffer *b = operands[1];
-  if (a == nullptr || b == nullptr)
+                         const int64_t *, const double *) {
+  if (!ctx || !operands)
     return -1;
-  if (toyfhe_is_vec(a) || toyfhe_is_vec(b)) {
-    // Mixed scalar/vector operands are not defined.
-    if (!toyfhe_is_vec(a) || !toyfhe_is_vec(b))
-      return -1;
-    return toyfhe_vec_binary(ctx, result, a, b, &fhenomenon::toyfhe::Engine::add);
-  }
-  result->ct = ctx->engine.add(a->ct, b->ct);
-  result->kind = BufKind::Ciphertext;
-  return 0;
+  return toyfhe_binary(result, operands[0], operands[1],
+                       [&](const auto &a, const auto &b) { return ctx->engine.add(a, b); });
 }
 
 static int toyfhe_add_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t * /*params*/, const double *fparams) {
-  result->ct = ctx->engine.addPlain(operands[0]->ct, fparams[0]);
-  result->kind = BufKind::Ciphertext;
-  return 0;
+                         const int64_t *, const double *fparams) {
+  if (!ctx || !operands || !fparams)
+    return -1;
+  return toyfhe_unary(result, operands[0], [&](const auto &a) { return ctx->engine.addPlain(a, fparams[0]); });
 }
 
 static int toyfhe_sub_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t * /*params*/, const double * /*fparams*/) {
-  // ToyFHE has no direct subtract — negate b then add.
-  fhenomenon::toyfhe::Ciphertext neg_b = operands[1]->ct;
-  neg_b.c0 = -neg_b.c0;
-  neg_b.c1 = -neg_b.c1;
-  result->ct = ctx->engine.add(operands[0]->ct, neg_b);
-  result->kind = BufKind::Ciphertext;
-  return 0;
+                         const int64_t *, const double *) {
+  if (!ctx || !operands)
+    return -1;
+  // ToyFHE has no direct subtract: negate b, then add slot by slot.
+  return toyfhe_binary(result, operands[0], operands[1],
+                       [&](const auto &a, const auto &b) { return ctx->engine.add(a, toyfhe_negated(b)); });
 }
 
-static int toyfhe_negate(FhnBackendCtx * /*ctx*/, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t * /*params*/, const double * /*fparams*/) {
-  result->ct = operands[0]->ct;
-  result->ct.c0 = -result->ct.c0;
-  result->ct.c1 = -result->ct.c1;
-  result->kind = BufKind::Ciphertext;
-  return 0;
+static int toyfhe_negate(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *operands,
+                         const int64_t *, const double *) {
+  if (!operands)
+    return -1;
+  return toyfhe_unary(result, operands[0], toyfhe_negated);
 }
 
 static int toyfhe_mult_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t * /*params*/, const double * /*fparams*/) {
-  const FhnBuffer *a = operands[0];
-  const FhnBuffer *b = operands[1];
-  if (a == nullptr || b == nullptr)
+                          const int64_t *, const double *) {
+  if (!ctx || !operands)
     return -1;
-  if (toyfhe_is_vec(a) || toyfhe_is_vec(b)) {
-    // Mixed scalar/vector operands are not defined.
-    if (!toyfhe_is_vec(a) || !toyfhe_is_vec(b))
-      return -1;
-    return toyfhe_vec_binary(ctx, result, a, b, &fhenomenon::toyfhe::Engine::multiply);
-  }
-  result->ct = ctx->engine.multiply(a->ct, b->ct);
-  result->kind = BufKind::Ciphertext;
-  return 0;
+  return toyfhe_binary(result, operands[0], operands[1],
+                       [&](const auto &a, const auto &b) { return ctx->engine.multiply(a, b); });
 }
 
 static int toyfhe_mult_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t * /*params*/, const double *fparams) {
-  result->ct = ctx->engine.multiplyPlain(operands[0]->ct, fparams[0]);
-  result->kind = BufKind::Ciphertext;
-  return 0;
+                          const int64_t *, const double *fparams) {
+  if (!ctx || !operands || !fparams)
+    return -1;
+  return toyfhe_unary(result, operands[0], [&](const auto &a) { return ctx->engine.multiplyPlain(a, fparams[0]); });
 }
 
 // ToyFHE multiply performs relinearization and rescale internally, so the
@@ -307,6 +316,49 @@ int toyfhe_fhn_decrypt_vec_i64(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t 
     out[i] = ctx->engine.decryptInt(in->ct_vec[i]);
   }
   return 0;
+}
+
+int toyfhe_fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double *values, uint32_t count) {
+  if (!ctx || !out || !values || count == 0)
+    return -1;
+  // Validate the whole input before encryption or assignment. Checking the
+  // rounded mantissa also prevents llround overflow inside encryptDouble.
+  const long double half_plaintext_modulus = static_cast<long double>(ctx->params.t) / 2;
+  for (uint32_t i = 0; i < count; ++i) {
+    if (!std::isfinite(values[i]) ||
+        std::abs(std::round(static_cast<long double>(values[i]) * static_cast<long double>(ctx->params.scale))) >= half_plaintext_modulus)
+      return -1;
+  }
+  try {
+    std::vector<fhenomenon::toyfhe::Ciphertext> encrypted;
+    encrypted.reserve(count);
+    for (uint32_t i = 0; i < count; ++i)
+      encrypted.push_back(ctx->engine.encryptDouble(values[i]));
+    out->ct_vec = std::move(encrypted);
+    out->kind = BufKind::CiphertextVec;
+    return 0;
+  } catch (const std::exception &) {
+    return -1;
+  }
+}
+
+int toyfhe_fhn_decrypt_vec_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *values, uint32_t count) {
+  if (!ctx || !in || !values || count == 0 || in->kind != BufKind::CiphertextVec || in->ct_vec.size() != count)
+    return -1;
+  try {
+    std::vector<double> decoded;
+    decoded.reserve(count);
+    for (const auto &cipher : in->ct_vec) {
+      const double value = ctx->engine.decryptDouble(cipher);
+      if (!std::isfinite(value))
+        return -1;
+      decoded.push_back(value);
+    }
+    std::copy(decoded.begin(), decoded.end(), values);
+    return 0;
+  } catch (const std::exception &) {
+    return -1;
+  }
 }
 
 int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf) {

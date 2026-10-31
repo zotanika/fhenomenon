@@ -11,6 +11,7 @@ extern "C" {
 typedef struct FhnBackendCtx FhnBackendCtx;
 typedef struct FhnBuffer FhnBuffer;
 typedef struct FhnExecHandle FhnExecHandle;
+typedef struct FhnClientCtx FhnClientCtx;
 
 /* Device type enumeration */
 typedef enum FhnDeviceType {
@@ -94,8 +95,16 @@ typedef int (*FhnBufferEvictFn)(FhnBackendCtx *ctx, FhnBuffer *buffer);
 
 /* Level effect of a compute opcode, declared by CKKS-family backends for
    byte-accurate movement planning (see fhn_fresh_level/fhn_level_bytes/
-   fhn_opcode_level_effect, resolved as an all-or-nothing trio). */
-typedef enum FhnLevelEffect {
+   fhn_opcode_level_effect, resolved as an all-or-nothing trio).
+   C++ uses the ABI's 32-bit representation explicitly so every backend
+   bit pattern is a valid enum value; unknown values can then be rejected
+   by the planner without an undefined enum load. The C declaration and
+   the ABI 1 representation of all existing values remain unchanged. */
+typedef enum FhnLevelEffect
+#ifdef __cplusplus
+  : uint32_t
+#endif
+{
   FHN_LEVEL_PRESERVE = 0,   /* result level = min over operand levels    */
   FHN_LEVEL_CONSUME = 1,    /* result level = (min over operands) - 1    */
   FHN_LEVEL_SET_PARAM0 = 2, /* result level = params[0] (must not raise) */
@@ -113,6 +122,43 @@ typedef int (*FhnEncryptInt64Fn)(FhnBackendCtx *ctx, FhnBuffer *out, int64_t val
 typedef int (*FhnEncryptDoubleFn)(FhnBackendCtx *ctx, FhnBuffer *out, double value);
 typedef int (*FhnDecryptInt64Fn)(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t *value_out);
 typedef int (*FhnDecryptDoubleFn)(FhnBackendCtx *ctx, const FhnBuffer *in, double *value_out);
+
+/* Optional packed-real exports, resolved independently with dlsym:
+   fhn_encrypt_vec_f64 / fhn_decrypt_vec_f64 (plus any backend prefix).
+   ABI version 1 and FhnBackendVTable layout are unchanged; scalar-only
+   backends remain valid. Both return 0 on success, nonzero on failure.
+
+   count must be positive. Encryption reads exactly count finite doubles;
+   decryption requires count to equal the ciphertext's logical slot count
+   and writes exactly count doubles. The caller supplies that many elements,
+   not merely a capacity; no truncation or implicit padding is allowed.
+   Null arguments, nonfinite values, unsupported counts/ranges and kind or
+   length mismatches fail. Validation failures leave the output unchanged.
+   Backends may restrict supported counts (e.g. power-of-two packing and
+   device capacity) and numerical range; callers must handle failure. */
+typedef int (*FhnEncryptVectorDoubleFn)(FhnBackendCtx *ctx, FhnBuffer *out, const double *values, uint32_t count);
+typedef int (*FhnDecryptVectorDoubleFn)(FhnBackendCtx *ctx, const FhnBuffer *in, double *values, uint32_t count);
+
+/* Optional separate trusted-client group, resolved together by symbol name:
+   fhn_client_create/destroy/prepare/encrypt_vec_f64/decrypt_vec_f64.
+   This additive group does not change ABI 1 or FhnBackendVTable.
+   The client owns secret material; the compute context must not own or
+   reference the client or its secret key. prepare derives and registers
+   public evaluation keys for a program before execution. Compute-only
+   kernels may borrow those keys, but must not invoke these host functions.
+   Destroy the client before its backend context. Buffers belong to the
+   backend; the packed-real validation/count contract above also applies.
+   A backend may allow just one client/key identity per compute context.
+   Evaluation keys can expire at client destruction; affected kernels then
+   fail. No serialized ciphertext transport is implied by this interface. */
+typedef FhnClientCtx *(*FhnClientCreateFn)(FhnBackendCtx *ctx);
+typedef void (*FhnClientDestroyFn)(FhnClientCtx *client);
+typedef int (*FhnClientPrepareFn)(FhnClientCtx *client, const FhnProgram *program);
+typedef int (*FhnClientEncryptVectorDoubleFn)(FhnClientCtx *client, FhnBuffer *out,
+                                           const double *values, uint32_t count);
+typedef int (*FhnClientDecryptVectorDoubleFn)(FhnClientCtx *client, const FhnBuffer *in,
+                                           double *values, uint32_t count);
+
 
 /* Optional advanced exports (NULL if not provided) */
 typedef FhnExecHandle *(*FhnSubmitFn)(FhnBackendCtx *ctx, const FhnProgram *program, FhnBuffer **inputs,

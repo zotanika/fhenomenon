@@ -46,6 +46,17 @@ class ShapeBuilder {
     return in.result_id;
   }
 
+  uint32_t rotAdd(uint32_t a, uint32_t b, int64_t dist) {
+    FhnInstruction in{};
+    in.opcode = FHN_HROT_ADD;
+    in.result_id = next_id_++;
+    in.operands[0] = a;
+    in.operands[1] = b;
+    in.params[0] = dist;
+    insts_.push_back(in);
+    return in.result_id;
+  }
+
   uint32_t un(FhnOpCode op, uint32_t a) {
     FhnInstruction in{};
     in.opcode = op;

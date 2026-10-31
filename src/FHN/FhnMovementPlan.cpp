@@ -1,16 +1,47 @@
 #include "FHN/FhnMovementPlan.h"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
+#include <iterator>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace fhenomenon {
 
+bool FhnMovementPlan::matches(const FhnProgram &program) const {
+  if (program.version != version_ || program.num_instructions != instructions_.size() ||
+      program.num_inputs != inputs_.size() || program.num_outputs != outputs_.size() ||
+      (program.num_instructions && !program.instructions) || (program.num_inputs && !program.input_ids) ||
+      (program.num_outputs && !program.output_ids))
+    return false;
+  for (uint32_t i = 0; i < program.num_inputs; ++i)
+    if (program.input_ids[i] != inputs_[i])
+      return false;
+  for (uint32_t i = 0; i < program.num_outputs; ++i)
+    if (program.output_ids[i] != outputs_[i])
+      return false;
+  for (uint32_t i = 0; i < program.num_instructions; ++i) {
+    const auto &a = program.instructions[i];
+    const auto &b = instructions_[i];
+    // Compare fields, never structure padding. Float bit patterns preserve
+    // signed zero and permit identical NaN-bearing program snapshots.
+    if (a.opcode != b.opcode || a.result_id != b.result_id ||
+        !std::equal(std::begin(a.operands), std::end(a.operands), std::begin(b.operands)) ||
+        !std::equal(std::begin(a.params), std::end(a.params), std::begin(b.params)) ||
+        std::memcmp(a.fparams, b.fparams, sizeof(a.fparams)) != 0)
+      return false;
+  }
+  return true;
+}
+
 std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &program, const std::vector<uint32_t> &pinned,
                                                         uint64_t device_budget, FhnEvictionPolicy policy,
                                                         const FhnLevelModel *model) {
+  if (program.version != FHN_ABI_VERSION || (program.num_instructions && !program.instructions) ||
+      (program.num_inputs && !program.input_ids) || (program.num_outputs && !program.output_ids))
+    return std::nullopt;
   constexpr int64_t kBeforeProgram = -1;
   constexpr int64_t kNever = std::numeric_limits<int64_t>::max();
 
@@ -88,9 +119,18 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
   }
 
   // Unit cost of holding an id resident: bytes in byte mode, 1 in slot
-  // mode — this single function keeps the no-model path bit-identical.
+  // mode. The instruction schedule uses the same logic in both modes.
   auto cost = [&](uint32_t id) -> uint64_t {
     return model ? model->bytes_by_level[static_cast<size_t>(level_of.at(id))] : 1;
+  };
+
+  // Model byte sizes are supplied by a backend and may span uint64_t.
+  // Every accumulated cost must remain representable, even without a budget.
+  auto add_units = [](uint64_t &sum, uint64_t units) {
+    if (units > std::numeric_limits<uint64_t>::max() - sum)
+      return false;
+    sum += units;
+    return true;
   };
 
   const std::unordered_set<uint32_t> pinned_set(pinned.begin(), pinned.end());
@@ -107,6 +147,18 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
 
   FhnMovementPlan plan;
   plan.actions_.resize(program.num_instructions);
+  plan.version_ = program.version;
+  for (uint32_t i = 0; i < program.num_instructions; ++i)
+    plan.instructions_.push_back(program.instructions[i]);
+  for (uint32_t i = 0; i < program.num_inputs; ++i)
+    plan.inputs_.push_back(program.input_ids[i]);
+  for (uint32_t i = 0; i < program.num_outputs; ++i)
+    plan.outputs_.push_back(program.output_ids[i]);
+  plan.budgeted_ = device_budget > 0;
+  if (plan.budgeted_) {
+    plan.initial_evictions_ = plan.inputs_;
+    plan.stats_.initial_evict_count = program.num_inputs;
+  }
   std::set<uint32_t> resident;                      // ordered: deterministic Belady tie-break on lower id
   uint64_t resident_units = 0;                      // Σ cost(id) for id in resident — bytes in byte mode, else count
   std::unordered_map<uint32_t, int64_t> last_touch; // position of most recent def/prefetch/use
@@ -130,10 +182,11 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
       if (!resident.count(id))
         to_prefetch.push_back(id);
 
+    uint64_t working_units = 0;
+    for (uint32_t id : working)
+      if (!add_units(working_units, cost(id)))
+        return std::nullopt;
     if (device_budget > 0) {
-      uint64_t working_units = 0;
-      for (uint32_t id : working)
-        working_units += cost(id);
       if (working_units > device_budget)
         return std::nullopt; // one instruction cannot fit — infeasible
       // Belady: make room for the result alloc + missing operands by
@@ -142,8 +195,11 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
       // ordered set breaks ties on the lower id.
       uint64_t incoming_units = cost(inst.result_id);
       for (uint32_t id : to_prefetch)
-        incoming_units += cost(id);
-      while (resident_units + incoming_units > device_budget) {
+        if (!add_units(incoming_units, cost(id)))
+          return std::nullopt;
+      // incoming <= working <= budget. Subtraction avoids overflowing the
+      // combined resident + incoming sum before victims have made room.
+      while (resident_units > device_budget - incoming_units) {
         bool found = false;
         uint32_t victim = 0;
         int64_t victim_key = 0;
@@ -177,14 +233,16 @@ std::optional<FhnMovementPlan> FhnMovementPlan::analyze(const FhnProgram &progra
 
     act.alloc.push_back(inst.result_id);
     resident.insert(inst.result_id);
-    resident_units += cost(inst.result_id);
+    if (!add_units(resident_units, cost(inst.result_id)))
+      return std::nullopt;
     last_touch[inst.result_id] = pos;
     plan.stats_.alloc_count++;
 
     for (uint32_t id : to_prefetch) {
       act.prefetch.push_back(id);
       resident.insert(id);
-      resident_units += cost(id);
+      if (!add_units(resident_units, cost(id)))
+        return std::nullopt;
       last_touch[id] = pos;
       plan.stats_.prefetch_count++;
     }

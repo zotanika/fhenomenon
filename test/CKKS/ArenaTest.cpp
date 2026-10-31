@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -174,6 +175,87 @@ TEST(CkksArenaTest, MoveLeavesTheSourceEmpty) {
   EXPECT_EQ(source.capacity(), 0u); // NOLINT(bugprone-use-after-move)
   EXPECT_EQ(source.used(), 0u);
   EXPECT_EQ(source.allocate<uint64_t>(1), nullptr);
+}
+
+TEST(CkksArenaTest, MoveConstructionInvalidatesSourceScopes) {
+  Arena source(512);
+  ASSERT_NE(source.allocateBytes(64), nullptr);
+  std::unique_ptr<Arena> moved;
+  {
+    Arena::Scope outer(source);
+    ASSERT_NE(source.allocateBytes(64), nullptr);
+    Arena::Scope inner(source);
+    auto *value = source.allocate<uint64_t>(1);
+    ASSERT_NE(value, nullptr);
+    *value = 123;
+    moved = std::make_unique<Arena>(std::move(source));
+    EXPECT_EQ(*value, 123U);
+    EXPECT_EQ(moved->used(), 192U);
+  }
+  EXPECT_EQ(source.capacity(), 0U); // NOLINT(bugprone-use-after-move)
+  EXPECT_EQ(source.used(), 0U);
+  EXPECT_EQ(source.remaining(), 0U);
+  EXPECT_EQ(source.allocateBytes(1), nullptr);
+  EXPECT_EQ(moved->used(), 192U); // moves preserve allocations, guards are detached
+}
+
+TEST(CkksArenaTest, MoveAssignmentInvalidatesSourceAndDestinationScopes) {
+  Arena source(256);
+  Arena destination(1024);
+  ASSERT_NE(source.allocateBytes(64), nullptr);
+  ASSERT_NE(destination.allocateBytes(512), nullptr);
+  {
+    Arena::Scope source_scope(source);
+    Arena::Scope destination_scope(destination);
+    ASSERT_NE(source.allocateBytes(64), nullptr);
+    destination = std::move(source);
+    EXPECT_EQ(destination.capacity(), 256U);
+    EXPECT_EQ(destination.used(), 128U);
+    ASSERT_NE(destination.allocateBytes(64), nullptr);
+  }
+  EXPECT_EQ(source.used(), 0U); // NOLINT(bugprone-use-after-move)
+  EXPECT_EQ(source.remaining(), 0U);
+  EXPECT_EQ(source.allocateBytes(1), nullptr);
+  EXPECT_EQ(destination.used(), 192U);
+  EXPECT_EQ(destination.remaining(), 64U);
+  EXPECT_NE(destination.allocateBytes(64), nullptr);
+  EXPECT_EQ(destination.allocateBytes(1), nullptr);
+}
+
+TEST(CkksArenaTest, ResetInvalidatesEarlierScopesWithoutRewindingNewAllocations) {
+  Arena arena(512);
+  ASSERT_NE(arena.allocateBytes(256), nullptr);
+  {
+    Arena::Scope outer(arena);
+    ASSERT_NE(arena.allocateBytes(64), nullptr);
+    Arena::Scope inner(arena);
+    arena.reset();
+    ASSERT_NE(arena.allocateBytes(64), nullptr);
+    {
+      Arena::Scope fresh(arena);
+      ASSERT_NE(arena.allocateBytes(64), nullptr);
+    }
+    EXPECT_EQ(arena.used(), 64U);
+  }
+  EXPECT_EQ(arena.used(), 64U);
+  EXPECT_EQ(arena.remaining(), 448U);
+  EXPECT_EQ(arena.highWater(), 320U);
+}
+
+TEST(CkksArenaTest, RewindingAnOuterScopeInvalidatesStillLiveInnerScopes) {
+  Arena arena(512);
+  ASSERT_NE(arena.allocateBytes(64), nullptr);
+  auto outer = std::make_unique<Arena::Scope>(arena);
+  ASSERT_NE(arena.allocateBytes(64), nullptr);
+  {
+    Arena::Scope inner(arena);
+    ASSERT_NE(arena.allocateBytes(64), nullptr);
+    outer.reset(); // unusual but legal guard destruction order
+    EXPECT_EQ(arena.used(), 64U);
+    ASSERT_NE(arena.allocateBytes(192), nullptr);
+    EXPECT_EQ(arena.used(), 256U);
+  }
+  EXPECT_EQ(arena.used(), 256U); // inner cannot rewind allocations made after outer died
 }
 
 // One arena per thread is the whole concurrency story: no lock, no shared

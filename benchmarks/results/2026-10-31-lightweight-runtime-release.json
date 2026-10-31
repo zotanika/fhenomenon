@@ -1,0 +1,223 @@
+{
+  "memory_scope": "runtime retained ciphertext/artifact slabs and region reservation; excludes keys, context scratch/tables, metadata and allocator overhead",
+  "repetitions": 7,
+  "schema": 1,
+  "timing_scope": "warm dispatch, allocation, evaluation and temporary release; excludes input import, setup and decryption",
+  "workloads": [
+    {
+      "context_keys_encryption_ms": 295.890042,
+      "modes": [
+        {
+          "max_absolute_error": 7.736737757113588e-07,
+          "median_ms": 193.591125,
+          "name": "immediate",
+          "peak_tracked_bytes": 4718592,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.0,
+          "prepared_sources": 0,
+          "retained_tracked_bytes": 786432,
+          "samples_ms": [
+            189.630458,
+            193.543625,
+            194.535584,
+            193.154458,
+            193.591125,
+            193.651,
+            194.766417
+          ]
+        },
+        {
+          "max_absolute_error": 7.736737757113588e-07,
+          "median_ms": 184.071125,
+          "name": "prepared",
+          "peak_tracked_bytes": 5308416,
+          "preparation_bytes": 589824,
+          "preparation_ms": 0.148417,
+          "prepared_sources": 1,
+          "retained_tracked_bytes": 1376256,
+          "samples_ms": [
+            184.071125,
+            184.426834,
+            184.093125,
+            184.039792,
+            184.089875,
+            183.41775,
+            183.296792
+          ]
+        },
+        {
+          "max_absolute_error": 7.736737757113588e-07,
+          "median_ms": 162.756083,
+          "name": "region",
+          "peak_tracked_bytes": 35127296,
+          "preparation_bytes": 0,
+          "preparation_ms": 2.924667,
+          "prepared_sources": 0,
+          "region_actual_workspace_bytes": 23724864,
+          "region_reserved_bytes": 33554432,
+          "retained_tracked_bytes": 34340864,
+          "samples_ms": [
+            162.756083,
+            164.031125,
+            161.834292,
+            162.47425,
+            162.864042,
+            162.939875,
+            162.649792
+          ]
+        }
+      ],
+      "outputs": 1,
+      "shape": "matvec",
+      "slots_per_output": 64,
+      "source_nodes": 190
+    },
+    {
+      "context_keys_encryption_ms": 41.028666,
+      "modes": [
+        {
+          "max_absolute_error": 3.432469926067938e-07,
+          "median_ms": 79.267125,
+          "name": "immediate",
+          "peak_tracked_bytes": 14942208,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.0,
+          "prepared_sources": 0,
+          "retained_tracked_bytes": 7077888,
+          "samples_ms": [
+            79.395916,
+            79.438958,
+            78.508833,
+            79.267125,
+            79.269083,
+            79.163917,
+            78.931375
+          ]
+        },
+        {
+          "max_absolute_error": 3.432469926067938e-07,
+          "median_ms": 79.389625,
+          "name": "prepared",
+          "peak_tracked_bytes": 14942208,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.001833,
+          "prepared_sources": 0,
+          "retained_tracked_bytes": 7077888,
+          "samples_ms": [
+            79.389625,
+            79.420875,
+            78.93875,
+            79.397125,
+            78.864833,
+            79.789125,
+            78.895
+          ]
+        },
+        {
+          "max_absolute_error": 3.432469926067938e-07,
+          "median_ms": 76.302584,
+          "name": "region",
+          "peak_tracked_bytes": 46923776,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.357375,
+          "prepared_sources": 0,
+          "region_actual_workspace_bytes": 4850496,
+          "region_reserved_bytes": 33554432,
+          "retained_tracked_bytes": 40632320,
+          "samples_ms": [
+            76.485958,
+            76.4045,
+            76.611125,
+            75.981333,
+            74.936333,
+            76.302584,
+            75.85475
+          ]
+        }
+      ],
+      "outputs": 8,
+      "shape": "matvec-fused",
+      "slots_per_output": 8,
+      "source_nodes": 56
+    },
+    {
+      "context_keys_encryption_ms": 39.071666,
+      "modes": [
+        {
+          "max_absolute_error": 0.00021023063163738698,
+          "median_ms": 75.534792,
+          "name": "immediate",
+          "peak_tracked_bytes": 6291456,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.0,
+          "prepared_sources": 0,
+          "retained_tracked_bytes": 1572864,
+          "samples_ms": [
+            76.50725,
+            75.428583,
+            75.675584,
+            75.236542,
+            75.534792,
+            76.076917,
+            75.413083
+          ]
+        },
+        {
+          "max_absolute_error": 0.00021023063163738698,
+          "median_ms": 75.568833,
+          "name": "prepared",
+          "peak_tracked_bytes": 6291456,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.001291,
+          "prepared_sources": 0,
+          "retained_tracked_bytes": 1572864,
+          "samples_ms": [
+            74.7545,
+            75.962083,
+            75.568833,
+            76.009416,
+            76.463209,
+            75.313083,
+            75.45725
+          ]
+        },
+        {
+          "max_absolute_error": 0.00021023063163738698,
+          "median_ms": 73.013875,
+          "name": "region",
+          "peak_tracked_bytes": 38273024,
+          "preparation_bytes": 0,
+          "preparation_ms": 0.41175,
+          "prepared_sources": 0,
+          "region_actual_workspace_bytes": 4719424,
+          "region_reserved_bytes": 33554432,
+          "retained_tracked_bytes": 35127296,
+          "samples_ms": [
+            73.444792,
+            73.660459,
+            73.369459,
+            72.788333,
+            73.013875,
+            72.40225,
+            72.471375
+          ]
+        }
+      ],
+      "outputs": 4,
+      "shape": "stats",
+      "slots_per_output": 64,
+      "source_nodes": 56
+    }
+  ],
+  "environment": {
+    "date": "2026-10-31",
+    "platform": "macOS arm64",
+    "compiler": "AppleClang 21.0.0 (clang-2100.4.1.1)",
+    "build_type": "Release",
+    "build_tests": false,
+    "lto": false,
+    "native_profile": "default N8192, Q 50/40/40, P60, dnum3",
+    "warmups_per_mode": 2,
+    "concurrency": "no other agent builds, tests or timings running"
+  }
+}
