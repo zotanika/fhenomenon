@@ -1,4 +1,5 @@
-#include "SearchWorkflow.h"
+#include "ScopedSearch.h"
+#include "Session/Session.h"
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -44,20 +45,27 @@ int main(int argc, char **argv) {
     // Only TrustedClient owns a secret key; the evaluator receives compute services.
     fhenomenon::runtime::Runtime resources;
     TrustedClient client(resources, argv[1]);
-    EncryptedSearch evaluator(resources, client.computeServices(), argv[1]);
+    fhenomenon::contrib::registerSearchKernels(resources, client.computeServices(), argv[1]);
+    auto session = fhenomenon::Session::create(resources);
 
     // CLIENT: plaintext embeddings cross the encryption boundary here.
     const EncryptedDocuments documents = client.encryptDocuments(fixture.documents);
     const EncryptedQuery query = client.encryptQuery(*question);
 
     // EVALUATOR: only ciphertext and public layout metadata enter this program.
-    // Follow EncryptedSearch.cpp for runtime requests and ScoreBlock.h for kernels.
-    const EncryptedIndex index = evaluator.createIndex(documents);
-    const QueryPreparation prepared = evaluator.prepareQuery(query);
-    const EncryptedScores encrypted_scores = evaluator.score(query, index, prepared);
+    // Capture once, then select kernels over the recorded commands at scope exit.
+    // Follow ScopedSearch.cpp for commands and ScoreBlock.h for encrypted arithmetic.
+    auto outputs = session->run([&](fhenomenon::runtime::Scope &scope) {
+      ScopedSearch program(scope);
+      auto prepared = program.prepareQuery(query);
+      auto scores = program.score(query, documents, prepared);
+      return program.exportResults(prepared, scores);
+    });
+    const auto search = ScopedSearch::results(std::move(outputs), documents.shape);
+    // search.preparation retains the exact query state for a later scope.
 
     // CLIENT: only the owner decrypts. Ranking and document display are plaintext.
-    const std::vector<double> scores = client.decryptScores(encrypted_scores);
+    const std::vector<double> scores = client.decryptScores(search.scores);
     const auto matches = topK(fixture.documents, scores, 5);
 
     std::cout << "Question: " << question->text << "\n\nOwner's top matches:\n";
@@ -67,9 +75,10 @@ int main(int argc, char **argv) {
                 << "  " << document.source << '\n'
                 << "  " << document.text.substr(0, document.text.find('\n')) << '\n';
     }
-    std::cout << "\nSelected search kernels (bounded runtime trace):\n";
-    for (const auto &recipe : evaluator.selectedRecipes())
-      std::cout << "  " << recipe << '\n';
+    std::cout << "\nSelected scope spans (bounded runtime trace):\n";
+    for (const auto &event : resources.trace())
+      if (event.kind == fhenomenon::runtime::TraceKind::Selected && event.operation == "scope.span")
+        std::cout << "  " << event.recipe << " [" << event.detail << "]\n";
     return 0;
   } catch (const std::exception &error) {
     std::cerr << "private-search: " << error.what() << '\n';

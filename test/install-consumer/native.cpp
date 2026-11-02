@@ -4,6 +4,7 @@
 #include "FHN/contrib/StatsKernels.h"
 #include "FHN/fhn_backend_api.h"
 #include "FHN/fhn_circuit_api.h"
+#include "Session/Session.h"
 #include <cmath>
 #include <dlfcn.h>
 #include <memory>
@@ -193,5 +194,20 @@ int main(int argc, char **argv) {
     return 26;
   if (!std::isfinite(actual[0]) || std::abs(actual[0] - plain_squares) > 1e-5)
     return 27;
+  // Installed public Scope/Session APIs preserve preparation and expose intermediate results.
+  auto session = fhenomenon::Session::create(runtime);
+  auto scoped = session->run([&](Scope &scope) {
+    auto x = scope.input(source);
+    auto state = scope.input(prepared);
+    auto left = native.rotate(scope, x, 1, state);
+    auto sum = native.op(scope, FHN_ADD_CC, {left, x});
+    return ScopeValues{state, left, sum};
+  });
+  if (scoped.size() != 3 || scoped[0].identity() != prepared.identity() ||
+      decrypt(client.get(), native.buffer(scoped[2]), actual, 4))
+    return 29;
+  for (unsigned i = 0; i < 4; ++i)
+    if (!std::isfinite(actual[i]) || std::abs(actual[i] - values[i] - values[(i + 1) % 4]) > 1e-5)
+      return 30;
   return 0;
 }

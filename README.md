@@ -5,10 +5,10 @@ Fhenomenon is an early C++17 systems project for a practical, FHE-native program
 Its intended contribution model is broad: independently supplied kernels at
 different granularities should compete and compose to execute high-level
 programs under explicit application requirements. The
-[lightweight runtime](docs/lightweight-runtime.md) executes registered recipes
-immediately and retains shared intermediate artifacts across commands. Native
-CKKS rotation preparation is one implemented example; the existing circuit
-compiler attaches only to explicitly requested regions. The earlier global
+[lightweight runtime](docs/lightweight-runtime.md) selects and composes kernels
+for a bounded native `Session` scope, or executes individual requests immediately.
+Different kernel granularities share intermediate values and reusable artifacts;
+the existing circuit compiler attaches only to explicitly requested regions. The earlier global
 planning proposal is superseded. Automatic whole-program optimization and
 CGGI↔CKKS/BFV switching are not implemented.
 
@@ -21,9 +21,9 @@ ciphertext residues; [measurements](docs/matvec-preparation-validation-2026-10-3
 include component comparisons, preparation cost and retained memory.
 
 [Encrypted personal-document search](examples/private_search/README.md) encrypts
-both multilingual document and query embeddings, composes collection scoring
-from replaceable block recipes, and compares row/tiled layouts with explicit
-query preparation. Its offline fixture uses public documentation as a sample
+both multilingual document and query embeddings. Its native scope records query
+preparation and separate block scores; the runtime selects collection and tail
+kernels while preserving preparation and exported intermediate results. Its offline fixture uses public documentation as a sample
 vault; decryption and ranking stay with the single owning client.
 Start with its [short application workflow](examples/private_search/main.cpp),
 then follow the [encrypted computation and contribution contract](contributions/search/README.md).
@@ -36,8 +36,8 @@ Fhenomenon treats constraints as performance contracts. A fast kernel that only 
 
 This repository is building the small runtime and backend interface for that world.
 
-- An immediate recipe runtime with shared resource identities, dependencies,
-  retained-memory budgets, and bounded dispatch diagnostics.
+- Bounded scoped kernel selection and immediate dispatch with shared resource
+  identities, dependencies, retained-memory budgets and bounded diagnostics.
 - Optional semantic circuit compilation for explicitly selected native regions.
 - A flat FHN program IR for explicit kernel dispatch and reference execution.
 - A C ABI kernel table that FHE library and hardware developers can extend without learning a complex compiler pipeline.
@@ -85,6 +85,7 @@ The repository already contains the first version of that boundary.
 
 | Area | Status |
 | --- | --- |
+| Native scoped runtime | `Session::create(Runtime&)` records bounded symbolic commands, selects contributed contiguous spans and falls back to ordinary recipes. Intermediate live-outs and preparation identities survive kernel boundaries. |
 | Circuit compiler | Optional `fhn_circuit_api.h`: copied value graphs, affine/quadratic regions, prepared public keys, reusable slots, allocation-free repeated execution. See [circuit execution](docs/circuit-execution.md). |
 | FHN IR | Implemented in `include/FHN/fhn_program.h` as a flat C ABI instruction array. |
 | Backend ABI | Implemented in `include/FHN/fhn_backend_api.h`: `fhn_get_info`, `fhn_create`, `fhn_destroy`, `fhn_get_kernels`, plus a host-side data plane (`fhn_buffer_alloc/free`, optional `fhn_encrypt_*`/`fhn_decrypt_*`). Key-consuming operations are not kernel-table entries and cannot appear in an `FhnProgram`. |
@@ -94,10 +95,10 @@ The repository already contains the first version of that boundary.
 | External backend loading | Implemented with `dlopen` for Linux/macOS style shared libraries. |
 | Cheddar-FHE backend | Optional GPU CKKS backend under `src/FHN/cheddar`, built only when the Cheddar submodule and CUDA-facing dependencies are available. |
 | Async backend hooks | `fhn_submit`, `fhn_poll`, `fhn_wait`, `fhn_get_outputs`, and `fhn_exec_free` are defined as optional exports and resolved by `ExternalBackend`; the default executor is still primarily synchronous. |
-| Scheduler lowering | `LowerToFhnProgram` lowers scheduler ASTs into FHN programs. `Session::run` executes a recorded scope through that same path — lower, plan movement, dispatch — so scoped execution is the FHN path rather than an alternative to it. See [Scoped Execution](#scoped-execution). |
+| Scheduler lowering | `LowerToFhnProgram` lowers scheduler ASTs into FHN programs. The legacy `Session::create(Backend&)` frontend lowers, plans movement and dispatches its recorded Fhenon operations through this path. See [Scoped Execution](#scoped-execution). |
 | TFHE-rs experiment | A separate Rust FFI experiment exists for integer operations when `BUILTIN_BACKEND=TFHE`. |
 
-The default build produces both the native CKKS plugin and the ToyFHE reference. Native CKKS runs through the public client/compute ABI, the `fhn-bench-circuit` graph path, and the legacy `fhn-corpus` opcode path. The existing `Fhenon`/`Session` C++ frontend still selects ToyFHE by default; it is not yet adapted to the separate native client handle. Cheddar remains the optional GPU CKKS target.
+The default build produces both the native CKKS plugin and the ToyFHE reference. Native CKKS runs through the public client/compute ABI, the `fhn-bench-circuit` graph path, and the legacy `fhn-corpus` opcode path. The existing `Fhenon<int>` frontend still selects ToyFHE by default. Native `Session::create(Runtime&)` uses explicit `ScopeValue` commands and the separate native client; it does not redirect Fhenon arithmetic. Cheddar remains the optional GPU CKKS target.
 
 The native circuit compiler owns level/scale checks, evaluation-key requirements, region selection and intermediate storage. The existing kernel table remains useful for reference execution and external backends. Device residency, accelerator scheduling and async execution remain future work.
 
@@ -105,7 +106,12 @@ The native circuit compiler owns level/scale checks, evaluation-key requirements
 
 ```mermaid
 flowchart TD
-    A["Application code<br/>Fhenon<int>, Session"] --> B["Scheduler<br/>operations to AST"]
+    S["Native application<br/>Session::run(Scope&)"] --> T["Bounded span selection"]
+    T --> U["Contributed multi-command kernels"]
+    T --> V["Single-request recipes"]
+    U --> V
+    V --> M["Native CPU RNS-CKKS"]
+    A["Legacy application<br/>Fhenon<int>, Session"] --> B["Scheduler<br/>operations to AST"]
     B --> C["LowerToFhnProgram<br/>AST to flat FHN program"]
     C --> D["FhnDefaultExecutor"]
     D --> E["Kernel table lookup"]
@@ -353,7 +359,33 @@ Today, `Fhenon<int>` is the most exercised path. ToyFHE also contains fixed-poin
 
 ### Scoped Execution
 
-The example above runs eagerly: each operator dispatches as it is reached. Wrapping the same work in a session changes what the runtime is given.
+The native CKKS route makes the program boundary explicit without a mandatory
+compiler. The [search example](examples/private_search/main.cpp) uses:
+
+```cpp
+auto session = Session::create(runtime);
+auto outputs = session->run([&](Scope &scope) {
+  ScopedSearch search(scope);
+  auto prepared = search.prepareQuery(encrypted_query);
+  auto scores = search.score(encrypted_query, encrypted_documents, prepared);
+  return search.exportResults(prepared, scores);
+});
+```
+
+The callback runs once and records commands. After it returns, the runtime
+selects bounded contiguous spans using contributed `ScopeKernel` matchers.
+Unmatched commands use existing recipes. A selected kernel must expose every
+intermediate used downstream or exported by the caller; it can decline if it
+cannot preserve one. Explicitly exported preparation can be imported into a
+later scope with the same identity. See [the scope contract](docs/lightweight-runtime.md#native-scopes-and-kernel-selection)
+for limits, contribution APIs and failure behavior.
+
+The search contribution groups up to eight prepared full blocks, then selects
+a separate tail kernel. It currently composes the existing block calculations;
+this demonstrates replaceable orchestration, not new cryptographic fusion.
+Neither capture nor selection enumerates branches or invokes a compiler.
+
+The earlier `Fhenon<int>` example above runs eagerly: each operator dispatches as it is reached. Wrapping the same work in a session changes what the runtime is given.
 
 ```cpp
 auto session = Session::create(Backend::getInstance());
@@ -364,6 +396,8 @@ session->run([&]() {
   a = a + 2;
 });
 ```
+
+In this legacy backend-bound frontend:
 
 - **Outside a session**, operations execute immediately. This is the useful mode for setup and debugging, and `test/NoSessionTest.cpp` deliberately never creates a `Session` so the eager paths stay pinned.
 - **Inside a session**, operations are recorded rather than executed. On leaving the scope, `Session::run` lowers the recorded graph through `LowerToFhnProgram` into a single `FhnProgram`, plans its data movement with `FhnMovementPlan::analyze`, and dispatches the whole program through the backend's FHN runtime.

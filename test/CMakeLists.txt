@@ -27,6 +27,22 @@ add_executable(RuntimeTest RuntimeTest.cpp)
 target_link_libraries(RuntimeTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(RuntimeTest)
 
+add_executable(ScopeTest ScopeTest.cpp)
+target_link_libraries(ScopeTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
+add_gtest_target_to_ctest(ScopeTest)
+
+add_executable(NativeScopeTest NativeScopeTest.cpp)
+target_link_libraries(NativeScopeTest PRIVATE fhn_private_search_example gtest_main)
+target_compile_definitions(NativeScopeTest PRIVATE FHN_NATIVE_TEST_LIBRARY="$<TARGET_FILE:ckks_fhn>")
+add_dependencies(NativeScopeTest ckks_fhn)
+add_gtest_target_to_ctest(NativeScopeTest)
+
+add_executable(SearchScopeTest SearchScopeTest.cpp)
+target_link_libraries(SearchScopeTest PRIVATE fhn_private_search_example gtest_main)
+target_compile_definitions(SearchScopeTest PRIVATE FHN_NATIVE_TEST_LIBRARY="$<TARGET_FILE:ckks_fhn>")
+add_dependencies(SearchScopeTest ckks_fhn)
+add_gtest_target_to_ctest(SearchScopeTest)
+
 add_executable(NativeRuntimeTest NativeRuntimeTest.cpp)
 target_link_libraries(NativeRuntimeTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 target_compile_definitions(NativeRuntimeTest PRIVATE
@@ -75,6 +91,11 @@ add_test(NAME PrivateSearchBenchmark COMMAND fhn-bench-private-search
   "$<TARGET_FILE:ckks_fhn>" "${PROJECT_SOURCE_DIR}/examples/private_search/data/fixture.json"
   --verify-all --compare --reps 1 --limit-documents 17)
 set_tests_properties(PrivateSearchBenchmark PROPERTIES TIMEOUT 600)
+
+add_test(NAME PrivateSearchScopedBenchmark COMMAND fhn-bench-private-search
+  "$<TARGET_FILE:ckks_fhn>" "${PROJECT_SOURCE_DIR}/examples/private_search/data/fixture.json"
+  --query memory --compare --reps 1 --limit-documents 17 --scoped)
+set_tests_properties(PrivateSearchScopedBenchmark PROPERTIES TIMEOUT 600)
 
 add_executable(FhnBackendApiTest FhnBackendApiTest.cpp)
 target_link_libraries(FhnBackendApiTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)

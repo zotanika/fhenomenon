@@ -1,10 +1,12 @@
 #pragma once
 
 #include "FHN/Runtime.h"
+#include "FHN/Scope.h"
 #include "FHN/fhn_circuit_api.h"
 #include "FHN/fhn_native_api.h"
 #include "FHN/fhn_prepared_api.h"
 #include <array>
+#include <optional>
 
 namespace fhenomenon::runtime {
 
@@ -35,6 +37,13 @@ struct RegionOptions {
   std::size_t workspace_bytes = 8 * 1024 * 1024;
 };
 
+// Public owning attributes let contributed scope kernels inspect native requests.
+struct NativeOpAttributes {
+  FhnOpCode opcode;
+  std::array<std::int64_t, 4> params{};
+  std::array<double, 2> fparams{};
+};
+
 // Registers native.op, native.prepare_rotation, native.rotate,
 // native.compile_region and native.run_region. Registered recipes own their
 // services and remain valid after this adapter dies. No recipe owns a client.
@@ -49,6 +58,11 @@ class NativeRuntime {
   Value semantic(FhnCircuitOp, Values, std::int64_t rotation = 0, double scalar = 0);
   Value prepareRotation(Value);
   Value rotate(Value, std::int64_t rotation, Value preparation = {});
+  // Recording adapters: no dispatch or buffer access until the scope executes.
+  ScopeValue op(Scope &, FhnOpCode, ScopeValues, std::array<std::int64_t, 4> params = {},
+                std::array<double, 2> fparams = {});
+  ScopeValue prepareRotation(Scope &, ScopeValue);
+  ScopeValue rotate(Scope &, ScopeValue, std::int64_t rotation, std::optional<ScopeValue> preparation = {});
   // Reserves the finite workspace cap before invoking the optional compiler.
   // Prototypes are metadata only and are not retained as dependencies.
   Value compileRegion(const FhnCircuit &, Values prototypes, RegionOptions = {});

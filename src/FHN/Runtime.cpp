@@ -1,4 +1,5 @@
 #include "FHN/Runtime.h"
+#include "FHN/Scope.h"
 
 #include <algorithm>
 #include <atomic>
@@ -71,6 +72,10 @@ struct Runtime::Impl {
   std::shared_ptr<Accounting> accounting;
   std::vector<std::shared_ptr<const Recipe>> recipes;
   std::deque<TraceEvent> events;
+  std::vector<std::shared_ptr<const ScopeKernel>> scope_kernels;
+  bool scope_running = false;
+  bool capturing = false;
+  bool matching = false;
 
   explicit Impl(RuntimeOptions options) : accounting(std::make_shared<Accounting>(Accounting{options, {}})) {}
 
@@ -115,6 +120,8 @@ void Runtime::addRecipe(Recipe recipe) {
 }
 
 Values Runtime::submit(const Request &request) {
+  if (impl_->capturing || impl_->matching)
+    throw Error(ErrorCode::InvalidRequest, "cannot submit during scope capture or matching");
   if (request.operation.empty()) {
     throw Error(ErrorCode::InvalidRequest, "request requires an operation");
   }
@@ -160,6 +167,8 @@ Values Runtime::submit(const Request &request) {
 
 Value Runtime::makeValue(std::string format, ResourceKind kind, std::size_t bytes,
                          const std::function<std::any()> &factory, Values dependencies) {
+  if (impl_->capturing || impl_->matching)
+    throw Error(ErrorCode::InvalidRequest, "cannot create resources during scope capture or matching");
   if (!factory)
     throw Error(ErrorCode::InvalidRequest, "resource requires a factory");
   for (const auto &dependency : dependencies) {
@@ -178,6 +187,45 @@ Value Runtime::makeValue(std::string format, ResourceKind kind, std::size_t byte
     throw Error(ErrorCode::ExecutionFailed, error.what());
   } catch (...) {
     throw Error(ErrorCode::ExecutionFailed, "non-standard resource factory exception");
+  }
+}
+
+bool Runtime::owns(const Value &value) const noexcept {
+  return value.resource_ && value.resource_->charge->owner == impl_->accounting;
+}
+void Runtime::setScopeMatching(bool matching) noexcept { impl_->matching = matching; }
+void Runtime::addScopeKernel(ScopeKernel kernel) {
+  if (kernel.name.empty() || !kernel.max_commands || !kernel.match || !kernel.execute)
+    throw Error(ErrorCode::InvalidRequest, "scope kernel requires name, positive span cap and callbacks");
+  auto registered = std::make_shared<const ScopeKernel>(std::move(kernel));
+  const auto position = std::find_if(impl_->scope_kernels.begin(), impl_->scope_kernels.end(),
+    [&](const auto &existing) { return existing->priority < registered->priority; });
+  impl_->scope_kernels.insert(position, std::move(registered));
+}
+Values Runtime::runScope(const std::function<ScopeValues(Scope &)> &capture) { return runScope(capture, ScopeOptions{}); }
+Values Runtime::runScope(const std::function<ScopeValues(Scope &)> &capture, ScopeOptions options) {
+  if (impl_->scope_running || !capture)
+    throw Error(ErrorCode::InvalidRequest, "scope requires a callback and cannot nest on the same runtime");
+  struct Reset {
+    Impl &impl;
+    ~Reset() { impl.capturing = false; impl.scope_running = false; }
+  } reset{*impl_};
+  impl_->scope_running = true;
+  const auto kernels = impl_->scope_kernels;
+  try {
+    Scope scope(*this, options);
+    impl_->capturing = true;
+    auto exports = capture(scope);
+    impl_->capturing = false;
+    return scope.execute(exports, kernels, [&](TraceKind kind, const std::string &name, const std::string &detail) {
+      impl_->record(kind, "scope.span", name, detail);
+    });
+  } catch (const Error &) {
+    throw;
+  } catch (const std::exception &error) {
+    throw Error(ErrorCode::ExecutionFailed, error.what());
+  } catch (...) {
+    throw Error(ErrorCode::ExecutionFailed, "non-standard scope callback exception");
   }
 }
 

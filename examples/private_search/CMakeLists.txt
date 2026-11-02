@@ -1,4 +1,4 @@
-add_library(fhn_private_search_example STATIC TrustedClient.cpp EncryptedSearch.cpp)
+add_library(fhn_private_search_example STATIC TrustedClient.cpp EncryptedSearch.cpp ScopedSearch.cpp)
 target_link_libraries(fhn_private_search_example PUBLIC fhn_search_contribution nlohmann_json::nlohmann_json ${CMAKE_DL_LIBS})
 target_include_directories(fhn_private_search_example PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

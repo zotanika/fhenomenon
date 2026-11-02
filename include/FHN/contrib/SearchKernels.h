@@ -32,5 +32,10 @@ SearchKeyRequirements nativeSearchKeyRequirements(std::uint32_t width);
 // only ciphertext/artifact dependencies, never a client, plaintext or secret.
 // Preparation wraps an existing contrib.matvec.prepare artifact, validating its
 // width and exact query identity before dispatching contrib.matvec.dot.
+// Also registers prepared Scope kernels: priority 20 collection spans of 2..8
+// consecutive full blocks with identical symbolic query/preparation and layout,
+// plus priority 10 single full/tail blocks. These compose the same overrideable
+// score-block submissions and expose every requested intermediate liveout;
+// they do not promise a fused cryptographic implementation or a speedup.
 void registerSearchKernels(runtime::Runtime &, runtime::NativeServices, const std::string &nativeLibraryPath);
 } // namespace fhenomenon::contrib

@@ -1,7 +1,8 @@
 # Lightweight execution runtime
 
 The public C++17 API in `FHN/Runtime.h` executes a named request when submitted.
-It does not record a program or invoke a compiler. Contributions register
+Optional `FHN/Scope.h` records bounded commands before kernel selection; neither
+entry point invokes a compiler automatically. Contributions register
 recipes with public-metadata applicability checks, deterministic priorities and
 an execution callback. One recipe can produce several outputs, allocate a
 preparation artifact, or compose other requests. The runtime has no built-in
@@ -9,8 +10,9 @@ arithmetic instruction vocabulary.
 
 This replaces the earlier (2026-10-28) mandatory semantic-graph/provider-search
 proposal.
-Existing `Fhenon`/`Session` APIs and physical FHN programs remain available;
-they have not silently changed to use this new entry point.
+Existing backend-bound `Fhenon` sessions and physical FHN programs remain
+available. `Session::create(Runtime&)` explicitly selects the native scope route;
+it does not silently redirect the old frontend.
 
 ## Execution and resource contract
 
@@ -41,8 +43,8 @@ chosen workspace cap; executable statistics separately expose used workspace.
 
 Diagnostics retain at most `max_trace_events` events (default 256); zero
 disables them. Calls on a runtime and on a native context are synchronous and
-must be serialized. No background queue, automatic cache, graph matching,
-autotuning or global representation search is hidden in dispatch.
+must be serialized. Scope matching is opt-in and bounded; no background queue,
+automatic cache, autotuning or global representation search is hidden in dispatch.
 
 ## Native execution and reusable state
 
@@ -79,6 +81,85 @@ uses normalized HMULT; integer scale uses additions/negation without consuming
 a level; fractional scale uses native scalar multiplication. Binary operands
 can be lowered to a common level, but incompatible actual scales still fail.
 This policy belongs to the native adapter, not the generic runtime.
+
+## Native scopes and kernel selection
+
+```cpp
+#include "Session/Session.h"
+#include "FHN/NativeRuntime.h"
+// runtime, native and x are the same concrete objects as above.
+auto session = Session::create(runtime);
+auto outputs = session->run([&](Scope &scope) {
+  auto source = scope.input(x);
+  auto preparation = native.prepareRotation(scope, source);
+  auto left = native.rotate(scope, source, 1, preparation);
+  auto sum = native.op(scope, FHN_ADD_CC, {source, left});
+  return ScopeValues{preparation, left, sum};
+});
+// outputs[0] can be imported into another scope and reused with the same x.
+```
+
+The callback executes once using ordinary public C++ control flow. `Scope::input`
+retains a concrete Value from the same Runtime and deduplicates exact identity.
+`Scope::submit(operation, inputs, owning_attributes, output_count)` records a
+request, including zero/multiple outputs. It returns opaque `ScopeValue` symbols,
+which cannot be inspected, decrypted or converted to boolean. Symbols are valid
+only in that recording; concrete exported Values can cross scopes. Capture
+requires owning immutable attributes, never references to temporary buffers.
+The Runtime must outlive a native Session.
+
+After capture, the runtime greedily covers the command sequence from left to
+right. `Runtime::addScopeKernel` registers a name, priority, maximum span,
+read-only matcher and executor. The matcher receives a bounded `ScopeView` and
+returns a prefix length, or zero to decline. Higher priorities win; registration
+order resolves ties. This is a local selection policy, not an optimal global
+plan. The scope registry is snapshotted before capture. Ordinary recipe selection
+still snapshots per submission. Missing span matches fall back to one ordinary
+`Runtime::submit` request.
+
+`ScopeView` exposes commands and any currently concrete values without requiring
+an arithmetic vocabulary. `liveIns(length)` lists distinct external inputs;
+`liveOuts(length)` lists outputs defined inside the span that are exported or used
+later. The executor receives a view clipped to its selected span and must return
+**exactly those live-outs, in that order**, all owned by the same Runtime. A
+matcher must decline if it cannot produce an observable intermediate. Internal
+results can stay private to a fused implementation. The core releases concrete
+results after their last use, while explicit exports and Value dependencies
+retain their resources. Callback export order and duplicates are preserved.
+Views are borrowed for one callback and must not be retained.
+
+Scope callbacks, matchers and executors are trusted host extensions. Matchers
+must be read-only; immediate `submit` and `makeValue` on this Runtime are rejected
+during capture and matching. Executors may compose ordinary requests. Nested
+scopes on one Runtime are rejected; Session additionally rejects nested sessions
+and mixed Fhenon recording. Recording failures execute no captured commands.
+Executor failures release unpublished results and never retry another kernel;
+they do not undo an extension's external side effects. `scope.span` trace events
+show the chosen kernel, command start/count and live-in/live-out counts.
+
+`ScopeOptions` bounds recording and selection independently of ciphertext memory:
+
+| Limit | Default |
+| --- | ---: |
+| Commands | 256 |
+| Imported and output symbols | 2048 |
+| Input edges | 4096 |
+| Export entries | 2048 |
+| Matcher lookahead | 32 commands |
+| Total matcher attempts | 4096 |
+
+All numeric caps must be positive; exceeding one fails explicitly. Setting
+`use_kernels = false` retains capture and liveness but uses ordinary dispatch
+for each command. These limits do not bound arbitrary `std::any` allocations or
+extension callback time. There is no speculative replay, encrypted branch
+exploration, automatic key discovery or automatic reuse discovery.
+
+The [search scope contribution](../contributions/search/README.md#native-session-scopes)
+selects multi-block and single-block implementations over separately recorded
+requests. Its query preparation survives both ordinary commands and later scopes.
+`NativeRuntime` also provides scoped physical op/rotation adapters and public
+`NativeOpAttributes` for matchers. Scoped `semantic` and `compileRegion` adapters
+are not provided; explicit immediate compilation remains available outside capture.
 
 ## Optional compilation
 

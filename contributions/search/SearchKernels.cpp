@@ -1,5 +1,6 @@
 #include "FHN/contrib/SearchKernels.h"
 #include "FHN/contrib/MatvecKernels.h"
+#include "FHN/Scope.h"
 #include "ScoreBlock.h"
 #include <algorithm>
 #include <cmath>
@@ -197,6 +198,78 @@ Values executeBlock(Runtime &runtime, const Provider &provider, const Request &r
   const auto width = std::any_cast<SearchShape>(request.attributes).width;
   return search_detail::scoreBlockOrdinary(*provider.native, request.inputs[0], request.inputs[1], width);
 }
+bool scopedBlockRequest(const Provider &provider, const ScopeView &view, std::size_t offset,
+                        Request &request, std::string &reason) {
+  const auto &command = view.command(offset);
+  if (command.operation != "contrib.search.score-block" || command.inputs.size() != 3 ||
+      command.outputs.size() != 1) {
+    reason = "scope search requires one-output prepared score-block commands";
+    return false;
+  }
+  request = {command.operation, {}, command.attributes};
+  for (auto symbol : command.inputs) {
+    const auto *value = view.find(symbol);
+    if (!value) {
+      reason = "scope search requires concrete query, block and preparation inputs";
+      return false;
+    }
+    request.inputs.push_back(*value);
+  }
+  const auto *shape = std::any_cast<SearchShape>(&request.attributes);
+  return shape && blockApplicable(provider, request, true, shape->document_count == 1, reason);
+}
+std::size_t matchScopedBlocks(const Provider &provider, const ScopeView &view, bool collection,
+                              std::string &reason) {
+  Request first;
+  if (!scopedBlockRequest(provider, view, 0, first, reason))
+    return 0;
+  if (!collection)
+    return 1;
+  const auto shape = std::any_cast<SearchShape>(first.attributes);
+  if (shape.document_count != shape.documents_per_ciphertext) {
+    reason = "scope collection requires full document blocks";
+    return 0;
+  }
+  const auto &inputs = view.command(0).inputs;
+  std::size_t count = 1;
+  for (; count < view.size(); ++count) {
+    const auto &command = view.command(count);
+    const auto *next = std::any_cast<SearchShape>(&command.attributes);
+    if (!next || next->width != shape.width || next->documents_per_ciphertext != shape.documents_per_ciphertext ||
+        next->document_count != shape.documents_per_ciphertext || command.inputs.size() != 3 ||
+        command.inputs[0] != inputs[0] || command.inputs[2] != inputs[2])
+      break;
+    Request request;
+    if (!scopedBlockRequest(provider, view, count, request, reason))
+      break;
+  }
+  if (count < 2) {
+    reason = "scope collection requires at least two compatible full blocks";
+    return 0;
+  }
+  // Each accepted command defines one independently reproducible output, so
+  // every intermediate requested by liveOuts(count) can be exposed unchanged.
+  return count;
+}
+Values executeScopedBlocks(Runtime &runtime, const ScopeView &view) {
+  const auto liveouts = view.liveOuts(view.size());
+  Values results(liveouts.size());
+  for (std::size_t i = 0; i < view.size(); ++i) {
+    const auto &command = view.command(i);
+    Values inputs;
+    for (auto symbol : command.inputs)
+      inputs.push_back(view.value(symbol));
+    // Keep the ordinary recipe boundary: contributed block overrides still
+    // participate inside a selected multi-command orchestration span.
+    auto block = runtime.submit({command.operation, std::move(inputs), command.attributes});
+    if (block.size() != 1)
+      throw Error(ErrorCode::ExecutionFailed, "Scoped search block returned an incorrect result count");
+    const auto found = std::find(liveouts.begin(), liveouts.end(), command.outputs[0]);
+    if (found != liveouts.end())
+      results[static_cast<std::size_t>(found - liveouts.begin())] = std::move(block[0]);
+  }
+  return results;
+}
 } // namespace
 SearchKeyRequirements nativeSearchKeyRequirements(std::uint32_t width) {
   if (!powerOfTwo(width))
@@ -234,5 +307,13 @@ void registerSearchKernels(runtime::Runtime &runtime, runtime::NativeServices se
          [provider, prepared](Runtime &rt, const Request &r) { return executeBlock(rt, *provider, r, prepared); }});
     }
   }
+  runtime.addScopeKernel(
+    {"contrib.search.scope.collection", 20, 8,
+     [provider](const ScopeView &view, std::string &why) { return matchScopedBlocks(*provider, view, true, why); },
+     executeScopedBlocks});
+  runtime.addScopeKernel(
+    {"contrib.search.scope.block", 10, 1,
+     [provider](const ScopeView &view, std::string &why) { return matchScopedBlocks(*provider, view, false, why); },
+     executeScopedBlocks});
 }
 } // namespace fhenomenon::contrib

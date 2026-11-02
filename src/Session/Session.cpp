@@ -24,7 +24,7 @@ thread_local std::shared_ptr<Session> Session::session_ptr_ = nullptr;
 // caller falls back to the legacy per-operation path.
 bool Session::executeThroughFhnRuntime(scheduler::Planner<int> &planner, const FhnRuntime &runtime) {
   auto &scheduler = *scheduler_;
-  const auto &backend = backend_;
+  const auto &backend = *backend_;
   scheduler::LowerToFhnProgram::EntityBindings<int> bindings;
   std::unique_ptr<FhnProgram, decltype(&fhn_program_free)> program(scheduler.lowerGraph<int>(planner, &bindings),
                                                                    &fhn_program_free);
@@ -218,7 +218,7 @@ void Session::optimize() {
   // Backends that expose an FHN runtime execute the whole plan as one
   // FhnProgram through the executor; the rest use the legacy per-operation
   // evaluation. Lowering failures also fall back.
-  const FhnRuntime *runtime = backend_.fhnRuntime();
+  const FhnRuntime *runtime = backend_->fhnRuntime();
   if (runtime && executeThroughFhnRuntime(planner, *runtime)) {
     return;
   }

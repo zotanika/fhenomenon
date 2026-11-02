@@ -2,7 +2,8 @@
 // For the application workflow start at main.cpp; encrypted requests live in EncryptedSearch.cpp.
 #include "FHN/contrib/SearchKernels.h"
 #include "Fixture.h"
-#include "SearchWorkflow.h"
+#include "ScopedSearch.h"
+#include "Session/Session.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -41,11 +42,11 @@ unsigned positive(const std::string &text, unsigned maximum) {
 struct Options {
   std::string library, fixture, query, output;
   unsigned repetitions = 3, limit = 0;
-  bool compare = false, all = false;
+  bool compare = false, all = false, scoped = false, scope_kernels = true;
 };
 Options options(int argc, char **argv) {
   require(argc >= 3, "usage: fhn-bench-private-search NATIVE_LIBRARY FIXTURE_JSON [--query ID] [--compare] [--reps N] "
-                     "[--verify-all] [--limit-documents N] [--json OUTPUT]");
+                     "[--verify-all] [--limit-documents N] [--json OUTPUT] [--scoped] [--no-scope-kernels]");
   Options result;
   result.library = argv[1];
   result.fixture = argv[2];
@@ -55,6 +56,10 @@ Options options(int argc, char **argv) {
       result.compare = true;
     else if (flag == "--verify-all")
       result.all = true;
+    else if (flag == "--scoped")
+      result.scoped = true;
+    else if (flag == "--no-scope-kernels")
+      result.scope_kernels = false;
     else {
       require(i + 1 < argc, "missing value for " + flag);
       const std::string value = argv[++i];
@@ -70,6 +75,7 @@ Options options(int argc, char **argv) {
         throw std::runtime_error("unknown option: " + flag);
     }
   }
+  require(result.scoped || result.scope_kernels, "--no-scope-kernels requires --scoped");
   require(!result.all || result.query.empty(), "--query and --verify-all are mutually exclusive");
   if (!result.output.empty()) {
     std::error_code error;
@@ -85,6 +91,8 @@ struct Run {
   Runtime runtime{RuntimeOptions{0, 8192}};
   NativeRuntime native;
   Value index;
+  EncryptedDocuments documents;
+  std::shared_ptr<fhenomenon::Session> session;
   unsigned capacity;
   bool prepared;
   std::string name;
@@ -114,6 +122,12 @@ struct Run {
                        SearchShape{width, static_cast<uint32_t>(fixture.documents.size()), capacity}})
               .at(0);
     index_setup_ms = elapsed(start);
+    documents = {std::move(blocks), SearchShape{width, static_cast<uint32_t>(fixture.documents.size()), capacity}};
+    if (opts.scoped) {
+      ScopeOptions scope_options;
+      scope_options.use_kernels = opts.scope_kernels;
+      session = fhenomenon::Session::create(runtime, scope_options);
+    }
     corpus_bytes = runtime.stats().live_bytes;
   }
 };
@@ -153,7 +167,17 @@ json search(TrustedClient &client, Run &run, const Fixture &fixture, const Query
   const auto prep_bytes = run.runtime.stats().live_bytes - before;
   const Values arguments =
     run.prepared ? Values{encrypted_query, run.index, preparation} : Values{encrypted_query, run.index};
-  auto evaluate = [&] { return run.runtime.submit({"contrib.search.score", arguments, {}}); };
+  auto evaluate = [&] {
+    if (!run.session)
+      return run.runtime.submit({"contrib.search.score", arguments, {}});
+    return run.session->run([&](Scope &scope) {
+      ScopedSearch program(scope);
+      std::optional<ScopeValue> state;
+      if (run.prepared)
+        state = scope.input(preparation);
+      return program.score(EncryptedQuery{encrypted_query}, run.documents, state);
+    });
+  };
   const auto expected = oracle(fixture, query);
   constexpr double tolerance = 1e-5;
   double max_error = 0, decrypt_extract_ms = 0, verification_decrypt_total_ms = 0;
@@ -262,6 +286,13 @@ json search(TrustedClient &client, Run &run, const Fixture &fixture, const Query
               {"live_ciphertext_bytes", run.corpus_ciphertext_bytes + query_bytes + output_bytes},
               {"retained_bytes_with_outputs", run.runtime.stats().live_bytes},
               {"mode_lifetime_peak_tracked_bytes", run.runtime.stats().peak_live_bytes}};
+  if (run.session) {
+    record["scope_span_trace_scope"] = "bounded mode-lifetime snapshot; may include earlier queries/evaluations";
+    record["selected_scope_spans"] = json::array();
+    for (const auto &event : run.runtime.trace())
+      if (event.kind == TraceKind::Selected && event.operation == "scope.span")
+        record["selected_scope_spans"].push_back({{"kernel", event.recipe}, {"span", event.detail}});
+  }
   record["plaintext_top_k_boundary_margin"] =
     k < order.size() ? json(expected[plain_order[k - 1]] - expected[plain_order[k]]) : json(nullptr);
   return record;
@@ -316,6 +347,12 @@ int main(int argc, char **argv) {
        "runtime charged ciphertext/preparation slabs and contribution metadata; excludes keys, scratch, "
        "unaccounted runtime/allocator overhead, model and other runtimes; not wire bytes or RSS"},
       {"baseline_scope", "same 4096-slot representation; row baseline is not claimed optimal"}};
+    if (opts.scoped) {
+      report["scoped_execution"] = true;
+      report["scope_kernels_enabled"] = opts.scope_kernels;
+      report["timing_scope"] = "warm synchronous scope capture, selection and score execution incl. allocation; "
+                               "excludes key/index/query setup, preparation, warm-up, decrypt and ranking";
+    }
     report["ciphertext_scope"] =
       "direct corpus/query/output Values: live native payload and reserved capacity separately; "
       "embedded preparation snapshots are accounted in preparation_bytes";

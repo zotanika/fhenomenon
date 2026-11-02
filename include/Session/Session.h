@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Backend/Backend.h"
+#include "FHN/Scope.h"
 #include "Fhenon.h"
 #include "Parameter/CKKSParameter.h"
 #include "Parameter/Parameter.h"
@@ -33,6 +34,15 @@ class Session final : public std::enable_shared_from_this<Session> {
   }
 
   static std::shared_ptr<Session> getSession() { return session_ptr_; }
+
+  // The Runtime must outlive this Session. The scope callback records symbolic
+  // commands; execution and kernel selection happen after it returns.
+  static std::shared_ptr<Session> create(runtime::Runtime &runtime, runtime::ScopeOptions options = {}) {
+    if (isRecording())
+      throw std::logic_error("Session: cannot create a session during recording");
+    session_ptr_ = std::shared_ptr<Session>(new Session(runtime, options));
+    return session_ptr_;
+  }
 
   ~Session() {
     if (session_ptr_.get() == this)
@@ -96,7 +106,7 @@ class Session final : public std::enable_shared_from_this<Session> {
   }
 
   template <typename T> void saveOp(std::shared_ptr<scheduler::Operation<T>> op);
-  template <typename Op> void run(Op &&ops);
+  template <typename Op> auto run(Op &&ops);
 
   bool isActive() const { return active_; }
 
@@ -150,7 +160,10 @@ class Session final : public std::enable_shared_from_this<Session> {
   // prevent direct instantiation
 
   explicit Session(const Backend &backend)
-    : active_(false), backend_(backend), scheduler_(std::make_unique<scheduler::Scheduler>(backend)) {}
+    : active_(false), backend_(&backend), scheduler_(std::make_unique<scheduler::Scheduler>(backend)) {}
+
+  explicit Session(runtime::Runtime &runtime, runtime::ScopeOptions options)
+    : active_(false), native_runtime_(&runtime), scope_options_(options) {}
 
   Session(const Session &) = delete;
   Session &operator=(const Session &) = delete;
@@ -181,7 +194,9 @@ class Session final : public std::enable_shared_from_this<Session> {
   bool poisoned_ = false;
   bool unsupported_type_ = false;
   std::string poison_reason_;
-  const Backend &backend_;
+  const Backend *backend_ = nullptr;
+  runtime::Runtime *native_runtime_ = nullptr;
+  runtime::ScopeOptions scope_options_;
   std::unique_ptr<scheduler::Scheduler> scheduler_; // Scheduler with backend delegate
   // set of operations
   std::vector<std::shared_ptr<scheduler::OperationBase>> operations_;

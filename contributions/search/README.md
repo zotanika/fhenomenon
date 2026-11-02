@@ -4,11 +4,13 @@ Start with [ScoreBlock.h](ScoreBlock.h) to read the encrypted computation.
 [SearchKernels.cpp](SearchKernels.cpp) checks applicability, retains artifacts and
 composes collection requests from those block implementations. The application
 entry point is [the private-search example](../../examples/private_search/main.cpp);
-its evaluator submits the requests in
-[EncryptedSearch.cpp](../../examples/private_search/EncryptedSearch.cpp).
+its evaluator records the scoped program in
+[ScopedSearch.cpp](../../examples/private_search/ScopedSearch.cpp). The immediate
+alternative remains in [EncryptedSearch.cpp](../../examples/private_search/EncryptedSearch.cpp).
 
-These are immediate runtime programs. No recorded circuit or compiler is needed
-to execute them. A compatible larger contributed kernel can implement the same
+The ordinary recipes execute immediately; the optional native Session scope
+records their requests before bounded span selection. Neither path needs a
+recorded circuit or compiler. A compatible larger contributed kernel can implement the same
 request directly; the multiply/rotate/add sequence is one implementation of the
 contract, not a required decomposition for every contribution.
 
@@ -121,6 +123,58 @@ than duplicating buffers. Returned score Values remain ordinary native values
 that other registered commands can consume. No intermediate needs to be
 decrypted merely to cross a kernel boundary.
 
+## Native Session scopes
+
+[ScopedSearch](../../examples/private_search/ScopedSearch.h) records a separate
+`contrib.search.prepare-query` command followed by one
+`contrib.search.score-block` command per ciphertext. It accepts only ciphertexts
+and public layout metadata. The capture callback runs once; no registered scope
+kernel receives the client or plaintext.
+
+The same sealed provider registers two scope contributions:
+
+| Kernel | Priority | Selected span |
+| --- | --- | --- |
+| `contrib.search.scope.collection` | 20 | Two through eight consecutive prepared full blocks |
+| `contrib.search.scope.block` | 10 | One prepared full or tail block |
+
+Collection commands must share the same symbolic query and preparation inputs,
+width and capacity. Their native metadata must be compatible, and their concrete
+preparation must bind the exact query, width and provider. Each command must
+define exactly one score output. The collection stops before a tail, a different
+layout or an incompatible command. Unprepared commands use ordinary dispatch;
+`ScopeOptions::use_kernels = false` also preserves that path.
+
+Execution composes the existing block requests through `Runtime::submit`, so
+higher-priority ordinary block recipes still take effect inside the span. Each
+block is computed, and only outputs requested by the selected span's liveout
+contract are returned. Exported intermediate scores and downstream consumers
+retain the same ciphertexts. This contribution orchestrates multiple recorded
+commands; it introduces no cryptographic fusion or speedup claim.
+
+The example can explicitly export both preparation and scores:
+
+```cpp
+auto session = Session::create(runtime);
+auto values = session->run([&](Scope &scope) {
+  ScopedSearch search(scope);
+  auto preparation = search.prepareQuery(query);
+  auto scores = search.score(query, documents, preparation);
+  return search.exportResults(preparation, scores);
+});
+auto result = ScopedSearch::results(std::move(values), documents.shape);
+```
+
+Reuse requires importing `result.preparation.artifact` into the next scope with
+`scope.input(...)`, then passing that symbol to `score`. This shares the exact
+concrete artifact identity; no identity copy, hidden cache or automatic import
+occurs. Symbols themselves remain local to their original recording.
+
+A third-party `ScopeKernel` with priority above 20 can replace these search
+spans without a runtime-core edit. It must return exactly the concrete values
+listed by `view.liveOuts(view.size())`, including exported intermediates. A
+selected executor failure is final; it cannot fall back to another kernel.
+
 ## Where a new contribution fits
 
 Link `Fhenomenon::SearchKernels` and register a recipe for
@@ -141,3 +195,7 @@ third-party block replacement, ordinary-command interoperability, row/tile and
 tail agreement, key requirements, source/provider/width binding and failure
 cleanup. The general callback and ownership rules are in
 [the runtime contract](../../docs/lightweight-runtime.md).
+[SearchScopeTest.cpp](../../test/SearchScopeTest.cpp) checks real encrypted
+Session execution with collection, tail and ordinary native commands, exact
+preparation reuse, bounded spans, liveouts, disabled/unprepared paths and
+external scope/block replacements.

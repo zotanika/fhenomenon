@@ -101,11 +101,6 @@ std::size_t arity(FhnOpCode op) {
     return 1;
   }
 }
-struct OpAttributes {
-  FhnOpCode opcode;
-  std::array<std::int64_t, 4> params;
-  std::array<double, 2> fparams;
-};
 struct CompileAttributes {
   FhnCircuit circuit;
   RegionOptions options;
@@ -147,7 +142,7 @@ void registerRecipes(Runtime &runtime, const Services &s) {
     const auto completePreparation = s->preparation_required_bytes && s->prepare_rotation && s->preparation_bytes &&
                                      s->preparation_free && s->rotate_prepared;
     if (request.operation == "native.op") {
-      const auto *attributes = std::any_cast<OpAttributes>(&request.attributes);
+      const auto *attributes = std::any_cast<NativeOpAttributes>(&request.attributes);
       if (attributes) {
         auto *table = s->get_kernels(s->context.get());
         bool available = false;
@@ -182,7 +177,7 @@ void registerRecipes(Runtime &runtime, const Services &s) {
     return true;
   };
   runtime.addRecipe({"native.op", "native.physical", 0, accepts, [s](Runtime &rt, const Request &r) {
-                       auto attr = std::any_cast<OpAttributes>(&r.attributes);
+                       auto attr = std::any_cast<NativeOpAttributes>(&r.attributes);
                        if (!attr)
                          invalid("Invalid physical operation attributes");
                        return Values{physical(rt, s, attr->opcode, r.inputs, attr->params, attr->fparams)};
@@ -343,7 +338,7 @@ Value NativeRuntime::op(FhnOpCode opcode, Values inputs, std::array<std::int64_t
                         std::array<double, 2> fparams) {
   for (const auto &value : inputs)
     buffer(value);
-  return runtime_.submit({"native.op", std::move(inputs), OpAttributes{opcode, params, fparams}}).at(0);
+  return runtime_.submit({"native.op", std::move(inputs), NativeOpAttributes{opcode, params, fparams}}).at(0);
 }
 Value NativeRuntime::prepareRotation(Value source) {
   buffer(source);
@@ -356,6 +351,27 @@ Value NativeRuntime::rotate(Value source, std::int64_t rotation, Value preparati
   if (!preparation)
     return op(FHN_ROTATE, {std::move(source)}, {rotation, 0, 0, 0});
   return runtime_.submit({"native.rotate", {std::move(source), std::move(preparation)}, rotation}).at(0);
+}
+ScopeValue NativeRuntime::op(Scope &scope, FhnOpCode opcode, ScopeValues inputs, std::array<std::int64_t, 4> params,
+                             std::array<double, 2> fparams) {
+  if (!scope.belongsTo(runtime_))
+    invalid("Native adapter and scope belong to different runtimes");
+  if (inputs.size() != arity(opcode))
+    invalid("Wrong native physical operand count");
+  return scope.submit("native.op", std::move(inputs), NativeOpAttributes{opcode, params, fparams}).at(0);
+}
+ScopeValue NativeRuntime::prepareRotation(Scope &scope, ScopeValue source) {
+  if (!scope.belongsTo(runtime_))
+    invalid("Native adapter and scope belong to different runtimes");
+  return scope.submit("native.prepare_rotation", {source}).at(0);
+}
+ScopeValue NativeRuntime::rotate(Scope &scope, ScopeValue source, std::int64_t rotation,
+                                 std::optional<ScopeValue> preparation) {
+  if (!scope.belongsTo(runtime_))
+    invalid("Native adapter and scope belong to different runtimes");
+  if (!preparation)
+    return op(scope, FHN_ROTATE, {source}, {rotation, 0, 0, 0});
+  return scope.submit("native.rotate", {source, *preparation}, rotation).at(0);
 }
 Value NativeRuntime::compileRegion(const FhnCircuit &circuit, Values inputs, RegionOptions options) {
   for (const auto &value : inputs)

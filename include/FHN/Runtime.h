@@ -54,6 +54,10 @@ struct Request {
 };
 
 class Runtime;
+class Scope;
+class ScopeValue;
+struct ScopeOptions;
+struct ScopeKernel;
 struct Recipe {
   std::string operation;
   std::string name;
@@ -93,6 +97,10 @@ class Runtime {
   Runtime &operator=(Runtime &&) = delete;
 
   void addRecipe(Recipe recipe);
+  bool owns(const Value &value) const noexcept;
+  void addScopeKernel(ScopeKernel kernel);
+  Values runScope(const std::function<std::vector<ScopeValue>(Scope &)> &capture);
+  Values runScope(const std::function<std::vector<ScopeValue>(Scope &)> &capture, ScopeOptions options);
   Values submit(const Request &request);
   Value makeValue(std::string format, ResourceKind kind, std::size_t bytes, const std::function<std::any()> &factory,
                   Values dependencies = {});
@@ -102,6 +110,8 @@ class Runtime {
   private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
+  void setScopeMatching(bool matching) noexcept;
+  friend class Scope;
 };
 
 } // namespace fhenomenon::runtime

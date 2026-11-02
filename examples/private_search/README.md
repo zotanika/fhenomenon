@@ -13,7 +13,8 @@ multilingual sentence-transformer embeddings.
 | --- | --- |
 | How do I use encrypted search in an application? | [main.cpp](main.cpp): explicit client/evaluator steps, without timing or a plaintext oracle |
 | Which values are encrypted, and who can decrypt? | [SearchWorkflow.h](SearchWorkflow.h): example-only ciphertext types and separate capabilities |
-| What program does the evaluator submit? | [EncryptedSearch.cpp](EncryptedSearch.cpp): index, shared query preparation and score requests |
+| What program does the evaluator record? | [ScopedSearch.cpp](ScopedSearch.cpp): separate query-preparation and per-ciphertext score commands in a native Session scope |
+| Is immediate execution still available? | [EncryptedSearch.cpp](EncryptedSearch.cpp): index and score requests without scope capture |
 | Where does actual FHE computation happen? | [ScoreBlock.h](../../contributions/search/ScoreBlock.h): ordinary encrypted calculation and the prepared-kernel alternative |
 | What must a contributed kernel preserve? | [Search contribution contract](../../contributions/search/README.md): score meaning, packing, keys, level/scale, reuse and replacement |
 | How are keys prepared and ciphertexts created? | [TrustedClient.cpp](TrustedClient.cpp): client-only key setup, packing, encryption and decryption |
@@ -23,10 +24,11 @@ The important boundary in the application is:
 
 ```text
 Client (plaintext + secret key)      Evaluator (ciphertext + public metadata)
-  encryptDocuments -----------------> createIndex
-  encryptQuery ---------------------> prepareQuery
-                                      score
-  decryptScores <-------------------- encrypted scores
+  encryptDocuments -----------------> encrypted document blocks
+  encryptQuery ---------------------> Session::run(Scope&)
+                                      record prepareQuery + block scores
+                                      scope exit: select and compose kernels
+  decryptScores <-------------------- encrypted scores + reusable preparation
   topK and display
 ```
 
@@ -37,17 +39,44 @@ protocol. Only the client methods encrypt or decrypt; ordinary `topK` runs on
 already-decrypted scores. The evaluator's methods never take the client, source
 text, plaintext embeddings or a secret key.
 
-`score` composes block requests whose implementations are selected at runtime.
-There is no single recorded circuit in main. The ordinary block implementation
-in `ScoreBlock.h` computes a ciphertext product and a rotate/add reduction; the
-prepared implementation delegates the same score contract to a larger matvec
-kernel. That sequence is a readable implementation, not an instruction set
-that every contribution must use. The same query preparation survives across
-block requests, including the single-document tail.
+`Session::run` records query preparation and separate score-block commands, then
+selects kernels after the callback returns. The scope is the visible encrypted
+program boundary in main; ordinary public C++ control flow runs once. It does
+not construct or compile every possible branch of an application.
 
-Index creation retains ciphertext references and public metadata. Query
-preparation constructs reusable native state without decrypting or producing
-scores. Actual encrypted score arithmetic starts with the block implementations.
+For this 65-document fixture, selection covers the preparation request, a
+collection kernel over eight full tiles, and a one-document tail kernel.
+The selected collection currently composes the existing block requests. It is
+an orchestration contribution, not new cryptographic fusion or a speedup claim.
+A higher-priority contributed `ScopeKernel` can replace that span directly.
+
+The ordinary block implementation in `ScoreBlock.h` computes a ciphertext
+product and a rotate/add reduction; the prepared implementation delegates the
+same score contract to a larger matvec kernel. That sequence is a readable
+implementation, not an instruction set that every contribution must use.
+The same query preparation survives across block requests, including the tail.
+Main exports it alongside the scores. A later scope can reuse it explicitly:
+
+```cpp
+auto later = session->run([&](Scope &scope) {
+  ScopedSearch program(scope);
+  auto prepared = scope.input(search.preparation.artifact);
+  return program.score(query, documents, prepared);
+});
+```
+
+Intermediate score symbols can also feed ordinary native operations in the same
+scope and be exported at the same time. Span kernels must preserve every result
+used downstream or exported; [SearchScopeTest.cpp](../../test/SearchScopeTest.cpp)
+exercises that contract with real CKKS and with external kernel overrides.
+The lightweight core uses bounded lookahead and match attempts, with ordinary
+request fallback and no implicit compiler. See [the scope contract](../../docs/lightweight-runtime.md#native-scopes-and-kernel-selection).
+
+Query preparation constructs reusable native state without decrypting or
+producing scores. Actual encrypted score arithmetic starts with the block
+implementations. The immediate evaluator additionally offers an index artifact
+that retains ciphertext references and public metadata; the scope adapter records
+document blocks directly.
 
 ## Build and run the application
 
@@ -71,7 +100,8 @@ fhn-private-search NATIVE_LIBRARY FIXTURE_JSON [--query ID]
 ```
 
 The default is the first query with prepared eight-document tiles. The demo
-prints the client's top-five matches and the selected search recipe names.
+prints the client's top-five matches and the selected scope spans, including
+start/count and required live values.
 Use the benchmark executable for layout comparisons and numerical verification:
 
 ```sh
@@ -84,14 +114,24 @@ Use the benchmark executable for layout comparisons and numerical verification:
 ```text
 fhn-bench-private-search NATIVE_LIBRARY FIXTURE_JSON
   [--query ID] [--compare] [--reps N] [--verify-all]
-  [--limit-documents N] [--json OUTPUT]
+  [--limit-documents N] [--json OUTPUT] [--scoped] [--no-scope-kernels]
 ```
 
 The previous diagnostic flags moved to `fhn-bench-private-search`. The demo
 rejects them with a pointer to that executable rather than silently ignoring
 them. `--limit-documents 9` on the benchmark exercises a full tile and a
-one-document tail. All four paths submit the same high-level score request:
-row-ordinary, row-prepared, tile-ordinary and tile-prepared.
+one-document tail; `--limit-documents 17` exercises collection plus tail selection.
+The four modes are row-ordinary, row-prepared, tile-ordinary and tile-prepared.
+By default they retain the original immediate collection request and timing
+scope, so existing measurement files stay comparable.
+
+Add `--scoped` to record separate block commands and include capture/selection
+in the evaluation interval. Add `--no-scope-kernels` with it to compare the same
+recording through ordinary request fallback. Prepared modes import their existing
+query preparation into every scope; its setup remains reported separately. JSON
+marks scoped execution and includes a bounded mode-lifetime span trace snapshot,
+which may include earlier queries/evaluations. The example and both benchmark
+paths work with native compiler services disabled.
 
 ## Roles, keys and execution scope
 
