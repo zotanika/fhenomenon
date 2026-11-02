@@ -1,5 +1,6 @@
 #include "FHN/contrib/SearchKernels.h"
 #include "FHN/contrib/MatvecKernels.h"
+#include "ScoreBlock.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -191,15 +192,21 @@ Values executeScore(Runtime &runtime, const Request &request) {
 }
 Values executeBlock(Runtime &runtime, const Provider &provider, const Request &request, bool prepared) {
   if (prepared)
-    return runtime.submit(
-      {"contrib.matvec.dot", {request.inputs[0], request.inputs[1], request.inputs[2].dependencies()[0]}, {}});
+    return search_detail::scoreBlockPrepared(runtime, request.inputs[0], request.inputs[1],
+                                             request.inputs[2].dependencies()[0]);
   const auto width = std::any_cast<SearchShape>(request.attributes).width;
-  auto value = provider.native->op(FHN_HMULT, {request.inputs[0], request.inputs[1]});
-  for (auto shift = width / 2; shift; shift /= 2)
-    value = provider.native->op(FHN_ADD_CC, {value, provider.native->rotate(value, shift)});
-  return {std::move(value)};
+  return search_detail::scoreBlockOrdinary(*provider.native, request.inputs[0], request.inputs[1], width);
 }
 } // namespace
+SearchKeyRequirements nativeSearchKeyRequirements(std::uint32_t width) {
+  if (!powerOfTwo(width))
+    throw runtime::Error(runtime::ErrorCode::InvalidRequest, "Search reduction width must be a positive power of two");
+  SearchKeyRequirements result{true, {}};
+  for (std::uint64_t step = 1; step < width; step *= 2)
+    result.rotation_steps.push_back(static_cast<std::int64_t>(step));
+  return result;
+}
+
 void registerSearchKernels(runtime::Runtime &runtime, runtime::NativeServices services,
                            const std::string &nativeLibraryPath) {
   registerMatvecKernels(runtime, services, nativeLibraryPath);

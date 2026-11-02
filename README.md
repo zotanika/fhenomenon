@@ -25,6 +25,10 @@ both multilingual document and query embeddings, composes collection scoring
 from replaceable block recipes, and compares row/tiled layouts with explicit
 query preparation. Its offline fixture uses public documentation as a sample
 vault; decryption and ranking stay with the single owning client.
+Start with its [short application workflow](examples/private_search/main.cpp),
+then follow the [encrypted computation and contribution contract](contributions/search/README.md).
+The [separate benchmark runner](examples/private_search/benchmark.cpp) retains
+the oracle, layout comparisons and performance diagnostics.
 
 The core bet is simple: fully homomorphic encryption will not become practical by pretending that arbitrary software can be compiled unchanged into encrypted execution. It will also not become practical by making every backend maximally general and then accepting unusable speed. The useful boundary is closer to GPU computing. A trusted host should orchestrate public control flow, while an untrusted executor runs branchless, data-oblivious, coarse-grained encrypted kernels.
 

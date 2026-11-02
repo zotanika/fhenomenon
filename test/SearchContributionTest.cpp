@@ -10,6 +10,29 @@
 namespace {
 using namespace fhenomenon::runtime;
 using namespace fhenomenon::contrib;
+TEST(SearchKeyRequirements, CoversNativeMultiplicationAndEveryReductionRotation) {
+  auto single = nativeSearchKeyRequirements(1);
+  EXPECT_TRUE(single.multiplication);
+  EXPECT_TRUE(single.rotation_steps.empty());
+  EXPECT_EQ(nativeSearchKeyRequirements(2).rotation_steps, (std::vector<std::int64_t>{1}));
+  EXPECT_EQ(nativeSearchKeyRequirements(4).rotation_steps, (std::vector<std::int64_t>{1, 2}));
+  auto search = nativeSearchKeyRequirements(512);
+  EXPECT_TRUE(search.multiplication);
+  EXPECT_EQ(search.rotation_steps, (std::vector<std::int64_t>{1, 2, 4, 8, 16, 32, 64, 128, 256}));
+  auto largest = nativeSearchKeyRequirements(std::uint32_t{1} << 31);
+  ASSERT_EQ(largest.rotation_steps.size(), 31u);
+  EXPECT_EQ(largest.rotation_steps.back(), std::int64_t{1} << 30);
+}
+TEST(SearchKeyRequirements, RejectsInvalidReductionWidths) {
+  for (auto width : {0u, 3u, 6u, std::numeric_limits<std::uint32_t>::max()}) {
+    try {
+      nativeSearchKeyRequirements(width);
+      FAIL() << "invalid width accepted: " << width;
+    } catch (const Error &error) {
+      EXPECT_EQ(error.code(), ErrorCode::InvalidRequest);
+    }
+  }
+}
 class SearchContributionTest : public ::testing::Test {
   protected:
   void *library = nullptr;
@@ -35,14 +58,22 @@ class SearchContributionTest : public ::testing::Test {
     client = create(services.context.get());
     ASSERT_NE(client, nullptr);
     auto prepare = symbol<FhnClientPrepareFn>("ckks_fhn_client_prepare");
-    std::array<FhnInstruction, 3> code{};
-    code[0].opcode = FHN_HMULT;
-    code[1].opcode = FHN_ROTATE;
-    code[1].params[0] = 1;
-    code[2].opcode = FHN_ROTATE;
-    code[2].params[0] = 2;
-    FhnProgram program{FHN_ABI_VERSION, code.size(), code.data(), 0, nullptr, 0, nullptr};
-    ASSERT_EQ(prepare(client, &program), 0);
+    const auto requirements = nativeSearchKeyRequirements(4);
+    std::vector<FhnInstruction> key_requests;
+    if (requirements.multiplication) {
+      FhnInstruction multiply{};
+      multiply.opcode = FHN_HMULT;
+      key_requests.push_back(multiply);
+    }
+    for (auto step : requirements.rotation_steps) {
+      FhnInstruction rotate{};
+      rotate.opcode = FHN_ROTATE;
+      rotate.params[0] = step;
+      key_requests.push_back(rotate);
+    }
+    FhnProgram evaluation_key_request{
+      FHN_ABI_VERSION, static_cast<std::uint32_t>(key_requests.size()), key_requests.data(), 0, nullptr, 0, nullptr};
+    ASSERT_EQ(prepare(client, &evaluation_key_request), 0);
   }
   void TearDown() override {
     if (client)

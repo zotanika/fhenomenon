@@ -2,6 +2,7 @@
 #include "FHN/NativeRuntime.h"
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace fhenomenon::contrib {
 struct SearchShape {
@@ -9,6 +10,16 @@ struct SearchShape {
   std::uint32_t document_count;
   std::uint32_t documents_per_ciphertext;
 };
+struct SearchKeyRequirements {
+  bool multiplication;
+  std::vector<std::int64_t> rotation_steps;
+};
+// Evaluation-key requirements for the built-in native ordinary/prepared search
+// kernels, not a circuit or negotiation for arbitrary third-party recipes.
+// Width must be a positive power of two. The caller also checks that it fits
+// the selected CKKS profile and prepares these keys before encrypted execution.
+SearchKeyRequirements nativeSearchKeyRequirements(std::uint32_t width);
+
 // Registers contrib.search.index({ciphertext blocks}, SearchShape),
 // contrib.search.prepare-query({query}, uint32_t width),
 // contrib.search.score({query,index[,search preparation]}, {}), and

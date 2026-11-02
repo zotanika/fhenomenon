@@ -62,9 +62,19 @@ target_link_libraries(PrivateSearchFixtureTest PRIVATE nlohmann_json::nlohmann_j
 add_gtest_target_to_ctest(PrivateSearchFixtureTest)
 
 add_test(NAME PrivateSearchExample COMMAND fhn-private-search
+  "$<TARGET_FILE:ckks_fhn>" "${PROJECT_SOURCE_DIR}/examples/private_search/data/fixture.json" --query memory)
+set_tests_properties(PrivateSearchExample PROPERTIES TIMEOUT 60)
+
+add_executable(PrivateSearchWorkflowTest PrivateSearchWorkflowTest.cpp)
+target_link_libraries(PrivateSearchWorkflowTest PRIVATE fhn_private_search_example gtest_main)
+target_compile_definitions(PrivateSearchWorkflowTest PRIVATE FHN_NATIVE_TEST_LIBRARY="$<TARGET_FILE:ckks_fhn>")
+add_dependencies(PrivateSearchWorkflowTest ckks_fhn)
+add_gtest_target_to_ctest(PrivateSearchWorkflowTest)
+
+add_test(NAME PrivateSearchBenchmark COMMAND fhn-bench-private-search
   "$<TARGET_FILE:ckks_fhn>" "${PROJECT_SOURCE_DIR}/examples/private_search/data/fixture.json"
   --verify-all --compare --reps 1 --limit-documents 17)
-set_tests_properties(PrivateSearchExample PROPERTIES TIMEOUT 600)
+set_tests_properties(PrivateSearchBenchmark PROPERTIES TIMEOUT 600)
 
 add_executable(FhnBackendApiTest FhnBackendApiTest.cpp)
 target_link_libraries(FhnBackendApiTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)

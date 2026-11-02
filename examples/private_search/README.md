@@ -1,160 +1,152 @@
 # Encrypted personal-document search
 
-This example encrypts both document embeddings and a query embedding, evaluates
-cosine similarity with genuine CPU CKKS, and lets the owning client decrypt
-scores and rank documents. The bundled vault contains **65 public project
-documentation excerpts standing in for private documents**, with eight English
-and Korean sample queries. Its vectors come from a real, pinned multilingual
-sentence-transformer model. The executable needs no Python, model download,
-network connection, or remote embedding service.
+Start with [main.cpp](main.cpp). It shows the owning client encrypting documents
+and a query, an evaluator computing encrypted similarity scores, and the client
+decrypting and ranking them. Both sets of embeddings are encrypted with native
+CPU CKKS. The bundled sample contains 65 public documentation excerpts standing
+in for a private vault, with eight English/Korean queries and real, pinned
+multilingual sentence-transformer embeddings.
 
-## Build and run
+## Read the application, then follow the encrypted computation
+
+| Reader's question | Entry point |
+| --- | --- |
+| How do I use encrypted search in an application? | [main.cpp](main.cpp): explicit client/evaluator steps, without timing or a plaintext oracle |
+| Which values are encrypted, and who can decrypt? | [SearchWorkflow.h](SearchWorkflow.h): example-only ciphertext types and separate capabilities |
+| What program does the evaluator submit? | [EncryptedSearch.cpp](EncryptedSearch.cpp): index, shared query preparation and score requests |
+| Where does actual FHE computation happen? | [ScoreBlock.h](../../contributions/search/ScoreBlock.h): ordinary encrypted calculation and the prepared-kernel alternative |
+| What must a contributed kernel preserve? | [Search contribution contract](../../contributions/search/README.md): score meaning, packing, keys, level/scale, reuse and replacement |
+| How are keys prepared and ciphertexts created? | [TrustedClient.cpp](TrustedClient.cpp): client-only key setup, packing, encryption and decryption |
+| Where are correctness checks and measurements? | [benchmark.cpp](benchmark.cpp): plaintext oracle, four paths, repeated evaluation and JSON diagnostics |
+
+The important boundary in the application is:
+
+```text
+Client (plaintext + secret key)      Evaluator (ciphertext + public metadata)
+  encryptDocuments -----------------> createIndex
+  encryptQuery ---------------------> prepareQuery
+                                      score
+  decryptScores <-------------------- encrypted scores
+  topK and display
+```
+
+`EncryptedDocuments`, `EncryptedQuery`, `EncryptedIndex`, `QueryPreparation`
+and `EncryptedScores` make the values crossing that boundary explicit. They are
+small example-level types over the existing runtime, not a new compiler or wire
+protocol. Only the client methods encrypt or decrypt; ordinary `topK` runs on
+already-decrypted scores. The evaluator's methods never take the client, source
+text, plaintext embeddings or a secret key.
+
+`score` composes block requests whose implementations are selected at runtime.
+There is no single recorded circuit in main. The ordinary block implementation
+in `ScoreBlock.h` computes a ciphertext product and a rotate/add reduction; the
+prepared implementation delegates the same score contract to a larger matvec
+kernel. That sequence is a readable implementation, not an instruction set
+that every contribution must use. The same query preparation survives across
+block requests, including the single-document tail.
+
+Index creation retains ciphertext references and public metadata. Query
+preparation constructs reusable native state without decrypting or producing
+scores. Actual encrypted score arithmetic starts with the block implementations.
+
+## Build and run the application
 
 From the repository root:
 
 ```sh
 cmake -S . -B build-search -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_TEST=OFF -DBUILD_DOCUMENTATION=OFF
-cmake --build build-search --target fhn-private-search ckks_fhn
+cmake --build build-search --target fhn-private-search fhn-bench-private-search ckks_fhn
 ./build-search/bin/fhn-private-search \
   ./build-search/lib/libckks_fhn.dylib \
-  examples/private_search/data/fixture.json
+  examples/private_search/data/fixture.json --query memory
 ```
 
-Use `libckks_fhn.so` on Linux. The default run uses the first sample query,
-three repetitions, and the prepared tiled layout. It displays the query,
-retrieved titles/text, and selected recipes. To compare all four execution
-paths and verify all sample queries:
+Use `libckks_fhn.so` on Linux. Both executables build with tests disabled and are
+installed along with the fixture. Running them needs no Python, model download,
+network connection or remote embedding service.
+
+```text
+fhn-private-search NATIVE_LIBRARY FIXTURE_JSON [--query ID]
+```
+
+The default is the first query with prepared eight-document tiles. The demo
+prints the client's top-five matches and the selected search recipe names.
+Use the benchmark executable for layout comparisons and numerical verification:
 
 ```sh
-./build-search/bin/fhn-private-search \
+./build-search/bin/fhn-bench-private-search \
   ./build-search/lib/libckks_fhn.dylib \
   examples/private_search/data/fixture.json \
   --compare --verify-all --reps 3 --json /tmp/private-search-results.json
 ```
 
-The command interface is:
-
 ```text
-fhn-private-search NATIVE_LIBRARY FIXTURE_JSON
+fhn-bench-private-search NATIVE_LIBRARY FIXTURE_JSON
   [--query ID] [--compare] [--reps N] [--verify-all]
   [--limit-documents N] [--json OUTPUT]
 ```
 
-For example, `--query memory` selects the Korean memory-budget question.
-`--limit-documents 9` exercises a full eight-document tile and a one-document
-tail on a smaller prefix. `--verify-all` checks all eight bundled queries;
-`--compare` evaluates `row-ordinary`, `row-prepared`, `tile-ordinary`, and
-`tile-prepared` through the same high-level score request.
+The previous diagnostic flags moved to `fhn-bench-private-search`. The demo
+rejects them with a pointer to that executable rather than silently ignoring
+them. `--limit-documents 9` on the benchmark exercises a full tile and a
+one-document tail. All four paths submit the same high-level score request:
+row-ordinary, row-prepared, tile-ordinary and tile-prepared.
 
-## Client and evaluator roles
+## Roles, keys and execution scope
 
-One owner controls every document and the query, and owns the secret and public
-evaluation keys. The client embeds text locally, encrypts both sets of vectors,
-prepares evaluation keys, decrypts returned score buffers, and chooses the top
-matches. It is already entitled to read every source document.
+One owner controls every document and query, and keeps the secret and public
+evaluation keys alive through evaluation. The client embeds text locally before
+running the demo; its fixture already contains embeddings. It is entitled to
+read every document and owns the display text separately from the evaluator.
 
-The evaluator receives ciphertext Values, public shape/layout metadata and
-public evaluation-key access. Contributed recipes retain ciphertext/artifact
-dependencies and compute services; they do not retain a client, plaintext
-embedding, source text, or secret key. The client keeps display text separately.
+The two roles explicitly share one `Runtime` and native context inside one
+process. This is necessary because Values carry runtime-specific accounting and
+identity. Sharing the runtime preserves preparation identity without hidden
+imports or caches. Compute recipes receive only compute services and ciphertext
+resources. `EncryptedSearch` is a view of this shared recipe registry, not a
+separate provider identity or namespace. This does not establish operating-system isolation or transport;
+the example has no ciphertext serialization, encrypted top-k or private
+retrieval/access-pattern protocol, and makes no production security claim.
 
-These roles run **inside one process**. The example demonstrates object and
-call-path separation. It does not supply operating-system isolation,
-ciphertext serialization or network transport, encrypted top-k, private
-retrieval/access patterns, or a production security claim. The evaluator learns
-public corpus size, layout, operation structure and preparation availability.
-Result decryption and ranking happen on the trusted client.
+The client gets default kernel requirements from
+`nativeSearchKeyRequirements(width)`. Its internal `FhnProgram` named
+`evaluation_key_request` adapts that list to the native key-preparation API;
+**it is not the search circuit**. The helper covers the built-in native kernels.
+A new kernel with different key requirements must arrange those capabilities
+before evaluation; runtime dispatch does not automatically discover or create
+keys. See the contribution contract for details.
 
-## Packing and selected recipes
+## Packing and validation
 
-Normalized embeddings have 384 components. Each is zero-padded to a 512-slot
-block. A query is repeated across eight such blocks in a ciphertext with 4096
-logical and physical slots, using the native default profile.
+The 384-dimensional normalized vectors are padded to width 512. The query repeats
+across eight blocks in 4096 slots. Row layout repeats one document in a whole
+ciphertext (65 ciphertexts); tile layout places eight independent documents in
+each ciphertext (nine ciphertexts, including one partial tile).
 
-| Corpus layout | Document placement | Ciphertexts for 65 documents |
-| --- | --- | --- |
-| Row | One document repeated across all eight 512-slot blocks | 65 |
-| Tile | Eight independent documents, one per 512-slot block | 9 |
+Only lane `j * 512` contains document `j`'s score in a result block. Other lanes
+contain mixed sliding sums. The trusted client extracts only valid score lanes
+before ranking, and excludes the zero-filled tail. Common-key encryption,
+query repetition and document placement are client contracts that public
+metadata cannot prove. This single-owner example is not a scores-only
+information-disclosure mechanism for another document owner.
 
-The final tile contains one valid document and seven zero-filled blocks. The
-padded dot product equals cosine similarity because the original vectors have
-unit norm. For document `d`, read only result buffer `d / capacity` at slot
-`(d % capacity) * 512`, where capacity is one for rows and eight for tiles.
-Other lanes contain mixed partial sums and are not document scores. Zero-filled
-tail blocks are excluded from ranking.
+The separate benchmark compares every warm-up and timed result against an
+independent plaintext dot-product oracle outside the evaluation timer. It
+reports exact/tolerance-aware top-five agreement separately from hand-labeled
+relevance. Unjudged queries have null relevance metrics. Setup, query
+preparation, warm evaluation, decrypt/extract and ranking costs are separate.
+Native live ciphertext payload and reserved capacity are distinct; preparation
+snapshots are counted in preparation bytes. The runtime peak is a mode's lifetime
+peak, not a per-query measurement or process RSS. All four indexes coexist, and
+the row representation is a readable baseline, not an optimal-row claim.
 
-The separately linked `Fhenomenon::SearchKernels` contribution registers:
+## Recorded run before this readability refactor
 
-- `contrib.search.index`: retain validated ciphertext blocks and public
-  `SearchShape{width, document_count, documents_per_ciphertext}` metadata.
-- `contrib.search.prepare-query`: create explicit reusable preparation for the
-  exact query Value and reduction width.
-- `contrib.search.score`: compose collection scoring from block requests,
-  sharing the same query preparation across every block.
-- `contrib.search.score-block`: select a compatible row/tile and
-  ordinary/prepared recipe using public metadata and explicit preparation.
-
-The application submits the same program for either layout:
-
-```cpp
-registerSearchKernels(runtime, services, nativeLibraryPath);
-auto index = runtime.submit({"contrib.search.index", encryptedBlocks,
-                             SearchShape{512, documentCount, capacity}}).at(0);
-auto prepared = runtime.submit({"contrib.search.prepare-query",
-                                {encryptedQuery}, std::uint32_t{512}}).at(0);
-auto scores = runtime.submit({"contrib.search.score",
-                              {encryptedQuery, index, prepared}, {}});
-```
-
-Use capacity one or eight for the layouts above, or omit the preparation input
-to select ordinary block recipes. The trusted client packs the matching layout;
-the runtime selects implementations from the submitted public contract.
-
-Every path performs an encrypted elementwise product and a width-512
-rotate-add reduction. Prepared paths use the existing matvec preparation and
-dot contribution. The one-document tail can select the row block recipe even
-though its enclosing index uses tiled storage. Selection is deterministic
-recipe dispatch; it is not encrypted-data-dependent selection or automatic
-performance tuning. Query preparation is bound to its original Value identity;
-a fresh encryption with the same dimensions is a different source.
-
-Returned scores are ordinary native ciphertext Values and can enter existing
-native commands. The index retains its ciphertext dependencies once rather
-than copying plaintext or retaining the client. The runtime core, native
-adapter, backend and cryptographic arithmetic require no search-specific edit.
-
-## Validation and costs
-
-The independent client oracle computes plaintext dot products from every
-original vector. Numeric agreement with encrypted scores, top-k agreement,
-near-tie handling, and the sample's hand-labeled relevance are distinct checks.
-Every warm-up and timed evaluation is decrypted and checked outside the evaluation
-timer. Fresh queries, or limited prefixes containing no labeled documents, show
-relevance as unjudged; their encrypted scores are still verified.
-A numerically correct computation does not establish search quality. The
-bundled relevance labels are small, non-exhaustive judgments written before
-model scoring: seven of eight queries have a labeled result in their plaintext
-top three. The data README records the missed query and the model's truncation
-limit.
-
-Compare index setup, query setup/preparation, evaluation, and result decoding
-separately. Include retained and peak tracked bytes as well as live ciphertext
-bytes/counts. JSON separates native live payload from reserved ciphertext capacity;
-preparation snapshots are counted in preparation bytes rather than again as
-ciphertext Values. Peak tracked bytes are each mode runtime's lifetime peak across
-queries, not a per-query peak. Runtime tracked slabs exclude keys, context tables/scratch and
-allocator overhead; they are not process memory. Ciphertext payload size is
-not measured network traffic. Reusable preparation has a setup and retained
-memory cost that belongs in any one-shot comparison. Use the JSON output to preserve
-evidence from the machine and configuration actually tested.
-The four modes use independently randomized encryptions under the same key and
-the same 4096-slot representation. All four indexes remain resident during a
-comparison. This row layout is a readable baseline, not a claim of the best
-possible row implementation. Query repetition, document placement and common-key
-encryption are trusted-client contracts; public metadata cannot prove them.
-
-## Recorded run
+These measurements were captured by the original combined runner, committed as
+`fcd296a`. Its measurement code now lives in `benchmark.cpp` and runs as
+`fhn-bench-private-search`. The JSON source hashes identify that historical code;
+the figures below are not a new timing claim for the refactored files.
 
 [Raw measurements and environment](../../benchmarks/results/2026-11-02-private-search-release.json)
 record an Apple M4 Pro, macOS 26.6.2, Apple clang 21 Release build with LTO disabled.
@@ -206,23 +198,10 @@ file as `FIXTURE_JSON` above. A custom corpus or fresh query requires an
 explicit `--output` destination. Keep personal corpus/export files outside the
 repository. Unjudged fresh queries have empty relevance lists.
 
-## Contribute another block implementation
+## Contribute a kernel
 
-An external C++ contribution can link the installed
-`Fhenomenon::SearchKernels` target and include `FHN/contrib/SearchKernels.h`
-with the existing public runtime headers. Register a recipe for
-`contrib.search.score-block` using `Runtime::addRecipe`; give it priority greater
-than 20 to take precedence over the built-in prepared recipes when applicable.
-The collection recipe submits each block through the registry, so compatible
-external kernels participate without modifying the collection or runtime core.
-
-The request carries a query, a document block, optional typed query preparation,
-and `SearchShape`. A recipe must validate its supported public context, basis,
-scale, dimensions, valid-document count and preparation contract. It must return
-one ordinary score ciphertext with valid scores at the documented block-start
-lanes, preserve escaped inputs, obey resource accounting, and retain no
-plaintext/client/secret state. An applicability decline allows another recipe;
-an exception after execution begins is reported without retrying another
-implementation. See [the runtime contract](../../docs/lightweight-runtime.md)
-and [prepared matvec](../../docs/matvec-preparation.md) for shared artifacts and
-intermediate-command composition.
+Follow [the search contribution contract](../../contributions/search/README.md)
+from the encrypted block implementation to public recipe registration. A
+compatible block replacement or a larger collection implementation can join
+through public interfaces, preserve shared artifacts and return ordinary native
+ciphertext Values. No runtime-core change is needed.

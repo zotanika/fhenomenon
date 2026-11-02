@@ -183,6 +183,9 @@ int main(int argc, char **argv) {
         return 25;
   }
   fhenomenon::contrib::registerSearchKernels(runtime, services, argv[1]);
+  const auto search_keys = fhenomenon::contrib::nativeSearchKeyRequirements(4);
+  if (!search_keys.multiplication || search_keys.rotation_steps != std::vector<std::int64_t>{1, 2})
+    return 28;
   auto index = runtime.submit({"contrib.search.index", {source}, fhenomenon::contrib::SearchShape{4, 1, 1}}).at(0);
   auto query_state = runtime.submit({"contrib.search.prepare-query", {source}, std::uint32_t{4}}).at(0);
   auto scores = runtime.submit({"contrib.search.score", {source, index, query_state}, {}});
