@@ -4,10 +4,10 @@ This document preserves ideas from earlier README drafts that are no longer accu
 
 The descriptions of the project's "current" direction below are also a
 historical architecture snapshot. See the [README](../README.md) for implemented
-paths and the [2026-10-28 open kernel redesign](superpowers/specs/2026-10-28-open-kernel-runtime-design.md)
-for the proposed contribution/runtime boundary. That proposal restores diverse
-kernel contributions and high-level runtime selection as the central goal;
-this archive's backend-first sequencing does not constrain the new design.
+paths and the [lightweight runtime](lightweight-runtime.md) for the current
+contribution/runtime boundary. That boundary restores diverse kernel
+contributions and high-level runtime selection as the central goal; this
+archive's backend-first sequencing does not constrain it.
 
 Most of these ideas are not abandoned. They are long-horizon capabilities that should become possible only after the lower-level FHN model is strong enough to support them honestly. Keeping them here lets the project keep its memory without asking newcomers to confuse aspiration with implementation.
 

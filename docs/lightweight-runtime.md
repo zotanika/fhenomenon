@@ -7,8 +7,8 @@ an execution callback. One recipe can produce several outputs, allocate a
 preparation artifact, or compose other requests. The runtime has no built-in
 arithmetic instruction vocabulary.
 
-This implements the [2026-10-31 design](superpowers/specs/2026-10-31-lightweight-runtime-design.md)
-and replaces the earlier mandatory semantic-graph/provider-search proposal.
+This replaces the earlier (2026-10-28) mandatory semantic-graph/provider-search
+proposal.
 Existing `Fhenon`/`Session` APIs and physical FHN programs remain available;
 they have not silently changed to use this new entry point.
 

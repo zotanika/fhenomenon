@@ -1,16 +1,19 @@
 # Built-in RNS-CKKS Backend — Plan and Handoff
 
-
 ## Current handoff — 2026-10-28
 
-The working checkout now implements genuine leveled CPU CKKS through L6:
+The repository now implements genuine leveled CPU CKKS through L6:
 fixed L2 storage, exact L1 CRT, immutable L4 tables and hybrid evaluation,
 L5 canonical packing/public-key crypto, and a `ckks_fhn` plugin with separate
 trusted client ownership. The default N8192 profile supports two multiplication
 levels. Packed 8×8 native/fallback execution and independent boundary reviews
-are complete; see [execution plan](2026-10-28-native-ckks-execution.md),
-[user guide](../../native-ckks.md), and [validation record](../../native-ckks-validation-2026-10-28.md).
-These changes are local and uncommitted; do not infer a merge from this handoff.
+are complete; see the [user guide](../../native-ckks.md) and
+[validation record](../../native-ckks-validation-2026-10-28.md).
+Work through 2026-10-31 built on this backend: the optional
+[circuit compiler](../../circuit-execution.md), the
+[lightweight runtime](../../lightweight-runtime.md), and contributed
+[statistics](../../coarse-statistics-kernels.md) and
+[prepared matvec](../../matvec-preparation.md) kernels.
 
 ToyFHE remains the reference. The current C++ `Fhenon`/`Session` default is
 still ToyFHE; the genuine path is the public FHN trusted-client/compute ABI

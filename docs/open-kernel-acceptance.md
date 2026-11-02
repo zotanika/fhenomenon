@@ -6,8 +6,9 @@
 > correctness, source identity, failure isolation and accounting remain useful;
 > mandatory graph matching/search and global numerical admission do not apply.
 
-Status: requirements for the [proposed runtime](superpowers/specs/2026-10-28-open-kernel-runtime-design.md),
-not new implementation or benchmark results. Date: 2026-10-28.
+Status: requirements for the proposed runtime, not new implementation or
+benchmark results. The proposal document was removed after it was superseded;
+it remains in Git history. Date: 2026-10-28.
 
 ## Keep the current evidence, and give it the right scope
 

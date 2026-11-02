@@ -4,9 +4,9 @@ This records the initial opcode backend. The subsequent semantic circuit path,
 application coverage and performance measurements are documented in
 [circuit execution validation](circuit-execution-validation-2026-10-28.md).
 
-The genuine CPU leveled RNS-CKKS path is implemented and checked in the local
-working checkout. This is correctness and integration evidence, not independent
-cryptographic certification. No commit, push or merge was performed.
+The genuine CPU leveled RNS-CKKS path is implemented and was checked before it
+was committed. This is correctness and integration evidence, not independent
+cryptographic certification.
 
 ## Final results
 
@@ -82,17 +82,7 @@ program-memory accounting. The CPU movement model has no physical eviction.
 
 ## Evidence and handoff
 
-Local build directories:
-
-- /private/tmp/fhenomenon-native-root
-- /private/tmp/fhenomenon-native-asan
-- /private/tmp/fhenomenon-native-release
-
-Detailed logs/reviews: /private/tmp/fhenomenon-native-20261028/, especially
-final-debug-tests.log, final-asan-tests.log, final-release-consumer.log,
-final-release-matvec.log, storage-report.md, eval-report.md, keys-report.md,
-eval-peer-review.md, keys-peer-review.md and backend-review.md.
-
-See [native usage](native-ckks.md),
-[execution plan](superpowers/plans/2026-10-28-native-ckks-execution.md), and
+The build directories, logs and review reports behind these results were local
+to the validating host and are not kept in the repository. The commands in
+[native usage](native-ckks.md) reproduce the checks. See also the
 [original handoff](superpowers/plans/2026-07-28-builtin-ckks-backend.md).

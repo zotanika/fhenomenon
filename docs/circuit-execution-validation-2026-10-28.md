@@ -73,12 +73,12 @@ nonfinite results fail. Absolute errors can exceed 1e-4 for large outputs, as
 the recorded per-app maximum errors show. The criterion was not relaxed for
 compiled execution.
 
-The baseline shared library was copied before this work and retained at
-`/private/tmp/fhenomenon-disruptive-20261028/libckks_before.dylib`. Its SHA-256 is
+The baseline shared library was copied before this work. Its SHA-256 is
 `f5548384ad12aa234af3815f6ce45ea09ec2f1f1b61d4d58940e1c22cad10da5`.
 The final candidate hash is
 `fd7b253e642d8320924817cc836cf9dc6e0d049ee89fa6d863206ce7419536e6`.
-Both are local working-checkout artifacts, not published release tags. Loading
+Both were local builds, not published release tags, and neither binary is kept
+in the repository. Loading
 both simultaneously was checked: only the candidate exports the circuit API.
 
 Evaluation timing excludes context/client creation, encryption, compilation,
@@ -134,4 +134,5 @@ build/bin/fhn-bench-circuit --backend build/lib/libckks_fhn.dylib --prefix ckks_
 Use `.so` on Linux. Omit the baseline argument for correctness/compiled timing.
 Use `--shape NAME --require-execution` to require a particular app. See
 [circuit API and runner](circuit-execution.md) for lifecycle, options and limits.
-Full local logs/reviews: `/private/tmp/fhenomenon-disruptive-20261028/`.
+The full logs and reviews were local to the validating host and are not kept in
+the repository.
