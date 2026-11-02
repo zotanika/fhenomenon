@@ -1,0 +1,469 @@
+{
+  "description": "Public project documentation excerpts standing in for a private vault; not private user notes.",
+  "source_files_sha256": {
+    "docs/lightweight-runtime.md": "4dfec31c2bb9f14f0831565ec007340fc5c7763e49cfb1bff227f49dfa583617",
+    "docs/matvec-preparation.md": "5b107b38b90fb92a2d67bccc2855902b39579defc968a44977fe020fc8d31317",
+    "docs/native-ckks.md": "0a03ccb6de0fe192725f68cad9e9385171cc75b05d83150b095ce07501a1e055",
+    "docs/circuit-execution.md": "6d44af7f5db5e0c75249a655c675edbc27c6b92533e4be51029bcefeebf07fe6",
+    "docs/coarse-statistics-kernels.md": "0f146a384513e95d8d809ead0d66439fc9b7111f457f0cb213b6ffa637d1342a"
+  },
+  "chunks": [
+    {
+      "id": "lightweight-runtime-01",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 3,
+      "line_end": 8,
+      "text_sha256": "8bd2c6406a0fa188b8e562411ef41fffc1e3a4f852b69d6c74e18f20a0d59363"
+    },
+    {
+      "id": "lightweight-runtime-03",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 17,
+      "line_end": 23,
+      "text_sha256": "225b0f2602378fdd87b9a979fd32ea652c58c2d10f34b4016d301351558d7e21"
+    },
+    {
+      "id": "lightweight-runtime-04",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 25,
+      "line_end": 31,
+      "text_sha256": "971ee2bbabe2d3280e42a96e2fa03a9f81d22f265d91a078b4c73db7134a3c30"
+    },
+    {
+      "id": "lightweight-runtime-05",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 33,
+      "line_end": 40,
+      "text_sha256": "fd2678f549b08255a52c28466e61cefd65ab156d4e2312ef59e872248e21613a"
+    },
+    {
+      "id": "lightweight-runtime-06",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 42,
+      "line_end": 45,
+      "text_sha256": "8857ebccf240ff5e81566244c781e8e738efc85ee0bde13bcddb9b39991972ec"
+    },
+    {
+      "id": "lightweight-runtime-07",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 49,
+      "line_end": 53,
+      "text_sha256": "09e3a11c78378ba78686ec098065767dde7b402a060ca6cc5105f8961d27ae8f"
+    },
+    {
+      "id": "lightweight-runtime-08",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 66,
+      "line_end": 74,
+      "text_sha256": "93a7e62cb7d85d00c633821f63aacc61fd2d0759aeb145bb7d02df663c20b69f"
+    },
+    {
+      "id": "lightweight-runtime-09",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 76,
+      "line_end": 81,
+      "text_sha256": "63d3fcf550b98cbd49f139530e2ae076aa84739fbc5258f69e3b3b8d78eb3c9f"
+    },
+    {
+      "id": "lightweight-runtime-10",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 94,
+      "line_end": 99,
+      "text_sha256": "9c74320a291125056136a58cf45e688eab891efae7750be13311c883e4d97c10"
+    },
+    {
+      "id": "lightweight-runtime-11",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 103,
+      "line_end": 106,
+      "text_sha256": "0e9d204757d0a642bbcb0c4c0b277a7654fe8839b4ae87d189045a3f4f34ae66"
+    },
+    {
+      "id": "lightweight-runtime-12",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 108,
+      "line_end": 111,
+      "text_sha256": "55b941c4f2b8b6aa45e679b92746cf909217675816b3549c842b734544d4cb7b"
+    },
+    {
+      "id": "lightweight-runtime-13",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 113,
+      "line_end": 118,
+      "text_sha256": "60c1ada4d674483d7daf33b8726b2a08604507e99fba672c2e13fa27fabcfd37"
+    },
+    {
+      "id": "lightweight-runtime-14",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 120,
+      "line_end": 125,
+      "text_sha256": "20fe0908ddff7de12acc38b7145b3a828b1cf9ce01282c6898cc29b70b8b702f"
+    },
+    {
+      "id": "lightweight-runtime-15",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 127,
+      "line_end": 133,
+      "text_sha256": "7b55f7de14b7e04fa97ded237c0ce381764233f17b49c58e7f8ac548edaa3466"
+    },
+    {
+      "id": "lightweight-runtime-16",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 139,
+      "line_end": 142,
+      "text_sha256": "87f83d3c8db96298306607cf222b8a99e202c10a80359e5ffdb1d7d7e9bcf91b"
+    },
+    {
+      "id": "lightweight-runtime-17",
+      "path": "docs/lightweight-runtime.md",
+      "line_start": 144,
+      "line_end": 148,
+      "text_sha256": "6263f28505e3a8deeeeae5d4f24f2da970772d00d6d13101f5f26b946cd9b134"
+    },
+    {
+      "id": "matvec-preparation-01",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 21,
+      "line_end": 24,
+      "text_sha256": "d37879874a528db2312b437e73c6a7d18931f72d764a9d1db53448ec46d2e05b"
+    },
+    {
+      "id": "matvec-preparation-02",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 28,
+      "line_end": 34,
+      "text_sha256": "0d83621bb07daf6b50cf2cb78b3f5ee94d667a818b7c72c4b73db4bf773c2461"
+    },
+    {
+      "id": "matvec-preparation-03",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 44,
+      "line_end": 49,
+      "text_sha256": "12f86a87510b9c42b3dce294102c8e0639cfd8bf3f8272f567371eef98c1d6c6"
+    },
+    {
+      "id": "matvec-preparation-04",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 62,
+      "line_end": 66,
+      "text_sha256": "6c422e6f8f639332c3909d0dc1dd2715ad3554de6e2e7a60c835e8b701ff0259"
+    },
+    {
+      "id": "matvec-preparation-05",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 68,
+      "line_end": 72,
+      "text_sha256": "eeecadc36c5b8c3b9c90deea8550080682e1a40db4851bc909bba504a50cd619"
+    },
+    {
+      "id": "matvec-preparation-06",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 76,
+      "line_end": 83,
+      "text_sha256": "cf02da0eef6d69e1fed01c8bb0a932a0882f2ee22e96e020797eeb93913338a8"
+    },
+    {
+      "id": "matvec-preparation-07",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 85,
+      "line_end": 90,
+      "text_sha256": "8d2e7169174c3b1f6f1eabc41f4599f3d263fb44da1a6198a7d6077c1323ab30"
+    },
+    {
+      "id": "matvec-preparation-08",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 92,
+      "line_end": 95,
+      "text_sha256": "5636e1e009a9442c72ebe6dd9bade3d23f09eff1f152075515f5ed16b561198c"
+    },
+    {
+      "id": "matvec-preparation-09",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 99,
+      "line_end": 103,
+      "text_sha256": "d32e70fbfccd91a0c059f182d144498c3de691d088047d2d458124645d889ee6"
+    },
+    {
+      "id": "matvec-preparation-10",
+      "path": "docs/matvec-preparation.md",
+      "line_start": 105,
+      "line_end": 111,
+      "text_sha256": "ff9e0c00163849bb7414f67f4298fc5b6c43caca7998868960c8be7ef80cf471"
+    },
+    {
+      "id": "native-ckks-01",
+      "path": "docs/native-ckks.md",
+      "line_start": 3,
+      "line_end": 6,
+      "text_sha256": "8ee8488f926d748735b4fb89998843a238ec600efd47352bdef7be4490c51f12"
+    },
+    {
+      "id": "native-ckks-02",
+      "path": "docs/native-ckks.md",
+      "line_start": 19,
+      "line_end": 24,
+      "text_sha256": "5a7b17dbeafd385d296fad461b3ee7565fa620cd6ca84d6f6c1f651ff9052137"
+    },
+    {
+      "id": "native-ckks-03",
+      "path": "docs/native-ckks.md",
+      "line_start": 28,
+      "line_end": 33,
+      "text_sha256": "04cf4ac7e7cff189ed2c2a877515da015bdaf94c186422b41b81fb0253311676"
+    },
+    {
+      "id": "native-ckks-04",
+      "path": "docs/native-ckks.md",
+      "line_start": 47,
+      "line_end": 51,
+      "text_sha256": "6986c76453b1558090fc84d7253978f84e29824007e9baadd775ba556ceb45ca"
+    },
+    {
+      "id": "native-ckks-05",
+      "path": "docs/native-ckks.md",
+      "line_start": 53,
+      "line_end": 59,
+      "text_sha256": "dd44759f142f303337c3e1703dcac12b9a044118229d4dc50bc844889c133ecf"
+    },
+    {
+      "id": "native-ckks-06",
+      "path": "docs/native-ckks.md",
+      "line_start": 61,
+      "line_end": 67,
+      "text_sha256": "b1db9bd20f7cbcfeea54a547650d8e63da950e9913dc19c6b77dcaf6441f3942"
+    },
+    {
+      "id": "native-ckks-07",
+      "path": "docs/native-ckks.md",
+      "line_start": 71,
+      "line_end": 74,
+      "text_sha256": "2e8697a0ae6fa5373530de9affac03eb10964b43d39b12653b4da4022e331ce5"
+    },
+    {
+      "id": "native-ckks-08",
+      "path": "docs/native-ckks.md",
+      "line_start": 76,
+      "line_end": 85,
+      "text_sha256": "7232fe0c4a2ba8df9984d4c72677d714bf919a879b99ed6d0f77c02a4d7725b0"
+    },
+    {
+      "id": "native-ckks-09",
+      "path": "docs/native-ckks.md",
+      "line_start": 87,
+      "line_end": 91,
+      "text_sha256": "6fc710d6acfdee134f161ae835a29277818b9bc19ba34d4b882ed0cfac31fc48"
+    },
+    {
+      "id": "native-ckks-10",
+      "path": "docs/native-ckks.md",
+      "line_start": 95,
+      "line_end": 103,
+      "text_sha256": "4c6e9793e36fe7081b137f56e9322c35977a704a2ae5e6ef60b8db54516fb7a1"
+    },
+    {
+      "id": "native-ckks-11",
+      "path": "docs/native-ckks.md",
+      "line_start": 105,
+      "line_end": 114,
+      "text_sha256": "2545873f9a517e1eced765ca41e33d7fca0a559e5713b1e76c8a544de2c4837a"
+    },
+    {
+      "id": "native-ckks-12",
+      "path": "docs/native-ckks.md",
+      "line_start": 116,
+      "line_end": 119,
+      "text_sha256": "18871a032d990dc61f62a8767c7260e733d1fea26b939634dbaba9e981bff44d"
+    },
+    {
+      "id": "native-ckks-13",
+      "path": "docs/native-ckks.md",
+      "line_start": 123,
+      "line_end": 129,
+      "text_sha256": "8e5d059db2cf7e2893c20d1d06b9b60de755fb5e50b47aad30bfdcb9e99c8705"
+    },
+    {
+      "id": "native-ckks-14",
+      "path": "docs/native-ckks.md",
+      "line_start": 131,
+      "line_end": 138,
+      "text_sha256": "af2f72de590f329d0f3e6261e7c6a934ec6d4448b641ceeecfe6a4f8cf2e792f"
+    },
+    {
+      "id": "native-ckks-15",
+      "path": "docs/native-ckks.md",
+      "line_start": 140,
+      "line_end": 148,
+      "text_sha256": "e00f8040429a4c1c4defb863db03a435922e095ed23c34478d2699e0919f4f95"
+    },
+    {
+      "id": "circuit-execution-01",
+      "path": "docs/circuit-execution.md",
+      "line_start": 3,
+      "line_end": 8,
+      "text_sha256": "52b765f9b7ea52ad44f0a91fb590916cd841039a4cd65369f2c09deb34d178c7"
+    },
+    {
+      "id": "circuit-execution-02",
+      "path": "docs/circuit-execution.md",
+      "line_start": 17,
+      "line_end": 24,
+      "text_sha256": "06caf7615f944348d9214e5380df66a8cc4368a35459ca5ea542713ba89d306c"
+    },
+    {
+      "id": "circuit-execution-03",
+      "path": "docs/circuit-execution.md",
+      "line_start": 26,
+      "line_end": 32,
+      "text_sha256": "607444067a7790c57761a8e68ea386316509a7de1239b40ede17783c94853352"
+    },
+    {
+      "id": "circuit-execution-04",
+      "path": "docs/circuit-execution.md",
+      "line_start": 34,
+      "line_end": 43,
+      "text_sha256": "0ab3d1c232aee51da5d6c26fbd8a99cdb93c235853e0c6db9d50127b292410ef"
+    },
+    {
+      "id": "circuit-execution-05",
+      "path": "docs/circuit-execution.md",
+      "line_start": 47,
+      "line_end": 50,
+      "text_sha256": "229e08b0f81392a022bd396310a0fe2ebb763892a97b7587e8cff6cfb9049865"
+    },
+    {
+      "id": "circuit-execution-06",
+      "path": "docs/circuit-execution.md",
+      "line_start": 52,
+      "line_end": 56,
+      "text_sha256": "1eb4ab996bc9c70c339509933fa6696a193189d58b0b9d797329924db7964037"
+    },
+    {
+      "id": "circuit-execution-07",
+      "path": "docs/circuit-execution.md",
+      "line_start": 58,
+      "line_end": 64,
+      "text_sha256": "e2b4f2811928230068d78dcabfa1c1b9abbc8aaf2eec0b97aa8898fed3e280c4"
+    },
+    {
+      "id": "circuit-execution-08",
+      "path": "docs/circuit-execution.md",
+      "line_start": 68,
+      "line_end": 71,
+      "text_sha256": "c5f74b4322efc57570f5f4c9b95769d115c67ad566b842e6613aed49d06b3761"
+    },
+    {
+      "id": "circuit-execution-09",
+      "path": "docs/circuit-execution.md",
+      "line_start": 78,
+      "line_end": 83,
+      "text_sha256": "ef33b83070affd24c650a25e68541f8566112ba0bc5af23f178e8d73756901e7"
+    },
+    {
+      "id": "circuit-execution-10",
+      "path": "docs/circuit-execution.md",
+      "line_start": 85,
+      "line_end": 93,
+      "text_sha256": "a6cf8550364d92f0ffcbaf274ebb94e7d5093d6ef94a36fec8a1fe3ed3e0817f"
+    },
+    {
+      "id": "circuit-execution-11",
+      "path": "docs/circuit-execution.md",
+      "line_start": 95,
+      "line_end": 99,
+      "text_sha256": "7fcd62fc5e87511e7a1cc39da421549877125b0dc66b05fb053192ba333574c9"
+    },
+    {
+      "id": "coarse-statistics-kernels-01",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 3,
+      "line_end": 6,
+      "text_sha256": "0fbf10ccbd648c9ad66127e9f47f10d2a3aeed00f82b2c43d4ce6ad4ddf16db3"
+    },
+    {
+      "id": "coarse-statistics-kernels-02",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 34,
+      "line_end": 39,
+      "text_sha256": "5a354cc7b80fad39874f441b148ab8d33227070c81b836d45b5be39f3344d1cb"
+    },
+    {
+      "id": "coarse-statistics-kernels-03",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 43,
+      "line_end": 45,
+      "text_sha256": "ffebfdec437d2d5837183dd155c21442e85d2bd4135a65010c9485b02e826271"
+    },
+    {
+      "id": "coarse-statistics-kernels-04",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 56,
+      "line_end": 61,
+      "text_sha256": "bfc4e6df1364a02096844a9df01aa54ef292c3a55929ece61c6982fa3c91aecb"
+    },
+    {
+      "id": "coarse-statistics-kernels-05",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 69,
+      "line_end": 73,
+      "text_sha256": "38a6e328eca0444f930b3826861f946177bfdcf9b82fb90d5c0afccae77502ac"
+    },
+    {
+      "id": "coarse-statistics-kernels-06",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 75,
+      "line_end": 79,
+      "text_sha256": "bdf6fc473140e865155b2831360d8502ef2f00a5d0bb5340c279733d17c3232a"
+    },
+    {
+      "id": "coarse-statistics-kernels-07",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 81,
+      "line_end": 85,
+      "text_sha256": "511d17d3812e79eb54652afb4e2505f7ed7630d34760c1550a44d4797bad99a3"
+    },
+    {
+      "id": "coarse-statistics-kernels-08",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 87,
+      "line_end": 93,
+      "text_sha256": "2b3f9fe0ee0489a2ea388fa8de469f4be5619757b65936ca86f8ebc1000ce79c"
+    },
+    {
+      "id": "coarse-statistics-kernels-09",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 97,
+      "line_end": 100,
+      "text_sha256": "2c684ea96a0eaa235395c0ef0696a9275dfcf832cb9c8646917c8fb3e7f53329"
+    },
+    {
+      "id": "coarse-statistics-kernels-10",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 102,
+      "line_end": 108,
+      "text_sha256": "81d6d4931a02f84f2e442975dc0234213e4d777bc2ccdb2e9a71f5427ff0906d"
+    },
+    {
+      "id": "coarse-statistics-kernels-12",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 118,
+      "line_end": 122,
+      "text_sha256": "9f80310be80b5f30209143fb217d9314e98687aa495574e07bfd815d87801869"
+    },
+    {
+      "id": "coarse-statistics-kernels-13",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 124,
+      "line_end": 130,
+      "text_sha256": "1c3c8a33f152f14fc634c6b1fcefda47be670db124ce9624db7dc91e24348758"
+    },
+    {
+      "id": "coarse-statistics-kernels-14",
+      "path": "docs/coarse-statistics-kernels.md",
+      "line_start": 132,
+      "line_end": 137,
+      "text_sha256": "80f4d0d364bed30a5837d5edd24f97446b4d5983224a67ea282f64b077d4ae3b"
+    }
+  ],
+  "relevance": "Hand-authored by reading the excerpts before model scoring. Labels are a small non-exhaustive illustrative judgment, not a benchmark or model-selected ground truth.",
+  "repository_revision": "9be94bf09e4fa06f4b54041d1cb31621dca28f6d"
+}

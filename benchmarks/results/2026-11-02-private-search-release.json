@@ -1,0 +1,3086 @@
+{
+  "baseline_scope": "same 4096-slot representation; row baseline is not claimed optimal",
+  "build_type": "Release",
+  "ciphertext_scope": "direct corpus/query/output Values: live native payload and reserved capacity separately; embedded preparation snapshots are accounted in preparation_bytes",
+  "documents": 65,
+  "index_layouts": [
+    {
+      "capacity": 1,
+      "ciphertexts": 65,
+      "corpus_ciphertext_bytes": 25559040,
+      "corpus_ciphertext_reserved_bytes": 51118080,
+      "corpus_retained_bytes": 51118720,
+      "mode": "row-ordinary",
+      "pack_encrypt_import_index_ms": 150.372958
+    },
+    {
+      "capacity": 1,
+      "ciphertexts": 65,
+      "corpus_ciphertext_bytes": 25559040,
+      "corpus_ciphertext_reserved_bytes": 51118080,
+      "corpus_retained_bytes": 51118720,
+      "mode": "row-prepared",
+      "pack_encrypt_import_index_ms": 148.330541
+    },
+    {
+      "capacity": 8,
+      "ciphertexts": 9,
+      "corpus_ciphertext_bytes": 3538944,
+      "corpus_ciphertext_reserved_bytes": 7077888,
+      "corpus_retained_bytes": 7078080,
+      "mode": "tile-ordinary",
+      "pack_encrypt_import_index_ms": 20.439167
+    },
+    {
+      "capacity": 8,
+      "ciphertexts": 9,
+      "corpus_ciphertext_bytes": 3538944,
+      "corpus_ciphertext_reserved_bytes": 7077888,
+      "corpus_retained_bytes": 7078080,
+      "mode": "tile-prepared",
+      "pack_encrypt_import_index_ms": 20.506709
+    }
+  ],
+  "key_setup_ms": 418.007667,
+  "logical_slots": 4096,
+  "memory_scope": "runtime charged ciphertext/preparation slabs and contribution metadata; excludes keys, scratch, unaccounted runtime/allocator overhead, model and other runtimes; not wire bytes or RSS",
+  "model": {
+    "dimensions": 384,
+    "id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
+  },
+  "padded_width": 512,
+  "repetitions": 3,
+  "schema_version": 1,
+  "scope": "single-owner in-process demo; client embeds, encrypts, decrypts and ranks; compute scores ciphertext",
+  "searches": [
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002041,
+      "decrypt_extract_ms": 31.701667,
+      "evaluation_ms": [
+        1381.123125,
+        1384.22625,
+        1384.602042
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.2233091367663818e-07,
+      "median_evaluation_ms": 1384.22625,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "lightweight-runtime-03",
+        "coarse-statistics-kernels-09",
+        "coarse-statistics-kernels-13",
+        "coarse-statistics-kernels-01",
+        "lightweight-runtime-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03089973398375373,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.311375,
+      "query_id": "dispatch",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-03",
+          "plaintext_score": 0.7235010046532728,
+          "score": 0.723500944569274,
+          "source": "docs/lightweight-runtime.md#L17-L23",
+          "text": "`Runtime::submit(Request)` selects the first applicable recipe, ordered by\ndescending priority and then registration order. An applicability decline may\ntry another recipe. Once execution begins, an exception is reported without\nretrying a different implementation. Callers observe returned outputs only on\nsuccess. Providers must preserve escaped inputs; the generic core cannot police\nmutability hidden inside arbitrary `std::any` payloads or roll back external\nside effects.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "coarse-statistics-kernels-09",
+          "plaintext_score": 0.5394757174599463,
+          "score": 0.5394757197367928,
+          "source": "docs/coarse-statistics-kernels.md#L97-L100",
+          "text": "Recipes retain their native context, adapter and library leases, never a client\nor secret key. Applicability examines public capability and ciphertext metadata;\nunavailable cases may fall through before execution. A native failure after\nselection is reported without retrying another implementation.",
+          "title": "Ownership and accounting"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.5100302152091609,
+          "score": 0.5100302548873514,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "coarse-statistics-kernels-01",
+          "plaintext_score": 0.5034977098888812,
+          "score": 0.5034976749762315,
+          "source": "docs/coarse-statistics-kernels.md#L3-L6",
+          "text": "The separately linked `Fhenomenon::StatsKernels` target contributes four named\nrecipes. It uses the existing public runtime API and optional native CKKS\nexports; neither `Runtime` nor `NativeRuntime` needs a new opcode, payload type,\ndispatch branch, compiler pass or registry change.",
+          "title": "Contributed statistics and packed dot kernels"
+        },
+        {
+          "id": "lightweight-runtime-01",
+          "plaintext_score": 0.46864453019998137,
+          "score": 0.46864450391876383,
+          "source": "docs/lightweight-runtime.md#L3-L8",
+          "text": "The public C++17 API in `FHN/Runtime.h` executes a named request when submitted.\nIt does not record a program or invoke a compiler. Contributions register\nrecipes with public-metadata applicability checks, deterministic priorities and\nan execution callback. One recipe can produce several outputs, allocate a\npreparation artifact, or compose other requests. The runtime has no built-in\narithmetic instruction vocabulary.",
+          "title": "Lightweight execution runtime"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.81504199999999,
+      "verified_evaluations": 4,
+      "warmup_ms": 1386.524708
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002625,
+      "decrypt_extract_ms": 31.789958,
+      "evaluation_ms": [
+        661.135,
+        687.794833,
+        662.219708
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.7466643287278316e-07,
+      "median_evaluation_ms": 662.219708,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "lightweight-runtime-03",
+        "coarse-statistics-kernels-09",
+        "coarse-statistics-kernels-13",
+        "coarse-statistics-kernels-01",
+        "lightweight-runtime-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03089973398375373,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.51925,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.372916,
+      "query_id": "dispatch",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-03",
+          "plaintext_score": 0.7235010046532728,
+          "score": 0.7235010197956653,
+          "source": "docs/lightweight-runtime.md#L17-L23",
+          "text": "`Runtime::submit(Request)` selects the first applicable recipe, ordered by\ndescending priority and then registration order. An applicability decline may\ntry another recipe. Once execution begins, an exception is reported without\nretrying a different implementation. Callers observe returned outputs only on\nsuccess. Providers must preserve escaped inputs; the generic core cannot police\nmutability hidden inside arbitrary `std::any` payloads or roll back external\nside effects.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "coarse-statistics-kernels-09",
+          "plaintext_score": 0.5394757174599463,
+          "score": 0.5394757120218873,
+          "source": "docs/coarse-statistics-kernels.md#L97-L100",
+          "text": "Recipes retain their native context, adapter and library leases, never a client\nor secret key. Applicability examines public capability and ciphertext metadata;\nunavailable cases may fall through before execution. A native failure after\nselection is reported without retrying another implementation.",
+          "title": "Ownership and accounting"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.5100302152091609,
+          "score": 0.5100302580952959,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "coarse-statistics-kernels-01",
+          "plaintext_score": 0.5034977098888812,
+          "score": 0.5034977086869862,
+          "source": "docs/coarse-statistics-kernels.md#L3-L6",
+          "text": "The separately linked `Fhenomenon::StatsKernels` target contributes four named\nrecipes. It uses the existing public runtime API and optional native CKKS\nexports; neither `Runtime` nor `NativeRuntime` needs a new opcode, payload type,\ndispatch branch, compiler pass or registry change.",
+          "title": "Contributed statistics and packed dot kernels"
+        },
+        {
+          "id": "lightweight-runtime-01",
+          "plaintext_score": 0.46864453019998137,
+          "score": 0.4686444501626426,
+          "source": "docs/lightweight-runtime.md#L3-L8",
+          "text": "The public C++17 API in `FHN/Runtime.h` executes a named request when submitted.\nIt does not record a program or invoke a compiler. Contributions register\nrecipes with public-metadata applicability checks, deterministic priorities and\nan execution callback. One recipe can produce several outputs, allocate a\npreparation artifact, or compose other requests. The runtime has no built-in\narithmetic instruction vocabulary.",
+          "title": "Lightweight execution runtime"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.846042,
+      "verified_evaluations": 4,
+      "warmup_ms": 660.5685
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.001958,
+      "decrypt_extract_ms": 4.383042,
+      "evaluation_ms": [
+        192.464,
+        214.307916,
+        190.735291
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.2604557220186052e-07,
+      "median_evaluation_ms": 192.464,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "lightweight-runtime-03",
+        "coarse-statistics-kernels-09",
+        "coarse-statistics-kernels-13",
+        "coarse-statistics-kernels-01",
+        "lightweight-runtime-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03089973398375373,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.1e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.288417,
+      "query_id": "dispatch",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-03",
+          "plaintext_score": 0.7235010046532728,
+          "score": 0.7235009958852352,
+          "source": "docs/lightweight-runtime.md#L17-L23",
+          "text": "`Runtime::submit(Request)` selects the first applicable recipe, ordered by\ndescending priority and then registration order. An applicability decline may\ntry another recipe. Once execution begins, an exception is reported without\nretrying a different implementation. Callers observe returned outputs only on\nsuccess. Providers must preserve escaped inputs; the generic core cannot police\nmutability hidden inside arbitrary `std::any` payloads or roll back external\nside effects.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "coarse-statistics-kernels-09",
+          "plaintext_score": 0.5394757174599463,
+          "score": 0.5394758095486687,
+          "source": "docs/coarse-statistics-kernels.md#L97-L100",
+          "text": "Recipes retain their native context, adapter and library leases, never a client\nor secret key. Applicability examines public capability and ciphertext metadata;\nunavailable cases may fall through before execution. A native failure after\nselection is reported without retrying another implementation.",
+          "title": "Ownership and accounting"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.5100302152091609,
+          "score": 0.5100302139914166,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "coarse-statistics-kernels-01",
+          "plaintext_score": 0.5034977098888812,
+          "score": 0.5034977330175168,
+          "source": "docs/coarse-statistics-kernels.md#L3-L6",
+          "text": "The separately linked `Fhenomenon::StatsKernels` target contributes four named\nrecipes. It uses the existing public runtime API and optional native CKKS\nexports; neither `Runtime` nor `NativeRuntime` needs a new opcode, payload type,\ndispatch branch, compiler pass or registry change.",
+          "title": "Contributed statistics and packed dot kernels"
+        },
+        {
+          "id": "lightweight-runtime-01",
+          "plaintext_score": 0.46864453019998137,
+          "score": 0.46864445301544594,
+          "source": "docs/lightweight-runtime.md#L3-L8",
+          "text": "The public C++17 API in `FHN/Runtime.h` executes a named request when submitted.\nIt does not record a program or invoke a compiler. Contributions register\nrecipes with public-metadata applicability checks, deterministic priorities and\nan execution callback. One recipe can produce several outputs, allocate a\npreparation artifact, or compose other requests. The runtime has no built-in\narithmetic instruction vocabulary.",
+          "title": "Lightweight execution runtime"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.679917,
+      "verified_evaluations": 4,
+      "warmup_ms": 192.390708
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.001792,
+      "decrypt_extract_ms": 4.461084,
+      "evaluation_ms": [
+        93.701458,
+        95.815375,
+        92.128333
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.4096863565349338e-07,
+      "median_evaluation_ms": 93.701458,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "lightweight-runtime-03",
+        "coarse-statistics-kernels-09",
+        "coarse-statistics-kernels-13",
+        "coarse-statistics-kernels-01",
+        "lightweight-runtime-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03089973398375373,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.767458,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.233667,
+      "query_id": "dispatch",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-03",
+          "plaintext_score": 0.7235010046532728,
+          "score": 0.7235010859000228,
+          "source": "docs/lightweight-runtime.md#L17-L23",
+          "text": "`Runtime::submit(Request)` selects the first applicable recipe, ordered by\ndescending priority and then registration order. An applicability decline may\ntry another recipe. Once execution begins, an exception is reported without\nretrying a different implementation. Callers observe returned outputs only on\nsuccess. Providers must preserve escaped inputs; the generic core cannot police\nmutability hidden inside arbitrary `std::any` payloads or roll back external\nside effects.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "coarse-statistics-kernels-09",
+          "plaintext_score": 0.5394757174599463,
+          "score": 0.5394757332636531,
+          "source": "docs/coarse-statistics-kernels.md#L97-L100",
+          "text": "Recipes retain their native context, adapter and library leases, never a client\nor secret key. Applicability examines public capability and ciphertext metadata;\nunavailable cases may fall through before execution. A native failure after\nselection is reported without retrying another implementation.",
+          "title": "Ownership and accounting"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.5100302152091609,
+          "score": 0.5100302341963463,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "coarse-statistics-kernels-01",
+          "plaintext_score": 0.5034977098888812,
+          "score": 0.5034976621557702,
+          "source": "docs/coarse-statistics-kernels.md#L3-L6",
+          "text": "The separately linked `Fhenomenon::StatsKernels` target contributes four named\nrecipes. It uses the existing public runtime API and optional native CKKS\nexports; neither `Runtime` nor `NativeRuntime` needs a new opcode, payload type,\ndispatch branch, compiler pass or registry change.",
+          "title": "Contributed statistics and packed dot kernels"
+        },
+        {
+          "id": "lightweight-runtime-01",
+          "plaintext_score": 0.46864453019998137,
+          "score": 0.4686446092309066,
+          "source": "docs/lightweight-runtime.md#L3-L8",
+          "text": "The public C++17 API in `FHN/Runtime.h` executes a named request when submitted.\nIt does not record a program or invoke a compiler. Contributions register\nrecipes with public-metadata applicability checks, deterministic priorities and\nan execution callback. One recipe can produce several outputs, allocate a\npreparation artifact, or compose other requests. The runtime has no built-in\narithmetic instruction vocabulary.",
+          "title": "Lightweight execution runtime"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.693334999999998,
+      "verified_evaluations": 4,
+      "warmup_ms": 93.459292
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.005959,
+      "decrypt_extract_ms": 31.241625,
+      "evaluation_ms": [
+        664.436375,
+        664.368,
+        657.638833
+      ],
+      "label_hit_at_3": false,
+      "label_hits_at_3": 0,
+      "label_recall_at_3": 0.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.398143888997616e-07,
+      "median_evaluation_ms": 664.368,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "lightweight-runtime-17",
+        "circuit-execution-10",
+        "native-ckks-12",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0029157806169810563,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.697625,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.391459,
+      "query_id": "key-lifetime",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.5659407409409084,
+          "score": 0.5659407167115945,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.5317421808621831,
+          "score": 0.5317420792820858,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.4921126345400607,
+          "score": 0.49211265181522257,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.45324946514352643,
+          "score": 0.45324948560046535,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.4462847397298228,
+          "score": 0.4462847738449438,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 127.226958,
+      "verified_evaluations": 4,
+      "warmup_ms": 662.479958
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.004833,
+      "decrypt_extract_ms": 4.414083,
+      "evaluation_ms": [
+        190.537625,
+        191.972125,
+        192.863292
+      ],
+      "label_hit_at_3": false,
+      "label_hits_at_3": 0,
+      "label_recall_at_3": 0.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.0738362066220475e-07,
+      "median_evaluation_ms": 191.972125,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "lightweight-runtime-17",
+        "circuit-execution-10",
+        "native-ckks-12",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0029157806169810563,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.2e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.285,
+      "query_id": "key-lifetime",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.5659407409409084,
+          "score": 0.565940706289195,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.5317421808621831,
+          "score": 0.5317421417347044,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.4921126345400607,
+          "score": 0.49211259540378594,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.45324946514352643,
+          "score": 0.45324946022276813,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.4462847397298228,
+          "score": 0.4462847078503495,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.485416,
+      "verified_evaluations": 4,
+      "warmup_ms": 194.203791
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002166,
+      "decrypt_extract_ms": 4.455667,
+      "evaluation_ms": [
+        92.668125,
+        91.827708,
+        92.179166
+      ],
+      "label_hit_at_3": false,
+      "label_hits_at_3": 0,
+      "label_recall_at_3": 0.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.0190313326496891e-07,
+      "median_evaluation_ms": 92.179166,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "lightweight-runtime-17",
+        "circuit-execution-10",
+        "native-ckks-12",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0029157806169810563,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.59675,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.283875,
+      "query_id": "key-lifetime",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.5659407409409084,
+          "score": 0.5659407469676478,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.5317421808621831,
+          "score": 0.5317421662784608,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.4921126345400607,
+          "score": 0.492112616879971,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.45324946514352643,
+          "score": 0.453249523581283,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.4462847397298228,
+          "score": 0.44628483796294555,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.953750999999997,
+      "verified_evaluations": 4,
+      "warmup_ms": 92.510833
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002375,
+      "decrypt_extract_ms": 31.999,
+      "evaluation_ms": [
+        1384.865125,
+        1412.538459,
+        1393.031334
+      ],
+      "label_hit_at_3": false,
+      "label_hits_at_3": 0,
+      "label_recall_at_3": 0.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.226908927787207e-07,
+      "median_evaluation_ms": 1393.031334,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "lightweight-runtime-17",
+        "circuit-execution-10",
+        "native-ckks-12",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0029157806169810563,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.36425,
+      "query_id": "key-lifetime",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.5659407409409084,
+          "score": 0.5659407735000331,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.5317421808621831,
+          "score": 0.5317421950018572,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.4921126345400607,
+          "score": 0.49211270141788,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.45324946514352643,
+          "score": 0.4532495348756275,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.4462847397298228,
+          "score": 0.4462847253366787,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 127.29954099999999,
+      "verified_evaluations": 4,
+      "warmup_ms": 1387.197375
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002291,
+      "decrypt_extract_ms": 4.334417,
+      "evaluation_ms": [
+        192.372334,
+        194.352666,
+        192.771958
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.674456265865487e-07,
+      "median_evaluation_ms": 192.771958,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "native-ckks-05",
+        "circuit-execution-06",
+        "circuit-execution-04",
+        "coarse-statistics-kernels-12",
+        "matvec-preparation-03"
+      ],
+      "plaintext_top_k_boundary_margin": 0.008866595207340122,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.331708,
+      "query_id": "packing",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-05",
+          "plaintext_score": 0.5516066096733867,
+          "score": 0.5516065514882841,
+          "source": "docs/native-ckks.md#L53-L59",
+          "text": "The encoder supports positive power-of-two real vector lengths up to N/2.\nShort vectors repeat across physical slots, preserving signed cyclic rotations\nof their logical length. Positive rotation steps rotate left. Decryption\nrequires the exact original logical count. Unsupported counts, nonfinite values,\ncoefficient-encoding overflow (int64 or centered active-Q range), incompatible\nbuffers, missing keys and depleted\nlevels fail rather than substituting another computation.",
+          "title": "What is implemented"
+        },
+        {
+          "id": "circuit-execution-06",
+          "plaintext_score": 0.5138592794003868,
+          "score": 0.5138592986738684,
+          "source": "docs/circuit-execution.md#L52-L56",
+          "text": "The native multiplication kernel also combines auxiliary-modulus removal and\nrescaling into one exact centered division. Its residues are tested against the\nseparate tensor/relinearize/rescale path on identical inputs and keys. This\nbit-exact statement applies to that kernel rewrite; graph-level scheduling can\nchange CKKS rounding/noise while retaining the application accuracy contract.",
+          "title": "Execution regions"
+        },
+        {
+          "id": "circuit-execution-04",
+          "plaintext_score": 0.4456506683451527,
+          "score": 0.44565075329080894,
+          "source": "docs/circuit-execution.md#L34-L43",
+          "text": "The circuit consists of explicit input IDs, topologically ordered value nodes,\nand output IDs. Nodes support addition, subtraction, multiplication, scalar\nscaling, scalar addition, negation, rotation and conjugation. The current native\nlowering uses exact signed integer coefficients for affine regions; fractional\nscaling uses a modulus-consuming path. Unsupported scale joins, insufficient\nlevels and out-of-range constants fail with diagnostics, without scale metadata\nrelabeling or a plaintext fallback. This first compiler bounds inputs plus nodes\nand output ports to 65,536 each, affine forms to 256 terms, and recursive\nmaterialization depth to 512; expressions exceeding these bounds are rejected\nwith diagnostics.",
+          "title": "Public API"
+        },
+        {
+          "id": "coarse-statistics-kernels-12",
+          "plaintext_score": 0.43445302747249487,
+          "score": 0.43445305048647725,
+          "source": "docs/coarse-statistics-kernels.md#L118-L122",
+          "text": "`fhn-bench-runtime` retains the original immediate, shared-rotation-preparation\nand explicit-region modes. It adds contributed and split modes for `stats` and\n`matvec-fused`, plus `energy-only` for statistics: the same stable energy kernel\nfollowed by a fully ordinary reduction. That last comparison separates algebraic\nsavings from larger-kernel boundary savings.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.4248991206797099,
+          "score": 0.42489911211209735,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.618584,
+      "verified_evaluations": 4,
+      "warmup_ms": 191.896167
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002167,
+      "decrypt_extract_ms": 4.437459,
+      "evaluation_ms": [
+        91.474209,
+        91.486459,
+        92.006417
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.3109550162093697e-07,
+      "median_evaluation_ms": 91.486459,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "native-ckks-05",
+        "circuit-execution-06",
+        "circuit-execution-04",
+        "coarse-statistics-kernels-12",
+        "matvec-preparation-03"
+      ],
+      "plaintext_top_k_boundary_margin": 0.008866595207340122,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.075833,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.181584,
+      "query_id": "packing",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-05",
+          "plaintext_score": 0.5516066096733867,
+          "score": 0.5516065883945361,
+          "source": "docs/native-ckks.md#L53-L59",
+          "text": "The encoder supports positive power-of-two real vector lengths up to N/2.\nShort vectors repeat across physical slots, preserving signed cyclic rotations\nof their logical length. Positive rotation steps rotate left. Decryption\nrequires the exact original logical count. Unsupported counts, nonfinite values,\ncoefficient-encoding overflow (int64 or centered active-Q range), incompatible\nbuffers, missing keys and depleted\nlevels fail rather than substituting another computation.",
+          "title": "What is implemented"
+        },
+        {
+          "id": "circuit-execution-06",
+          "plaintext_score": 0.5138592794003868,
+          "score": 0.513859357176318,
+          "source": "docs/circuit-execution.md#L52-L56",
+          "text": "The native multiplication kernel also combines auxiliary-modulus removal and\nrescaling into one exact centered division. Its residues are tested against the\nseparate tensor/relinearize/rescale path on identical inputs and keys. This\nbit-exact statement applies to that kernel rewrite; graph-level scheduling can\nchange CKKS rounding/noise while retaining the application accuracy contract.",
+          "title": "Execution regions"
+        },
+        {
+          "id": "circuit-execution-04",
+          "plaintext_score": 0.4456506683451527,
+          "score": 0.4456507482357488,
+          "source": "docs/circuit-execution.md#L34-L43",
+          "text": "The circuit consists of explicit input IDs, topologically ordered value nodes,\nand output IDs. Nodes support addition, subtraction, multiplication, scalar\nscaling, scalar addition, negation, rotation and conjugation. The current native\nlowering uses exact signed integer coefficients for affine regions; fractional\nscaling uses a modulus-consuming path. Unsupported scale joins, insufficient\nlevels and out-of-range constants fail with diagnostics, without scale metadata\nrelabeling or a plaintext fallback. This first compiler bounds inputs plus nodes\nand output ports to 65,536 each, affine forms to 256 terms, and recursive\nmaterialization depth to 512; expressions exceeding these bounds are rejected\nwith diagnostics.",
+          "title": "Public API"
+        },
+        {
+          "id": "coarse-statistics-kernels-12",
+          "plaintext_score": 0.43445302747249487,
+          "score": 0.4344531585679965,
+          "source": "docs/coarse-statistics-kernels.md#L118-L122",
+          "text": "`fhn-bench-runtime` retains the original immediate, shared-rotation-preparation\nand explicit-region modes. It adds contributed and split modes for `stats` and\n`matvec-fused`, plus `energy-only` for statistics: the same stable energy kernel\nfollowed by a fully ordinary reduction. That last comparison separates algebraic\nsavings from larger-kernel boundary savings.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.4248991206797099,
+          "score": 0.42489910517446705,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.894458999999998,
+      "verified_evaluations": 4,
+      "warmup_ms": 91.716583
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002334,
+      "decrypt_extract_ms": 31.750791,
+      "evaluation_ms": [
+        1413.420958,
+        1393.42075,
+        1384.114208
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.8755988284713254e-07,
+      "median_evaluation_ms": 1393.42075,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "native-ckks-05",
+        "circuit-execution-06",
+        "circuit-execution-04",
+        "coarse-statistics-kernels-12",
+        "matvec-preparation-03"
+      ],
+      "plaintext_top_k_boundary_margin": 0.008866595207340122,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.00025,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.358,
+      "query_id": "packing",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-05",
+          "plaintext_score": 0.5516066096733867,
+          "score": 0.5516065529732205,
+          "source": "docs/native-ckks.md#L53-L59",
+          "text": "The encoder supports positive power-of-two real vector lengths up to N/2.\nShort vectors repeat across physical slots, preserving signed cyclic rotations\nof their logical length. Positive rotation steps rotate left. Decryption\nrequires the exact original logical count. Unsupported counts, nonfinite values,\ncoefficient-encoding overflow (int64 or centered active-Q range), incompatible\nbuffers, missing keys and depleted\nlevels fail rather than substituting another computation.",
+          "title": "What is implemented"
+        },
+        {
+          "id": "circuit-execution-06",
+          "plaintext_score": 0.5138592794003868,
+          "score": 0.5138593174483074,
+          "source": "docs/circuit-execution.md#L52-L56",
+          "text": "The native multiplication kernel also combines auxiliary-modulus removal and\nrescaling into one exact centered division. Its residues are tested against the\nseparate tensor/relinearize/rescale path on identical inputs and keys. This\nbit-exact statement applies to that kernel rewrite; graph-level scheduling can\nchange CKKS rounding/noise while retaining the application accuracy contract.",
+          "title": "Execution regions"
+        },
+        {
+          "id": "circuit-execution-04",
+          "plaintext_score": 0.4456506683451527,
+          "score": 0.44565075753713834,
+          "source": "docs/circuit-execution.md#L34-L43",
+          "text": "The circuit consists of explicit input IDs, topologically ordered value nodes,\nand output IDs. Nodes support addition, subtraction, multiplication, scalar\nscaling, scalar addition, negation, rotation and conjugation. The current native\nlowering uses exact signed integer coefficients for affine regions; fractional\nscaling uses a modulus-consuming path. Unsupported scale joins, insufficient\nlevels and out-of-range constants fail with diagnostics, without scale metadata\nrelabeling or a plaintext fallback. This first compiler bounds inputs plus nodes\nand output ports to 65,536 each, affine forms to 256 terms, and recursive\nmaterialization depth to 512; expressions exceeding these bounds are rejected\nwith diagnostics.",
+          "title": "Public API"
+        },
+        {
+          "id": "coarse-statistics-kernels-12",
+          "plaintext_score": 0.43445302747249487,
+          "score": 0.43445307259731336,
+          "source": "docs/coarse-statistics-kernels.md#L118-L122",
+          "text": "`fhn-bench-runtime` retains the original immediate, shared-rotation-preparation\nand explicit-region modes. It adds contributed and split modes for `stats` and\n`matvec-fused`, plus `energy-only` for statistics: the same stable energy kernel\nfollowed by a fully ordinary reduction. That last comparison separates algebraic\nsavings from larger-kernel boundary savings.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.4248991206797099,
+          "score": 0.4248991637533325,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.446999,
+      "verified_evaluations": 4,
+      "warmup_ms": 1391.095542
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002458,
+      "decrypt_extract_ms": 31.605375,
+      "evaluation_ms": [
+        664.675959,
+        662.903084,
+        660.430625
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.40383691671353e-07,
+      "median_evaluation_ms": 662.903084,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "native-ckks-05",
+        "circuit-execution-06",
+        "circuit-execution-04",
+        "coarse-statistics-kernels-12",
+        "matvec-preparation-03"
+      ],
+      "plaintext_top_k_boundary_margin": 0.008866595207340122,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.467917,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.30575,
+      "query_id": "packing",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-05",
+          "plaintext_score": 0.5516066096733867,
+          "score": 0.5516066645430981,
+          "source": "docs/native-ckks.md#L53-L59",
+          "text": "The encoder supports positive power-of-two real vector lengths up to N/2.\nShort vectors repeat across physical slots, preserving signed cyclic rotations\nof their logical length. Positive rotation steps rotate left. Decryption\nrequires the exact original logical count. Unsupported counts, nonfinite values,\ncoefficient-encoding overflow (int64 or centered active-Q range), incompatible\nbuffers, missing keys and depleted\nlevels fail rather than substituting another computation.",
+          "title": "What is implemented"
+        },
+        {
+          "id": "circuit-execution-06",
+          "plaintext_score": 0.5138592794003868,
+          "score": 0.5138592542971063,
+          "source": "docs/circuit-execution.md#L52-L56",
+          "text": "The native multiplication kernel also combines auxiliary-modulus removal and\nrescaling into one exact centered division. Its residues are tested against the\nseparate tensor/relinearize/rescale path on identical inputs and keys. This\nbit-exact statement applies to that kernel rewrite; graph-level scheduling can\nchange CKKS rounding/noise while retaining the application accuracy contract.",
+          "title": "Execution regions"
+        },
+        {
+          "id": "circuit-execution-04",
+          "plaintext_score": 0.4456506683451527,
+          "score": 0.4456506133489296,
+          "source": "docs/circuit-execution.md#L34-L43",
+          "text": "The circuit consists of explicit input IDs, topologically ordered value nodes,\nand output IDs. Nodes support addition, subtraction, multiplication, scalar\nscaling, scalar addition, negation, rotation and conjugation. The current native\nlowering uses exact signed integer coefficients for affine regions; fractional\nscaling uses a modulus-consuming path. Unsupported scale joins, insufficient\nlevels and out-of-range constants fail with diagnostics, without scale metadata\nrelabeling or a plaintext fallback. This first compiler bounds inputs plus nodes\nand output ports to 65,536 each, affine forms to 256 terms, and recursive\nmaterialization depth to 512; expressions exceeding these bounds are rejected\nwith diagnostics.",
+          "title": "Public API"
+        },
+        {
+          "id": "coarse-statistics-kernels-12",
+          "plaintext_score": 0.43445302747249487,
+          "score": 0.4344529941679579,
+          "source": "docs/coarse-statistics-kernels.md#L118-L122",
+          "text": "`fhn-bench-runtime` retains the original immediate, shared-rotation-preparation\nand explicit-region modes. It adds contributed and split modes for `stats` and\n`matvec-fused`, plus `energy-only` for statistics: the same stable energy kernel\nfollowed by a fully ordinary reduction. That last comparison separates algebraic\nsavings from larger-kernel boundary savings.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.4248991206797099,
+          "score": 0.4248991568361446,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        }
+      ],
+      "verification_decrypt_total_ms": 127.053333,
+      "verified_evaluations": 4,
+      "warmup_ms": 672.496417
+    },
+    {
+      "available_relevance_labels": 4,
+      "client_rank_ms": 0.002375,
+      "decrypt_extract_ms": 4.412,
+      "evaluation_ms": [
+        92.027125,
+        91.385375,
+        91.342875
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.2500383789193492e-07,
+      "median_evaluation_ms": 91.385375,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "lightweight-runtime-05",
+        "matvec-preparation-07",
+        "lightweight-runtime-15",
+        "coarse-statistics-kernels-13",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.04956409415345353,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.662834,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.338334,
+      "query_id": "memory",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-05",
+          "plaintext_score": 0.5403171709126001,
+          "score": 0.540317184733851,
+          "source": "docs/lightweight-runtime.md#L33-L40",
+          "text": "`makeValue` reserves the declared bytes **before** invoking its factory and\nrolls back reservations on failure. Reentrant factories count their pending\nreservation. The optional retained-memory budget is not a process-memory\nlimit: keys, context tables/scratch, callback temporaries, graph metadata and\nallocator overhead are excluded. Native ciphertexts charge their actual fixed\nreserved slab size, including spare components. Rotation artifacts charge\ntheir snapshot and coefficient slabs. An explicit region reserves its entire\nchosen workspace cap; executable statistics separately expose used workspace.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "matvec-preparation-07",
+          "plaintext_score": 0.4982158495606689,
+          "score": 0.49821582755912713,
+          "source": "docs/matvec-preparation.md#L85-L90",
+          "text": "The exact coefficient/map slab estimate is reserved before allocation. Runtime\nbudgets count the retained artifact, source dependency and full staging/output\nbuffers. Final publication still uses unchanged `NativeRuntime::importCopy`;\nboth staging and copy cost are included in the timings. Native consumers use\nexisting context scratch and allocate no heap. Metadata, allocator overhead,\nkeys, tables and context scratch are outside the retained-slab accounting.",
+          "title": "Ownership and limits"
+        },
+        {
+          "id": "lightweight-runtime-15",
+          "plaintext_score": 0.48164251188787854,
+          "score": 0.4816425538170513,
+          "source": "docs/lightweight-runtime.md#L127-L133",
+          "text": "The harness drops intermediates after their last use. Its timing includes\ndispatch, allocation, arithmetic and temporary release, while excluding input\nimport, cryptographic setup, preparation and decryption. Preparation costs are\nreported separately and must be added for one-shot use. Measurement order\nrotates across modes. This is a comparison between paths of this project, not\nan OpenFHE/SEAL/HEaaN benchmark. The explicit region example chooses a 32 MiB\nreservation; it is not an automatically determined optimum.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.4488697166083403,
+          "score": 0.44886967371978037,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.44881514351178936,
+          "score": 0.4488151245687847,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.834334,
+      "verified_evaluations": 4,
+      "warmup_ms": 92.421791
+    },
+    {
+      "available_relevance_labels": 4,
+      "client_rank_ms": 0.002708,
+      "decrypt_extract_ms": 31.604875,
+      "evaluation_ms": [
+        1388.304667,
+        1396.192625,
+        1390.964875
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.1646172098922492e-07,
+      "median_evaluation_ms": 1390.964875,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "lightweight-runtime-05",
+        "matvec-preparation-07",
+        "lightweight-runtime-15",
+        "coarse-statistics-kernels-13",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.04956409415345353,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.2e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.26125,
+      "query_id": "memory",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-05",
+          "plaintext_score": 0.5403171709126001,
+          "score": 0.5403171189615037,
+          "source": "docs/lightweight-runtime.md#L33-L40",
+          "text": "`makeValue` reserves the declared bytes **before** invoking its factory and\nrolls back reservations on failure. Reentrant factories count their pending\nreservation. The optional retained-memory budget is not a process-memory\nlimit: keys, context tables/scratch, callback temporaries, graph metadata and\nallocator overhead are excluded. Native ciphertexts charge their actual fixed\nreserved slab size, including spare components. Rotation artifacts charge\ntheir snapshot and coefficient slabs. An explicit region reserves its entire\nchosen workspace cap; executable statistics separately expose used workspace.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "matvec-preparation-07",
+          "plaintext_score": 0.4982158495606689,
+          "score": 0.4982158703710929,
+          "source": "docs/matvec-preparation.md#L85-L90",
+          "text": "The exact coefficient/map slab estimate is reserved before allocation. Runtime\nbudgets count the retained artifact, source dependency and full staging/output\nbuffers. Final publication still uses unchanged `NativeRuntime::importCopy`;\nboth staging and copy cost are included in the timings. Native consumers use\nexisting context scratch and allocate no heap. Metadata, allocator overhead,\nkeys, tables and context scratch are outside the retained-slab accounting.",
+          "title": "Ownership and limits"
+        },
+        {
+          "id": "lightweight-runtime-15",
+          "plaintext_score": 0.48164251188787854,
+          "score": 0.48164245480531664,
+          "source": "docs/lightweight-runtime.md#L127-L133",
+          "text": "The harness drops intermediates after their last use. Its timing includes\ndispatch, allocation, arithmetic and temporary release, while excluding input\nimport, cryptographic setup, preparation and decryption. Preparation costs are\nreported separately and must be added for one-shot use. Measurement order\nrotates across modes. This is a comparison between paths of this project, not\nan OpenFHE/SEAL/HEaaN benchmark. The explicit region example chooses a 32 MiB\nreservation; it is not an automatically determined optimum.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.4488697166083403,
+          "score": 0.4488697380985156,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.44881514351178936,
+          "score": 0.4488151370637481,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.643583,
+      "verified_evaluations": 4,
+      "warmup_ms": 1387.417208
+    },
+    {
+      "available_relevance_labels": 4,
+      "client_rank_ms": 0.002583,
+      "decrypt_extract_ms": 31.982041,
+      "evaluation_ms": [
+        668.813542,
+        664.833458,
+        671.0455
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.3122247954910904e-07,
+      "median_evaluation_ms": 668.813542,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "lightweight-runtime-05",
+        "matvec-preparation-07",
+        "lightweight-runtime-15",
+        "coarse-statistics-kernels-13",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.04956409415345353,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.284375,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.31975,
+      "query_id": "memory",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-05",
+          "plaintext_score": 0.5403171709126001,
+          "score": 0.5403171200457836,
+          "source": "docs/lightweight-runtime.md#L33-L40",
+          "text": "`makeValue` reserves the declared bytes **before** invoking its factory and\nrolls back reservations on failure. Reentrant factories count their pending\nreservation. The optional retained-memory budget is not a process-memory\nlimit: keys, context tables/scratch, callback temporaries, graph metadata and\nallocator overhead are excluded. Native ciphertexts charge their actual fixed\nreserved slab size, including spare components. Rotation artifacts charge\ntheir snapshot and coefficient slabs. An explicit region reserves its entire\nchosen workspace cap; executable statistics separately expose used workspace.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "matvec-preparation-07",
+          "plaintext_score": 0.4982158495606689,
+          "score": 0.4982158401944054,
+          "source": "docs/matvec-preparation.md#L85-L90",
+          "text": "The exact coefficient/map slab estimate is reserved before allocation. Runtime\nbudgets count the retained artifact, source dependency and full staging/output\nbuffers. Final publication still uses unchanged `NativeRuntime::importCopy`;\nboth staging and copy cost are included in the timings. Native consumers use\nexisting context scratch and allocate no heap. Metadata, allocator overhead,\nkeys, tables and context scratch are outside the retained-slab accounting.",
+          "title": "Ownership and limits"
+        },
+        {
+          "id": "lightweight-runtime-15",
+          "plaintext_score": 0.48164251188787854,
+          "score": 0.4816426431103581,
+          "source": "docs/lightweight-runtime.md#L127-L133",
+          "text": "The harness drops intermediates after their last use. Its timing includes\ndispatch, allocation, arithmetic and temporary release, while excluding input\nimport, cryptographic setup, preparation and decryption. Preparation costs are\nreported separately and must be added for one-shot use. Measurement order\nrotates across modes. This is a comparison between paths of this project, not\nan OpenFHE/SEAL/HEaaN benchmark. The explicit region example chooses a 32 MiB\nreservation; it is not an automatically determined optimum.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.4488697166083403,
+          "score": 0.4488697443105715,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.44881514351178936,
+          "score": 0.4488151428816633,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.71437399999999,
+      "verified_evaluations": 4,
+      "warmup_ms": 664.815834
+    },
+    {
+      "available_relevance_labels": 4,
+      "client_rank_ms": 0.001709,
+      "decrypt_extract_ms": 4.411541,
+      "evaluation_ms": [
+        192.265,
+        192.042417,
+        191.610792
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 2,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.3580388225076234e-07,
+      "median_evaluation_ms": 192.042417,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "lightweight-runtime-05",
+        "matvec-preparation-07",
+        "lightweight-runtime-15",
+        "coarse-statistics-kernels-13",
+        "circuit-execution-07"
+      ],
+      "plaintext_top_k_boundary_margin": 0.04956409415345353,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.1e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.224875,
+      "query_id": "memory",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-05",
+          "plaintext_score": 0.5403171709126001,
+          "score": 0.5403171595435429,
+          "source": "docs/lightweight-runtime.md#L33-L40",
+          "text": "`makeValue` reserves the declared bytes **before** invoking its factory and\nrolls back reservations on failure. Reentrant factories count their pending\nreservation. The optional retained-memory budget is not a process-memory\nlimit: keys, context tables/scratch, callback temporaries, graph metadata and\nallocator overhead are excluded. Native ciphertexts charge their actual fixed\nreserved slab size, including spare components. Rotation artifacts charge\ntheir snapshot and coefficient slabs. An explicit region reserves its entire\nchosen workspace cap; executable statistics separately expose used workspace.",
+          "title": "Execution and resource contract"
+        },
+        {
+          "id": "matvec-preparation-07",
+          "plaintext_score": 0.4982158495606689,
+          "score": 0.49821598536455114,
+          "source": "docs/matvec-preparation.md#L85-L90",
+          "text": "The exact coefficient/map slab estimate is reserved before allocation. Runtime\nbudgets count the retained artifact, source dependency and full staging/output\nbuffers. Final publication still uses unchanged `NativeRuntime::importCopy`;\nboth staging and copy cost are included in the timings. Native consumers use\nexisting context scratch and allocate no heap. Metadata, allocator overhead,\nkeys, tables and context scratch are outside the retained-slab accounting.",
+          "title": "Ownership and limits"
+        },
+        {
+          "id": "lightweight-runtime-15",
+          "plaintext_score": 0.48164251188787854,
+          "score": 0.4816425146113846,
+          "source": "docs/lightweight-runtime.md#L127-L133",
+          "text": "The harness drops intermediates after their last use. Its timing includes\ndispatch, allocation, arithmetic and temporary release, while excluding input\nimport, cryptographic setup, preparation and decryption. Preparation costs are\nreported separately and must be added for one-shot use. Measurement order\nrotates across modes. This is a comparison between paths of this project, not\nan OpenFHE/SEAL/HEaaN benchmark. The explicit region example chooses a 32 MiB\nreservation; it is not an automatically determined optimum.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "coarse-statistics-kernels-13",
+          "plaintext_score": 0.4488697166083403,
+          "score": 0.44886974719648176,
+          "source": "docs/coarse-statistics-kernels.md#L124-L130",
+          "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+          "title": "Validation and measurement"
+        },
+        {
+          "id": "circuit-execution-07",
+          "plaintext_score": 0.44881514351178936,
+          "score": 0.4488151865264583,
+          "source": "docs/circuit-execution.md#L58-L64",
+          "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+          "title": "Execution regions"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.518832,
+      "verified_evaluations": 4,
+      "warmup_ms": 192.755833
+    },
+    {
+      "available_relevance_labels": 3,
+      "client_rank_ms": 0.002334,
+      "decrypt_extract_ms": 31.903209,
+      "evaluation_ms": [
+        1389.851334,
+        1389.160541,
+        1395.468875
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.3333333333333333,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 9.673672940468947e-08,
+      "median_evaluation_ms": 1389.851334,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "lightweight-runtime-12",
+        "matvec-preparation-02",
+        "lightweight-runtime-14",
+        "matvec-preparation-03",
+        "lightweight-runtime-16"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0010517966781895538,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.319875,
+      "query_id": "reuse",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-12",
+          "plaintext_score": 0.7488984491782569,
+          "score": 0.7488983925297824,
+          "source": "docs/lightweight-runtime.md#L108-L111",
+          "text": "The separately linked [prepared matvec contribution](matvec-preparation.md)\nadds an explicit reusable source artifact, complete dots, products and partial\nreductions. Fixed-multiplier companions and rotation maps survive separate\nrequests and ordinary intermediate commands, without changing the runtime core.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-02",
+          "plaintext_score": 0.5534025146943959,
+          "score": 0.5534025853573584,
+          "source": "docs/matvec-preparation.md#L28-L34",
+          "text": "The immutable preparation owns a snapshot of the shared source and, according\nto its flags, companion tables for fixed multipliers and rotation index maps.\nA companion contains the quotient needed by the existing Shoup modular\nmultiplication primitive. Canonical normalization gives the same residue as\ngeneral modular multiplication, while avoiding division in the coefficient\nloop. The prepared source and evaluation-key coefficients are reused by\nmultiple rows and separate requests.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-14",
+          "plaintext_score": 0.54257060198817,
+          "score": 0.5425706046754055,
+          "source": "docs/lightweight-runtime.md#L120-L125",
+          "text": "`fhn-bench-runtime NATIVE_LIBRARY [REPS]` runs the existing `stats`,\n`matvec-fused` and `matvec` corpus workloads in source order. The immediate and\nprepared modes have compiler function pointers removed. The explicit region\nmode uses the same imported mathematical operations and separately requests\ncompilation. All outputs and all logical slots are compared with the unchanged\nindependent corpus oracle on warmups and measured runs.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.5406485221033593,
+          "score": 0.5406485143480977,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-16",
+          "plaintext_score": 0.519973292710147,
+          "score": 0.5199733311058763,
+          "source": "docs/lightweight-runtime.md#L139-L142",
+          "text": "`stats` computes sums and scaled population variances of two 64-slot datasets;\n`matvec-fused` computes an encrypted 8×8 matrix/vector example with eight\noutputs; `matvec` is the existing cyclic rotation/scalar workload. Names do not\nestablish general application coverage.",
+          "title": "Contribution and validation"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.61187500000001,
+      "verified_evaluations": 4,
+      "warmup_ms": 1396.392625
+    },
+    {
+      "available_relevance_labels": 3,
+      "client_rank_ms": 0.002,
+      "decrypt_extract_ms": 31.988542,
+      "evaluation_ms": [
+        666.004625,
+        663.42725,
+        665.349166
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.3333333333333333,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.37976506942028e-07,
+      "median_evaluation_ms": 665.349166,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "lightweight-runtime-12",
+        "matvec-preparation-02",
+        "lightweight-runtime-14",
+        "matvec-preparation-03",
+        "lightweight-runtime-16"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0010517966781895538,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.462125,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.314166,
+      "query_id": "reuse",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-12",
+          "plaintext_score": 0.7488984491782569,
+          "score": 0.7488985058074249,
+          "source": "docs/lightweight-runtime.md#L108-L111",
+          "text": "The separately linked [prepared matvec contribution](matvec-preparation.md)\nadds an explicit reusable source artifact, complete dots, products and partial\nreductions. Fixed-multiplier companions and rotation maps survive separate\nrequests and ordinary intermediate commands, without changing the runtime core.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-02",
+          "plaintext_score": 0.5534025146943959,
+          "score": 0.5534025420272967,
+          "source": "docs/matvec-preparation.md#L28-L34",
+          "text": "The immutable preparation owns a snapshot of the shared source and, according\nto its flags, companion tables for fixed multipliers and rotation index maps.\nA companion contains the quotient needed by the existing Shoup modular\nmultiplication primitive. Canonical normalization gives the same residue as\ngeneral modular multiplication, while avoiding division in the coefficient\nloop. The prepared source and evaluation-key coefficients are reused by\nmultiple rows and separate requests.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-14",
+          "plaintext_score": 0.54257060198817,
+          "score": 0.5425706222212657,
+          "source": "docs/lightweight-runtime.md#L120-L125",
+          "text": "`fhn-bench-runtime NATIVE_LIBRARY [REPS]` runs the existing `stats`,\n`matvec-fused` and `matvec` corpus workloads in source order. The immediate and\nprepared modes have compiler function pointers removed. The explicit region\nmode uses the same imported mathematical operations and separately requests\ncompilation. All outputs and all logical slots are compared with the unchanged\nindependent corpus oracle on warmups and measured runs.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.5406485221033593,
+          "score": 0.5406485422505672,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-16",
+          "plaintext_score": 0.519973292710147,
+          "score": 0.5199732926761229,
+          "source": "docs/lightweight-runtime.md#L139-L142",
+          "text": "`stats` computes sums and scaled population variances of two 64-slot datasets;\n`matvec-fused` computes an encrypted 8×8 matrix/vector example with eight\noutputs; `matvec` is the existing cyclic rotation/scalar workload. Names do not\nestablish general application coverage.",
+          "title": "Contribution and validation"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.89975,
+      "verified_evaluations": 4,
+      "warmup_ms": 672.61675
+    },
+    {
+      "available_relevance_labels": 3,
+      "client_rank_ms": 0.002416,
+      "decrypt_extract_ms": 4.441416,
+      "evaluation_ms": [
+        194.1885,
+        192.325834,
+        191.192375
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.3333333333333333,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.391405606288032e-07,
+      "median_evaluation_ms": 192.325834,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "lightweight-runtime-12",
+        "matvec-preparation-02",
+        "lightweight-runtime-14",
+        "matvec-preparation-03",
+        "lightweight-runtime-16"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0010517966781895538,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.1e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.374084,
+      "query_id": "reuse",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-12",
+          "plaintext_score": 0.7488984491782569,
+          "score": 0.7488985233819965,
+          "source": "docs/lightweight-runtime.md#L108-L111",
+          "text": "The separately linked [prepared matvec contribution](matvec-preparation.md)\nadds an explicit reusable source artifact, complete dots, products and partial\nreductions. Fixed-multiplier companions and rotation maps survive separate\nrequests and ordinary intermediate commands, without changing the runtime core.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-02",
+          "plaintext_score": 0.5534025146943959,
+          "score": 0.5534025091127297,
+          "source": "docs/matvec-preparation.md#L28-L34",
+          "text": "The immutable preparation owns a snapshot of the shared source and, according\nto its flags, companion tables for fixed multipliers and rotation index maps.\nA companion contains the quotient needed by the existing Shoup modular\nmultiplication primitive. Canonical normalization gives the same residue as\ngeneral modular multiplication, while avoiding division in the coefficient\nloop. The prepared source and evaluation-key coefficients are reused by\nmultiple rows and separate requests.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-14",
+          "plaintext_score": 0.54257060198817,
+          "score": 0.5425705843982853,
+          "source": "docs/lightweight-runtime.md#L120-L125",
+          "text": "`fhn-bench-runtime NATIVE_LIBRARY [REPS]` runs the existing `stats`,\n`matvec-fused` and `matvec` corpus workloads in source order. The immediate and\nprepared modes have compiler function pointers removed. The explicit region\nmode uses the same imported mathematical operations and separately requests\ncompilation. All outputs and all logical slots are compared with the unchanged\nindependent corpus oracle on warmups and measured runs.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.5406485221033593,
+          "score": 0.5406484889975933,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-16",
+          "plaintext_score": 0.519973292710147,
+          "score": 0.5199733316002508,
+          "source": "docs/lightweight-runtime.md#L139-L142",
+          "text": "`stats` computes sums and scaled population variances of two 64-slot datasets;\n`matvec-fused` computes an encrypted 8×8 matrix/vector example with eight\noutputs; `matvec` is the existing cyclic rotation/scalar workload. Names do not\nestablish general application coverage.",
+          "title": "Contribution and validation"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.732416,
+      "verified_evaluations": 4,
+      "warmup_ms": 191.25925
+    },
+    {
+      "available_relevance_labels": 3,
+      "client_rank_ms": 0.005709,
+      "decrypt_extract_ms": 4.504958,
+      "evaluation_ms": [
+        93.73025,
+        93.605833,
+        93.344
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.3333333333333333,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.038319258905851e-07,
+      "median_evaluation_ms": 93.605833,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "lightweight-runtime-12",
+        "matvec-preparation-02",
+        "lightweight-runtime-14",
+        "matvec-preparation-03",
+        "lightweight-runtime-16"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0010517966781895538,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.984666,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.319084,
+      "query_id": "reuse",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "lightweight-runtime-12",
+          "plaintext_score": 0.7488984491782569,
+          "score": 0.7488984893980293,
+          "source": "docs/lightweight-runtime.md#L108-L111",
+          "text": "The separately linked [prepared matvec contribution](matvec-preparation.md)\nadds an explicit reusable source artifact, complete dots, products and partial\nreductions. Fixed-multiplier companions and rotation maps survive separate\nrequests and ordinary intermediate commands, without changing the runtime core.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-02",
+          "plaintext_score": 0.5534025146943959,
+          "score": 0.5534024654332931,
+          "source": "docs/matvec-preparation.md#L28-L34",
+          "text": "The immutable preparation owns a snapshot of the shared source and, according\nto its flags, companion tables for fixed multipliers and rotation index maps.\nA companion contains the quotient needed by the existing Shoup modular\nmultiplication primitive. Canonical normalization gives the same residue as\ngeneral modular multiplication, while avoiding division in the coefficient\nloop. The prepared source and evaluation-key coefficients are reused by\nmultiple rows and separate requests.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-14",
+          "plaintext_score": 0.54257060198817,
+          "score": 0.5425706181366623,
+          "source": "docs/lightweight-runtime.md#L120-L125",
+          "text": "`fhn-bench-runtime NATIVE_LIBRARY [REPS]` runs the existing `stats`,\n`matvec-fused` and `matvec` corpus workloads in source order. The immediate and\nprepared modes have compiler function pointers removed. The explicit region\nmode uses the same imported mathematical operations and separately requests\ncompilation. All outputs and all logical slots are compared with the unchanged\nindependent corpus oracle on warmups and measured runs.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "matvec-preparation-03",
+          "plaintext_score": 0.5406485221033593,
+          "score": 0.540648461343853,
+          "source": "docs/matvec-preparation.md#L44-L49",
+          "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+          "title": "What is reused"
+        },
+        {
+          "id": "lightweight-runtime-16",
+          "plaintext_score": 0.519973292710147,
+          "score": 0.5199733131157469,
+          "source": "docs/lightweight-runtime.md#L139-L142",
+          "text": "`stats` computes sums and scaled population variances of two 64-slot datasets;\n`matvec-fused` computes an encrypted 8×8 matrix/vector example with eight\noutputs; `matvec` is the existing cyclic rotation/scalar workload. Names do not\nestablish general application coverage.",
+          "title": "Contribution and validation"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.946375000000003,
+      "verified_evaluations": 4,
+      "warmup_ms": 91.271833
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002709,
+      "decrypt_extract_ms": 32.057583,
+      "evaluation_ms": [
+        662.48125,
+        668.783958,
+        664.409292
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.2523757175753047e-07,
+      "median_evaluation_ms": 664.409292,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "native-ckks-08",
+        "lightweight-runtime-08",
+        "native-ckks-12",
+        "native-ckks-04"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0015163802401358395,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.688167,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.36375,
+      "query_id": "compile",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.47603979152467507,
+          "score": 0.4760397345346818,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "native-ckks-08",
+          "plaintext_score": 0.45688668019210477,
+          "score": 0.4568866574655299,
+          "source": "docs/native-ckks.md#L76-L85",
+          "text": "Create a compute context, then one client for it. `client_prepare(program)`\ngenerates only the needed relinearization and Galois keys before execution.\nThe client owns the secret, public key, evaluation keys and its own workspace.\nThe compute context has no client or secret-key reference; it keeps weak\nobservers of evaluation keys, borrowed during one kernel call. Destroying the\nclient expires these keys: key-switching operations fail, while addition can\nstill execute. A compute context accepts only one client lifetime to prevent\naccidental mixing of independent key identities. Buffers are checked against\ntheir creating context. Free buffers and destroy the client before the context,\nand unload the library last. Calls on one context must be serialized.",
+          "title": "Client and evaluator lifetime"
+        },
+        {
+          "id": "lightweight-runtime-08",
+          "plaintext_score": 0.42928140117422303,
+          "score": 0.4292814113254215,
+          "source": "docs/lightweight-runtime.md#L66-L74",
+          "text": "Import copies the ciphertext. Subsequent mutation/freeing of the original\nbuffer cannot invalidate the runtime value. A rotation preparation owns a\ncanonical source snapshot and inverse-NTT c1 limbs. Each consumer applies its\nown coefficient automorphism and basis conversion/key switch. It reuses inverse\ntransforms, not the entire hoisted key-switch decomposition. Its exact reserve\nis `3 * active_q_limbs * polynomial_degree * sizeof(uint64_t)`.\nThe adapter checks source identity before reuse, including when the supplied\nreplacement has the same ciphertext layout. The raw optional C exports in\n`FHN/fhn_prepared_api.h` instead operate on the owned snapshot directly.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.4182563541861107,
+          "score": 0.41825634584507926,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-04",
+          "plaintext_score": 0.41469555131305413,
+          "score": 0.4146956546776204,
+          "source": "docs/native-ckks.md#L47-L51",
+          "text": "Each layer links only downward. L4 cannot include or link L5 key types.\nHybrid switching uses per-digit CRT projector messages `P * E_digit * s_old`\nunder the destination secret. Digit extension uses approximate BConv; removing\nP and reconstructing decoded coefficients use exact centered CRT. Lower-level\nswitches retain the full key's original Q-to-P offsets.",
+          "title": "What is implemented"
+        }
+      ],
+      "verification_decrypt_total_ms": 127.900792,
+      "verified_evaluations": 4,
+      "warmup_ms": 663.698042
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002625,
+      "decrypt_extract_ms": 4.400375,
+      "evaluation_ms": [
+        192.256834,
+        192.336875,
+        191.803
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.410938558210617e-07,
+      "median_evaluation_ms": 192.256834,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "native-ckks-08",
+        "lightweight-runtime-08",
+        "native-ckks-12",
+        "native-ckks-04"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0015163802401358395,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.2e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.33175,
+      "query_id": "compile",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.47603979152467507,
+          "score": 0.47603985372779983,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "native-ckks-08",
+          "plaintext_score": 0.45688668019210477,
+          "score": 0.45688661295434574,
+          "source": "docs/native-ckks.md#L76-L85",
+          "text": "Create a compute context, then one client for it. `client_prepare(program)`\ngenerates only the needed relinearization and Galois keys before execution.\nThe client owns the secret, public key, evaluation keys and its own workspace.\nThe compute context has no client or secret-key reference; it keeps weak\nobservers of evaluation keys, borrowed during one kernel call. Destroying the\nclient expires these keys: key-switching operations fail, while addition can\nstill execute. A compute context accepts only one client lifetime to prevent\naccidental mixing of independent key identities. Buffers are checked against\ntheir creating context. Free buffers and destroy the client before the context,\nand unload the library last. Calls on one context must be serialized.",
+          "title": "Client and evaluator lifetime"
+        },
+        {
+          "id": "lightweight-runtime-08",
+          "plaintext_score": 0.42928140117422303,
+          "score": 0.42928142104850203,
+          "source": "docs/lightweight-runtime.md#L66-L74",
+          "text": "Import copies the ciphertext. Subsequent mutation/freeing of the original\nbuffer cannot invalidate the runtime value. A rotation preparation owns a\ncanonical source snapshot and inverse-NTT c1 limbs. Each consumer applies its\nown coefficient automorphism and basis conversion/key switch. It reuses inverse\ntransforms, not the entire hoisted key-switch decomposition. Its exact reserve\nis `3 * active_q_limbs * polynomial_degree * sizeof(uint64_t)`.\nThe adapter checks source identity before reuse, including when the supplied\nreplacement has the same ciphertext layout. The raw optional C exports in\n`FHN/fhn_prepared_api.h` instead operate on the owned snapshot directly.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.4182563541861107,
+          "score": 0.41825633762160785,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-04",
+          "plaintext_score": 0.41469555131305413,
+          "score": 0.41469565252031143,
+          "source": "docs/native-ckks.md#L47-L51",
+          "text": "Each layer links only downward. L4 cannot include or link L5 key types.\nHybrid switching uses per-digit CRT projector messages `P * E_digit * s_old`\nunder the destination secret. Digit extension uses approximate BConv; removing\nP and reconstructing decoded coefficients use exact centered CRT. Lower-level\nswitches retain the full key's original Q-to-P offsets.",
+          "title": "What is implemented"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.647708,
+      "verified_evaluations": 4,
+      "warmup_ms": 192.537375
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002875,
+      "decrypt_extract_ms": 4.498833,
+      "evaluation_ms": [
+        91.578084,
+        91.511417,
+        91.412041
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.1457007192960944e-07,
+      "median_evaluation_ms": 91.511417,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "native-ckks-08",
+        "lightweight-runtime-08",
+        "native-ckks-12",
+        "native-ckks-04"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0015163802401358395,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.386417,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.338458,
+      "query_id": "compile",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.47603979152467507,
+          "score": 0.47603974149534806,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "native-ckks-08",
+          "plaintext_score": 0.45688668019210477,
+          "score": 0.45688670220895755,
+          "source": "docs/native-ckks.md#L76-L85",
+          "text": "Create a compute context, then one client for it. `client_prepare(program)`\ngenerates only the needed relinearization and Galois keys before execution.\nThe client owns the secret, public key, evaluation keys and its own workspace.\nThe compute context has no client or secret-key reference; it keeps weak\nobservers of evaluation keys, borrowed during one kernel call. Destroying the\nclient expires these keys: key-switching operations fail, while addition can\nstill execute. A compute context accepts only one client lifetime to prevent\naccidental mixing of independent key identities. Buffers are checked against\ntheir creating context. Free buffers and destroy the client before the context,\nand unload the library last. Calls on one context must be serialized.",
+          "title": "Client and evaluator lifetime"
+        },
+        {
+          "id": "lightweight-runtime-08",
+          "plaintext_score": 0.42928140117422303,
+          "score": 0.42928139421930434,
+          "source": "docs/lightweight-runtime.md#L66-L74",
+          "text": "Import copies the ciphertext. Subsequent mutation/freeing of the original\nbuffer cannot invalidate the runtime value. A rotation preparation owns a\ncanonical source snapshot and inverse-NTT c1 limbs. Each consumer applies its\nown coefficient automorphism and basis conversion/key switch. It reuses inverse\ntransforms, not the entire hoisted key-switch decomposition. Its exact reserve\nis `3 * active_q_limbs * polynomial_degree * sizeof(uint64_t)`.\nThe adapter checks source identity before reuse, including when the supplied\nreplacement has the same ciphertext layout. The raw optional C exports in\n`FHN/fhn_prepared_api.h` instead operate on the owned snapshot directly.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.4182563541861107,
+          "score": 0.41825637450519737,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-04",
+          "plaintext_score": 0.41469555131305413,
+          "score": 0.41469561883944384,
+          "source": "docs/native-ckks.md#L47-L51",
+          "text": "Each layer links only downward. L4 cannot include or link L5 key types.\nHybrid switching uses per-digit CRT projector messages `P * E_digit * s_old`\nunder the destination secret. Digit extension uses approximate BConv; removing\nP and reconstructing decoded coefficients use exact centered CRT. Lower-level\nswitches retain the full key's original Q-to-P offsets.",
+          "title": "What is implemented"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.813083000000002,
+      "verified_evaluations": 4,
+      "warmup_ms": 92.201833
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.0025,
+      "decrypt_extract_ms": 31.746167,
+      "evaluation_ms": [
+        1386.436875,
+        1389.502708,
+        1388.77725
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.0996984034505886e-07,
+      "median_evaluation_ms": 1388.77725,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "circuit-execution-03",
+        "native-ckks-08",
+        "lightweight-runtime-08",
+        "native-ckks-12",
+        "native-ckks-04"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0015163802401358395,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.358958,
+      "query_id": "compile",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "circuit-execution-03",
+          "plaintext_score": 0.47603979152467507,
+          "score": 0.4760397634957818,
+          "source": "docs/circuit-execution.md#L26-L32",
+          "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+          "title": "Public API"
+        },
+        {
+          "id": "native-ckks-08",
+          "plaintext_score": 0.45688668019210477,
+          "score": 0.45688662359749804,
+          "source": "docs/native-ckks.md#L76-L85",
+          "text": "Create a compute context, then one client for it. `client_prepare(program)`\ngenerates only the needed relinearization and Galois keys before execution.\nThe client owns the secret, public key, evaluation keys and its own workspace.\nThe compute context has no client or secret-key reference; it keeps weak\nobservers of evaluation keys, borrowed during one kernel call. Destroying the\nclient expires these keys: key-switching operations fail, while addition can\nstill execute. A compute context accepts only one client lifetime to prevent\naccidental mixing of independent key identities. Buffers are checked against\ntheir creating context. Free buffers and destroy the client before the context,\nand unload the library last. Calls on one context must be serialized.",
+          "title": "Client and evaluator lifetime"
+        },
+        {
+          "id": "lightweight-runtime-08",
+          "plaintext_score": 0.42928140117422303,
+          "score": 0.4292813871106464,
+          "source": "docs/lightweight-runtime.md#L66-L74",
+          "text": "Import copies the ciphertext. Subsequent mutation/freeing of the original\nbuffer cannot invalidate the runtime value. A rotation preparation owns a\ncanonical source snapshot and inverse-NTT c1 limbs. Each consumer applies its\nown coefficient automorphism and basis conversion/key switch. It reuses inverse\ntransforms, not the entire hoisted key-switch decomposition. Its exact reserve\nis `3 * active_q_limbs * polynomial_degree * sizeof(uint64_t)`.\nThe adapter checks source identity before reuse, including when the supplied\nreplacement has the same ciphertext layout. The raw optional C exports in\n`FHN/fhn_prepared_api.h` instead operate on the owned snapshot directly.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.4182563541861107,
+          "score": 0.41825634002363593,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-04",
+          "plaintext_score": 0.41469555131305413,
+          "score": 0.41469551573160984,
+          "source": "docs/native-ckks.md#L47-L51",
+          "text": "Each layer links only downward. L4 cannot include or link L5 key types.\nHybrid switching uses per-digit CRT projector messages `P * E_digit * s_old`\nunder the destination secret. Digit extension uses approximate BConv; removing\nP and reconstructing decoded coefficients use exact centered CRT. Lower-level\nswitches retain the full key's original Q-to-P offsets.",
+          "title": "What is implemented"
+        }
+      ],
+      "verification_decrypt_total_ms": 127.473084,
+      "verified_evaluations": 4,
+      "warmup_ms": 1407.333583
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002166,
+      "decrypt_extract_ms": 4.39775,
+      "evaluation_ms": [
+        191.659041,
+        192.363709,
+        191.651125
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.4518726998424825e-07,
+      "median_evaluation_ms": 191.659041,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "coarse-statistics-kernels-04",
+        "native-ckks-12",
+        "lightweight-runtime-11",
+        "circuit-execution-10",
+        "native-ckks-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0018602954541162564,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.2e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.317375,
+      "query_id": "intermediate",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "coarse-statistics-kernels-04",
+          "plaintext_score": 0.578485664092275,
+          "score": 0.5784857270271657,
+          "source": "docs/coarse-statistics-kernels.md#L56-L61",
+          "text": "Here `energy` has two ordinary consumers, and their result re-enters another\ncontributed kernel. It is an ordinary native ciphertext Value with its actual\nlevel/scale, not an opaque completed-app result. Similarly the original shared\nvector in `matvec-fused` feeds eight contributed dot kernels without reimporting\nor recomputing the input. A split variant performs the product and first\nrotate/add with ordinary commands, then uses the contributed partial reduction.",
+          "title": "Shared intermediate boundaries"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.5561630315070879,
+          "score": 0.5561630224171445,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "lightweight-runtime-11",
+          "plaintext_score": 0.49618788608382125,
+          "score": 0.49618785149994427,
+          "source": "docs/lightweight-runtime.md#L103-L106",
+          "text": "The separately linked [statistics contribution](coarse-statistics-kernels.md)\nadds centered energy/variance, packed dot and partial reduction recipes. Its\nintermediates pass through existing commands and back into contributed kernels\nusing the unchanged public runtime and native adapter.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.47571224891939146,
+          "score": 0.4757121687627227,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.45326721826638594,
+          "score": 0.4532672978349845,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.644667,
+      "verified_evaluations": 4,
+      "warmup_ms": 191.011583
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.0025,
+      "decrypt_extract_ms": 4.412041,
+      "evaluation_ms": [
+        91.447333,
+        91.574916,
+        93.402125
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.4806567905090162e-07,
+      "median_evaluation_ms": 91.574916,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "coarse-statistics-kernels-04",
+        "native-ckks-12",
+        "lightweight-runtime-11",
+        "circuit-execution-10",
+        "native-ckks-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0018602954541162564,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.353458,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.238458,
+      "query_id": "intermediate",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "coarse-statistics-kernels-04",
+          "plaintext_score": 0.578485664092275,
+          "score": 0.578485771482561,
+          "source": "docs/coarse-statistics-kernels.md#L56-L61",
+          "text": "Here `energy` has two ordinary consumers, and their result re-enters another\ncontributed kernel. It is an ordinary native ciphertext Value with its actual\nlevel/scale, not an opaque completed-app result. Similarly the original shared\nvector in `matvec-fused` feeds eight contributed dot kernels without reimporting\nor recomputing the input. A split variant performs the product and first\nrotate/add with ordinary commands, then uses the contributed partial reduction.",
+          "title": "Shared intermediate boundaries"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.5561630315070879,
+          "score": 0.556163179572767,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "lightweight-runtime-11",
+          "plaintext_score": 0.49618788608382125,
+          "score": 0.4961879477272128,
+          "source": "docs/lightweight-runtime.md#L103-L106",
+          "text": "The separately linked [statistics contribution](coarse-statistics-kernels.md)\nadds centered energy/variance, packed dot and partial reduction recipes. Its\nintermediates pass through existing commands and back into contributed kernels\nusing the unchanged public runtime and native adapter.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.47571224891939146,
+          "score": 0.47571228736243154,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.45326721826638594,
+          "score": 0.453267207464294,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.760083,
+      "verified_evaluations": 4,
+      "warmup_ms": 91.735209
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.002291,
+      "decrypt_extract_ms": 31.307792,
+      "evaluation_ms": [
+        1386.741458,
+        1405.80075,
+        1411.369375
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.421677233715002e-07,
+      "median_evaluation_ms": 1405.80075,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "coarse-statistics-kernels-04",
+        "native-ckks-12",
+        "lightweight-runtime-11",
+        "circuit-execution-10",
+        "native-ckks-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0018602954541162564,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.341583,
+      "query_id": "intermediate",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "coarse-statistics-kernels-04",
+          "plaintext_score": 0.578485664092275,
+          "score": 0.578485699208592,
+          "source": "docs/coarse-statistics-kernels.md#L56-L61",
+          "text": "Here `energy` has two ordinary consumers, and their result re-enters another\ncontributed kernel. It is an ordinary native ciphertext Value with its actual\nlevel/scale, not an opaque completed-app result. Similarly the original shared\nvector in `matvec-fused` feeds eight contributed dot kernels without reimporting\nor recomputing the input. A split variant performs the product and first\nrotate/add with ordinary commands, then uses the contributed partial reduction.",
+          "title": "Shared intermediate boundaries"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.5561630315070879,
+          "score": 0.5561631196470014,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "lightweight-runtime-11",
+          "plaintext_score": 0.49618788608382125,
+          "score": 0.4961878772594958,
+          "source": "docs/lightweight-runtime.md#L103-L106",
+          "text": "The separately linked [statistics contribution](coarse-statistics-kernels.md)\nadds centered energy/variance, packed dot and partial reduction recipes. Its\nintermediates pass through existing commands and back into contributed kernels\nusing the unchanged public runtime and native adapter.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.47571224891939146,
+          "score": 0.47571230791319785,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.45326721826638594,
+          "score": 0.45326717501709557,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        }
+      ],
+      "verification_decrypt_total_ms": 126.790459,
+      "verified_evaluations": 4,
+      "warmup_ms": 1386.999917
+    },
+    {
+      "available_relevance_labels": 2,
+      "client_rank_ms": 0.00275,
+      "decrypt_extract_ms": 31.756709,
+      "evaluation_ms": [
+        676.23125,
+        676.762834,
+        673.749
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 0.5,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.1606713606893138e-07,
+      "median_evaluation_ms": 676.23125,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "coarse-statistics-kernels-04",
+        "native-ckks-12",
+        "lightweight-runtime-11",
+        "circuit-execution-10",
+        "native-ckks-01"
+      ],
+      "plaintext_top_k_boundary_margin": 0.0018602954541162564,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 14.530208,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.307875,
+      "query_id": "intermediate",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "coarse-statistics-kernels-04",
+          "plaintext_score": 0.578485664092275,
+          "score": 0.5784856563361763,
+          "source": "docs/coarse-statistics-kernels.md#L56-L61",
+          "text": "Here `energy` has two ordinary consumers, and their result re-enters another\ncontributed kernel. It is an ordinary native ciphertext Value with its actual\nlevel/scale, not an opaque completed-app result. Similarly the original shared\nvector in `matvec-fused` feeds eight contributed dot kernels without reimporting\nor recomputing the input. A split variant performs the product and first\nrotate/add with ordinary commands, then uses the contributed partial reduction.",
+          "title": "Shared intermediate boundaries"
+        },
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.5561630315070879,
+          "score": 0.5561630340813932,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "lightweight-runtime-11",
+          "plaintext_score": 0.49618788608382125,
+          "score": 0.49618790627380666,
+          "source": "docs/lightweight-runtime.md#L103-L106",
+          "text": "The separately linked [statistics contribution](coarse-statistics-kernels.md)\nadds centered energy/variance, packed dot and partial reduction recipes. Its\nintermediates pass through existing commands and back into contributed kernels\nusing the unchanged public runtime and native adapter.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-10",
+          "plaintext_score": 0.47571224891939146,
+          "score": 0.47571225406569007,
+          "source": "docs/circuit-execution.md#L85-L93",
+          "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+          "title": "Corpus runner"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.45326721826638594,
+          "score": 0.4532672272798508,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        }
+      ],
+      "verification_decrypt_total_ms": 128.364251,
+      "verified_evaluations": 4,
+      "warmup_ms": 678.28375
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002125,
+      "decrypt_extract_ms": 4.442041,
+      "evaluation_ms": [
+        94.971125,
+        91.91425,
+        93.072917
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 9.411719537055774e-08,
+      "median_evaluation_ms": 93.072917,
+      "mode": "tile-prepared",
+      "mode_lifetime_peak_tracked_bytes": 32538856,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "native-ckks-12",
+        "native-ckks-01",
+        "lightweight-runtime-07",
+        "lightweight-runtime-17",
+        "circuit-execution-02"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03674838500758981,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 13.900833,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.329167,
+      "query_id": "security",
+      "retained_bytes_with_outputs": 31752424,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.index.native",
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score-block.tile.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.6711837783173336,
+          "score": 0.6711838491216755,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.66869581309711,
+          "score": 0.6686958190142964,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        },
+        {
+          "id": "lightweight-runtime-07",
+          "plaintext_score": 0.6432795704809472,
+          "score": 0.6432795833709988,
+          "source": "docs/lightweight-runtime.md#L49-L53",
+          "text": "`FHN/NativeRuntime.h` supplies a compute-only adapter. `NativeServices` can be\ninjected, or `loadNativeServices(path)` loads the genuine CPU CKKS plugin.\nNeither services nor recipes hold a client or secret key. Trusted application\ncode separately encrypts inputs, prepares public evaluation keys and decrypts\noutputs. Keys remain client-owned; expired keys cause evaluation to fail.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.6415267539822868,
+          "score": 0.6415267324737659,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-02",
+          "plaintext_score": 0.5803424286960952,
+          "score": 0.5803423956904609,
+          "source": "docs/circuit-execution.md#L17-L24",
+          "text": "1. `ckks_fhn_compile_circuit`: copy a graph and encrypted input signatures into\n   an executable. Input values are not specialized into the plan.\n2. `ckks_fhn_client_prepare_executable`: prepare the public evaluation keys\n   required by that plan through the separate trusted client.\n3. `ckks_fhn_run_executable`: bind input/output buffers and evaluate repeatedly.\n4. `ckks_fhn_executable_stats`: report region counts and reserved slot/scratch\n   bytes.\n5. `ckks_fhn_executable_free`: release the plan before destroying its context.",
+          "title": "Public API"
+        }
+      ],
+      "verification_decrypt_total_ms": 18.059624,
+      "verified_evaluations": 4,
+      "warmup_ms": 94.786916
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002625,
+      "decrypt_extract_ms": 31.73125,
+      "evaluation_ms": [
+        1396.628125,
+        1410.209375,
+        1406.123375
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.6220163806535126e-07,
+      "median_evaluation_ms": 1406.123375,
+      "mode": "row-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 104596096,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "native-ckks-12",
+        "native-ckks-01",
+        "lightweight-runtime-07",
+        "lightweight-runtime-17",
+        "circuit-execution-02"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03674838500758981,
+      "preparation_bytes": 0,
+      "prepare_ms": 4.2e-05,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.366916,
+      "query_id": "security",
+      "retained_bytes_with_outputs": 103023232,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.6711837783173336,
+          "score": 0.6711838238820091,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.66869581309711,
+          "score": 0.6686957740435077,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        },
+        {
+          "id": "lightweight-runtime-07",
+          "plaintext_score": 0.6432795704809472,
+          "score": 0.6432795562967795,
+          "source": "docs/lightweight-runtime.md#L49-L53",
+          "text": "`FHN/NativeRuntime.h` supplies a compute-only adapter. `NativeServices` can be\ninjected, or `loadNativeServices(path)` loads the genuine CPU CKKS plugin.\nNeither services nor recipes hold a client or secret key. Trusted application\ncode separately encrypts inputs, prepares public evaluation keys and decrypts\noutputs. Keys remain client-owned; expired keys cause evaluation to fail.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.6415267539822868,
+          "score": 0.6415267848439664,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-02",
+          "plaintext_score": 0.5803424286960952,
+          "score": 0.5803423176039745,
+          "source": "docs/circuit-execution.md#L17-L24",
+          "text": "1. `ckks_fhn_compile_circuit`: copy a graph and encrypted input signatures into\n   an executable. Input values are not specialized into the plan.\n2. `ckks_fhn_client_prepare_executable`: prepare the public evaluation keys\n   required by that plan through the separate trusted client.\n3. `ckks_fhn_run_executable`: bind input/output buffers and evaluate repeatedly.\n4. `ckks_fhn_executable_stats`: report region counts and reserved slot/scratch\n   bytes.\n5. `ckks_fhn_executable_free`: release the plan before destroying its context.",
+          "title": "Public API"
+        }
+      ],
+      "verification_decrypt_total_ms": 128.482542,
+      "verified_evaluations": 4,
+      "warmup_ms": 1404.651958
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002833,
+      "decrypt_extract_ms": 31.224625,
+      "evaluation_ms": [
+        732.665583,
+        680.244625,
+        666.045583
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 42991616,
+      "live_ciphertexts": 131,
+      "max_absolute_error": 1.4441082890614965e-07,
+      "median_evaluation_ms": 680.244625,
+      "mode": "row-prepared",
+      "mode_lifetime_peak_tracked_bytes": 120619688,
+      "output_ciphertext_bytes": 17039360,
+      "output_ciphertext_reserved_bytes": 51118080,
+      "output_ciphertexts": 65,
+      "plaintext_top_ids": [
+        "native-ckks-12",
+        "native-ckks-01",
+        "lightweight-runtime-07",
+        "lightweight-runtime-17",
+        "circuit-execution-02"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03674838500758981,
+      "preparation_bytes": 16810024,
+      "prepare_ms": 15.266541,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.342042,
+      "query_id": "security",
+      "retained_bytes_with_outputs": 119833256,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.prepare-query.native",
+        "contrib.search.score-block.row.prepared",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.6711837783173336,
+          "score": 0.6711837376513551,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.66869581309711,
+          "score": 0.6686958038806692,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        },
+        {
+          "id": "lightweight-runtime-07",
+          "plaintext_score": 0.6432795704809472,
+          "score": 0.6432795278205394,
+          "source": "docs/lightweight-runtime.md#L49-L53",
+          "text": "`FHN/NativeRuntime.h` supplies a compute-only adapter. `NativeServices` can be\ninjected, or `loadNativeServices(path)` loads the genuine CPU CKKS plugin.\nNeither services nor recipes hold a client or secret key. Trusted application\ncode separately encrypts inputs, prepares public evaluation keys and decrypts\noutputs. Keys remain client-owned; expired keys cause evaluation to fail.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.6415267539822868,
+          "score": 0.64152676517036,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-02",
+          "plaintext_score": 0.5803424286960952,
+          "score": 0.5803423780121441,
+          "source": "docs/circuit-execution.md#L17-L24",
+          "text": "1. `ckks_fhn_compile_circuit`: copy a graph and encrypted input signatures into\n   an executable. Input values are not specialized into the plan.\n2. `ckks_fhn_client_prepare_executable`: prepare the public evaluation keys\n   required by that plan through the separate trusted client.\n3. `ckks_fhn_run_executable`: bind input/output buffers and evaluate repeatedly.\n4. `ckks_fhn_executable_stats`: report region counts and reserved slot/scratch\n   bytes.\n5. `ckks_fhn_executable_free`: release the plan before destroying its context.",
+          "title": "Public API"
+        }
+      ],
+      "verification_decrypt_total_ms": 127.01274900000001,
+      "verified_evaluations": 4,
+      "warmup_ms": 667.1455
+    },
+    {
+      "available_relevance_labels": 1,
+      "client_rank_ms": 0.002042,
+      "decrypt_extract_ms": 4.443459,
+      "evaluation_ms": [
+        192.778834,
+        192.020792,
+        192.403125
+      ],
+      "label_hit_at_3": true,
+      "label_hits_at_3": 1,
+      "label_recall_at_3": 1.0,
+      "live_ciphertext_bytes": 6291456,
+      "live_ciphertexts": 19,
+      "max_absolute_error": 1.028482388143459e-07,
+      "median_evaluation_ms": 192.403125,
+      "mode": "tile-ordinary",
+      "mode_lifetime_peak_tracked_bytes": 16515264,
+      "output_ciphertext_bytes": 2359296,
+      "output_ciphertext_reserved_bytes": 7077888,
+      "output_ciphertexts": 9,
+      "plaintext_top_ids": [
+        "native-ckks-12",
+        "native-ckks-01",
+        "lightweight-runtime-07",
+        "lightweight-runtime-17",
+        "circuit-execution-02"
+      ],
+      "plaintext_top_k_boundary_margin": 0.03674838500758981,
+      "preparation_bytes": 0,
+      "prepare_ms": 0.0,
+      "query_ciphertext_bytes": 393216,
+      "query_ciphertext_reserved_bytes": 786432,
+      "query_ciphertexts": 1,
+      "query_encrypt_import_ms": 2.338333,
+      "query_id": "security",
+      "retained_bytes_with_outputs": 14942400,
+      "score_tolerance": 1e-05,
+      "selected_search_recipes": [
+        "contrib.search.score-block.row.ordinary",
+        "contrib.search.score-block.tile.ordinary",
+        "contrib.search.score.composed"
+      ],
+      "top_k": 5,
+      "top_k_exact_order": true,
+      "top_k_overlap": 5,
+      "top_k_tolerance_consistent": true,
+      "top_results": [
+        {
+          "id": "native-ckks-12",
+          "plaintext_score": 0.6711837783173336,
+          "score": 0.6711836835898373,
+          "source": "docs/native-ckks.md#L116-L119",
+          "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+          "title": "Default profile and boundaries"
+        },
+        {
+          "id": "native-ckks-01",
+          "plaintext_score": 0.66869581309711,
+          "score": 0.6686958028987515,
+          "source": "docs/native-ckks.md#L3-L6",
+          "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+          "title": "Native CPU leveled RNS-CKKS"
+        },
+        {
+          "id": "lightweight-runtime-07",
+          "plaintext_score": 0.6432795704809472,
+          "score": 0.6432795211895674,
+          "source": "docs/lightweight-runtime.md#L49-L53",
+          "text": "`FHN/NativeRuntime.h` supplies a compute-only adapter. `NativeServices` can be\ninjected, or `loadNativeServices(path)` loads the genuine CPU CKKS plugin.\nNeither services nor recipes hold a client or secret key. Trusted application\ncode separately encrypts inputs, prepares public evaluation keys and decrypts\noutputs. Keys remain client-owned; expired keys cause evaluation to fail.",
+          "title": "Native execution and reusable state"
+        },
+        {
+          "id": "lightweight-runtime-17",
+          "plaintext_score": 0.6415267539822868,
+          "score": 0.6415267582687745,
+          "source": "docs/lightweight-runtime.md#L144-L148",
+          "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+          "title": "Contribution and validation"
+        },
+        {
+          "id": "circuit-execution-02",
+          "plaintext_score": 0.5803424286960952,
+          "score": 0.5803423885706019,
+          "source": "docs/circuit-execution.md#L17-L24",
+          "text": "1. `ckks_fhn_compile_circuit`: copy a graph and encrypted input signatures into\n   an executable. Input values are not specialized into the plan.\n2. `ckks_fhn_client_prepare_executable`: prepare the public evaluation keys\n   required by that plan through the separate trusted client.\n3. `ckks_fhn_run_executable`: bind input/output buffers and evaluate repeatedly.\n4. `ckks_fhn_executable_stats`: report region counts and reserved slot/scratch\n   bytes.\n5. `ckks_fhn_executable_free`: release the plan before destroying its context.",
+          "title": "Public API"
+        }
+      ],
+      "verification_decrypt_total_ms": 17.548458999999998,
+      "verified_evaluations": 4,
+      "warmup_ms": 193.073625
+    }
+  ],
+  "timing_scope": "warm synchronous score submission incl. dispatch/allocation; excludes key/index/query setup, preparation, warm-up, decrypt and ranking",
+  "measurement": {
+    "date": "2026-11-02",
+    "cpu": "Apple M4 Pro",
+    "os": "macOS 26.6.2 (25G83)",
+    "architecture": "arm64",
+    "compiler": "Apple clang 21.0.0 (clang-2100.4.1.1)",
+    "build": "Release -O3 -DNDEBUG; DISABLE_LTO=ON; BUILD_TEST=OFF",
+    "base_commit": "9be94bf09e4fa06f4b54041d1cb31621dca28f6d",
+    "source_state": "working tree with search example/contribution changes; Runtime, NativeRuntime and src/CKKS byte-identical to base",
+    "source_sha256": {
+      "examples/private_search/main.cpp": "0abc2777a5a14436687d9f22ac993c20d0abc185adea6ee33225e939f291ada6",
+      "examples/private_search/Fixture.h": "78624472b134590b2631772e51dfe35c1fdc78db18b6d6e5bf4036d16ce113a4",
+      "include/FHN/contrib/SearchKernels.h": "306a342aa68e854c23f9e72872451e4c933b24eaa8f72b3abf658e0701c033dc",
+      "contributions/search/SearchKernels.cpp": "0da1b9e62dacc5a7b5e7c012a537091003411e8b1a42144233fb318267bbe5d7",
+      "contributions/matvec/MatvecKernels.cpp": "1375b9e5951c51f56e6f96c3319f9bace45b88d29113d077be8528943b51ebcf",
+      "src/FHN/Runtime.cpp": "2c6783bd9186e771d5979236416fd1466b47210a5449bbdecc09bec569dfa13e",
+      "src/FHN/NativeRuntime.cpp": "1f5676e2c53ba7e3a02de7ae30f4b111fb2cba856877ad8f8ed94dfc109d43e6"
+    },
+    "fixture_sha256": "4dbb19420fecb1dea1d81a904ffd7186130b17bdd0e05fbfcf4acfede78a389b",
+    "embedding_generation": "precomputed real model fixture; inference time excluded and not measured in this run",
+    "concurrency": "No other assistant-initiated builds, tests, inference or benchmarks during measurement; host clock not locked",
+    "command": "fhn-private-search NATIVE_LIBRARY examples/private_search/data/fixture.json --verify-all --compare --reps 3 --json OUTPUT",
+    "validation": "32 query/mode combinations, each warm-up plus 3 timed evaluations; 8,320 document scores checked; exact top-5 order 32/32; no runtime/core/backend edits",
+    "tests": {
+      "debug_ctest": "46/46; final changed app/fixture 2/2 rerun",
+      "asan_ubsan_ctest": "46/46; final changed app/fixture 2/2 rerun (detect_leaks=0 on macOS, ODR enabled)",
+      "installed_consumer": "2/2",
+      "installed_example": "offline fixture run passed with BUILD_TEST=OFF"
+    },
+    "note": "Ciphertext capacity/payload, query preparation, index encryption, client decrypt/rank and key setup are separate; this row baseline is not an optimal-row claim."
+  }
+}

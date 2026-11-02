@@ -1,5 +1,6 @@
 #include "FHN/NativeRuntime.h"
 #include "FHN/contrib/MatvecKernels.h"
+#include "FHN/contrib/SearchKernels.h"
 #include "FHN/contrib/StatsKernels.h"
 #include "FHN/fhn_backend_api.h"
 #include "FHN/fhn_circuit_api.h"
@@ -181,5 +182,13 @@ int main(int argc, char **argv) {
       if (!std::isfinite(slot) || std::abs(slot - plain_squares) > 1e-5)
         return 25;
   }
+  fhenomenon::contrib::registerSearchKernels(runtime, services, argv[1]);
+  auto index = runtime.submit({"contrib.search.index", {source}, fhenomenon::contrib::SearchShape{4, 1, 1}}).at(0);
+  auto query_state = runtime.submit({"contrib.search.prepare-query", {source}, std::uint32_t{4}}).at(0);
+  auto scores = runtime.submit({"contrib.search.score", {source, index, query_state}, {}});
+  if (scores.size() != 1 || decrypt(client.get(), native.buffer(scores[0]), actual, 4))
+    return 26;
+  if (!std::isfinite(actual[0]) || std::abs(actual[0] - plain_squares) > 1e-5)
+    return 27;
   return 0;
 }

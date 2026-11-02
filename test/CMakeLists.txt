@@ -50,6 +50,22 @@ target_compile_definitions(MatvecContributionTest PRIVATE
 add_dependencies(MatvecContributionTest ckks_fhn toyfhe_fhn)
 add_gtest_target_to_ctest(MatvecContributionTest)
 
+add_executable(SearchContributionTest SearchContributionTest.cpp)
+target_link_libraries(SearchContributionTest PRIVATE fhn_search_contribution gtest_main)
+target_compile_definitions(SearchContributionTest PRIVATE
+  FHN_NATIVE_TEST_LIBRARY="$<TARGET_FILE:ckks_fhn>")
+add_dependencies(SearchContributionTest ckks_fhn)
+add_gtest_target_to_ctest(SearchContributionTest)
+
+add_executable(PrivateSearchFixtureTest PrivateSearchFixtureTest.cpp)
+target_link_libraries(PrivateSearchFixtureTest PRIVATE nlohmann_json::nlohmann_json gtest_main)
+add_gtest_target_to_ctest(PrivateSearchFixtureTest)
+
+add_test(NAME PrivateSearchExample COMMAND fhn-private-search
+  "$<TARGET_FILE:ckks_fhn>" "${PROJECT_SOURCE_DIR}/examples/private_search/data/fixture.json"
+  --verify-all --compare --reps 1 --limit-documents 17)
+set_tests_properties(PrivateSearchExample PROPERTIES TIMEOUT 600)
+
 add_executable(FhnBackendApiTest FhnBackendApiTest.cpp)
 target_link_libraries(FhnBackendApiTest PRIVATE ${PROJECT_LIB_NAME} gtest_main)
 add_gtest_target_to_ctest(FhnBackendApiTest)

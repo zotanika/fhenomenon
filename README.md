@@ -20,6 +20,12 @@ source/key companions across commands while preserving the original formula and
 ciphertext residues; [measurements](docs/matvec-preparation-validation-2026-10-31.md)
 include component comparisons, preparation cost and retained memory.
 
+[Encrypted personal-document search](examples/private_search/README.md) encrypts
+both multilingual document and query embeddings, composes collection scoring
+from replaceable block recipes, and compares row/tiled layouts with explicit
+query preparation. Its offline fixture uses public documentation as a sample
+vault; decryption and ranking stay with the single owning client.
+
 The core bet is simple: fully homomorphic encryption will not become practical by pretending that arbitrary software can be compiled unchanged into encrypted execution. It will also not become practical by making every backend maximally general and then accepting unusable speed. The useful boundary is closer to GPU computing. A trusted host should orchestrate public control flow, while an untrusted executor runs branchless, data-oblivious, coarse-grained encrypted kernels.
 
 Fhenomenon treats constraints as performance contracts. A fast kernel that only works for a particular scheme, parameter set, packing layout, tensor shape, device residency, or application pattern is not a second-class hack. It is a valuable fast path, as long as its constraints are explicit enough for the runtime to dispatch, compose, benchmark, and replace it safely.

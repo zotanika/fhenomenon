@@ -1,0 +1,462 @@
+{
+  "schema_version": 1,
+  "documents": [
+    {
+      "id": "lightweight-runtime-01",
+      "title": "Lightweight execution runtime",
+      "text": "The public C++17 API in `FHN/Runtime.h` executes a named request when submitted.\nIt does not record a program or invoke a compiler. Contributions register\nrecipes with public-metadata applicability checks, deterministic priorities and\nan execution callback. One recipe can produce several outputs, allocate a\npreparation artifact, or compose other requests. The runtime has no built-in\narithmetic instruction vocabulary.",
+      "source": "docs/lightweight-runtime.md#L3-L8"
+    },
+    {
+      "id": "lightweight-runtime-03",
+      "title": "Execution and resource contract",
+      "text": "`Runtime::submit(Request)` selects the first applicable recipe, ordered by\ndescending priority and then registration order. An applicability decline may\ntry another recipe. Once execution begins, an exception is reported without\nretrying a different implementation. Callers observe returned outputs only on\nsuccess. Providers must preserve escaped inputs; the generic core cannot police\nmutability hidden inside arbitrary `std::any` payloads or roll back external\nside effects.",
+      "source": "docs/lightweight-runtime.md#L17-L23"
+    },
+    {
+      "id": "lightweight-runtime-04",
+      "title": "Execution and resource contract",
+      "text": "`Value` is a shared immutable resource handle with an identity, format tag,\nprovider payload and strong dependencies. Copies share one charge. Resource\npayloads are destroyed before their dependencies, so provider cleanup may use\nthe dependency storage. Handles can outlive their `Runtime`; native handles\nalso retain their backend context and loaded library. Releasing the last handle\nreleases its charge. A new encryption/import has a new identity even when its\nshape and parameters match an existing input.",
+      "source": "docs/lightweight-runtime.md#L25-L31"
+    },
+    {
+      "id": "lightweight-runtime-05",
+      "title": "Execution and resource contract",
+      "text": "`makeValue` reserves the declared bytes **before** invoking its factory and\nrolls back reservations on failure. Reentrant factories count their pending\nreservation. The optional retained-memory budget is not a process-memory\nlimit: keys, context tables/scratch, callback temporaries, graph metadata and\nallocator overhead are excluded. Native ciphertexts charge their actual fixed\nreserved slab size, including spare components. Rotation artifacts charge\ntheir snapshot and coefficient slabs. An explicit region reserves its entire\nchosen workspace cap; executable statistics separately expose used workspace.",
+      "source": "docs/lightweight-runtime.md#L33-L40"
+    },
+    {
+      "id": "lightweight-runtime-06",
+      "title": "Execution and resource contract",
+      "text": "Diagnostics retain at most `max_trace_events` events (default 256); zero\ndisables them. Calls on a runtime and on a native context are synchronous and\nmust be serialized. No background queue, automatic cache, graph matching,\nautotuning or global representation search is hidden in dispatch.",
+      "source": "docs/lightweight-runtime.md#L42-L45"
+    },
+    {
+      "id": "lightweight-runtime-07",
+      "title": "Native execution and reusable state",
+      "text": "`FHN/NativeRuntime.h` supplies a compute-only adapter. `NativeServices` can be\ninjected, or `loadNativeServices(path)` loads the genuine CPU CKKS plugin.\nNeither services nor recipes hold a client or secret key. Trusted application\ncode separately encrypts inputs, prepares public evaluation keys and decrypts\noutputs. Keys remain client-owned; expired keys cause evaluation to fail.",
+      "source": "docs/lightweight-runtime.md#L49-L53"
+    },
+    {
+      "id": "lightweight-runtime-08",
+      "title": "Native execution and reusable state",
+      "text": "Import copies the ciphertext. Subsequent mutation/freeing of the original\nbuffer cannot invalidate the runtime value. A rotation preparation owns a\ncanonical source snapshot and inverse-NTT c1 limbs. Each consumer applies its\nown coefficient automorphism and basis conversion/key switch. It reuses inverse\ntransforms, not the entire hoisted key-switch decomposition. Its exact reserve\nis `3 * active_q_limbs * polynomial_degree * sizeof(uint64_t)`.\nThe adapter checks source identity before reuse, including when the supplied\nreplacement has the same ciphertext layout. The raw optional C exports in\n`FHN/fhn_prepared_api.h` instead operate on the owned snapshot directly.",
+      "source": "docs/lightweight-runtime.md#L66-L74"
+    },
+    {
+      "id": "lightweight-runtime-09",
+      "title": "Native execution and reusable state",
+      "text": "`op()` preserves physical FHN opcode semantics. `semantic()` is an explicitly\nchosen application adapter for the eight circuit operations: multiplication\nuses normalized HMULT; integer scale uses additions/negation without consuming\na level; fractional scale uses native scalar multiplication. Binary operands\ncan be lowered to a common level, but incompatible actual scales still fail.\nThis policy belongs to the native adapter, not the generic runtime.",
+      "source": "docs/lightweight-runtime.md#L76-L81"
+    },
+    {
+      "id": "lightweight-runtime-10",
+      "title": "Optional compilation",
+      "text": "Compilation is an explicit request with a node limit and finite workspace cap.\nPrototype inputs contribute signatures; the executable does not retain their\ndata and may be rebound to fresh compatible inputs. Oversized or unsupported\nregions leave immediate execution usable. There is no implicit “try the\ncompiler” step on ordinary requests. Compile-time graph metadata is bounded by\nthe node/input/output limits of the compiler, not charged as ciphertext memory.",
+      "source": "docs/lightweight-runtime.md#L94-L99"
+    },
+    {
+      "id": "lightweight-runtime-11",
+      "title": "Contribution and validation",
+      "text": "The separately linked [statistics contribution](coarse-statistics-kernels.md)\nadds centered energy/variance, packed dot and partial reduction recipes. Its\nintermediates pass through existing commands and back into contributed kernels\nusing the unchanged public runtime and native adapter.",
+      "source": "docs/lightweight-runtime.md#L103-L106"
+    },
+    {
+      "id": "lightweight-runtime-12",
+      "title": "Contribution and validation",
+      "text": "The separately linked [prepared matvec contribution](matvec-preparation.md)\nadds an explicit reusable source artifact, complete dots, products and partial\nreductions. Fixed-multiplier companions and rotation maps survive separate\nrequests and ordinary intermediate commands, without changing the runtime core.",
+      "source": "docs/lightweight-runtime.md#L108-L111"
+    },
+    {
+      "id": "lightweight-runtime-13",
+      "title": "Contribution and validation",
+      "text": "`test/install-consumer/rotation_contribution.cpp` is compiled separately using\nonly installed public headers. It registers `example.rotation-pair`, a\nmulti-output recipe composing two `native.rotate` requests that share one\ncaller-supplied preparation. The installed consumer also passes an immediate\nresult into an explicit compiled region. No core opcode or matcher edit is\nneeded for the contribution.",
+      "source": "docs/lightweight-runtime.md#L113-L118"
+    },
+    {
+      "id": "lightweight-runtime-14",
+      "title": "Contribution and validation",
+      "text": "`fhn-bench-runtime NATIVE_LIBRARY [REPS]` runs the existing `stats`,\n`matvec-fused` and `matvec` corpus workloads in source order. The immediate and\nprepared modes have compiler function pointers removed. The explicit region\nmode uses the same imported mathematical operations and separately requests\ncompilation. All outputs and all logical slots are compared with the unchanged\nindependent corpus oracle on warmups and measured runs.",
+      "source": "docs/lightweight-runtime.md#L120-L125"
+    },
+    {
+      "id": "lightweight-runtime-15",
+      "title": "Contribution and validation",
+      "text": "The harness drops intermediates after their last use. Its timing includes\ndispatch, allocation, arithmetic and temporary release, while excluding input\nimport, cryptographic setup, preparation and decryption. Preparation costs are\nreported separately and must be added for one-shot use. Measurement order\nrotates across modes. This is a comparison between paths of this project, not\nan OpenFHE/SEAL/HEaaN benchmark. The explicit region example chooses a 32 MiB\nreservation; it is not an automatically determined optimum.",
+      "source": "docs/lightweight-runtime.md#L127-L133"
+    },
+    {
+      "id": "lightweight-runtime-16",
+      "title": "Contribution and validation",
+      "text": "`stats` computes sums and scaled population variances of two 64-slot datasets;\n`matvec-fused` computes an encrypted 8×8 matrix/vector example with eight\noutputs; `matvec` is the existing cyclic rotation/scalar workload. Names do not\nestablish general application coverage.",
+      "source": "docs/lightweight-runtime.md#L139-L142"
+    },
+    {
+      "id": "lightweight-runtime-17",
+      "title": "Contribution and validation",
+      "text": "Remaining scope: CGGI↔CKKS/BFV conversions, cross-device events/residency,\nautomatic cross-command reuse discovery, a stable C plugin ABI for arbitrary\nrecipes and application-level encrypted control flow are not implemented.\nThis runtime exposes public orchestration and reusable resources; it does not\nremove the cost of hidden data-dependent branches.",
+      "source": "docs/lightweight-runtime.md#L144-L148"
+    },
+    {
+      "id": "matvec-preparation-01",
+      "title": "Prepared matvec without changing the computation",
+      "text": "Each dot performs the existing normalized ciphertext product and rotate-add\ntree at distances 4, 2, 1. It consumes the same level and preserves the original\nmodular residues, scale and rounding decisions. No algebraic rewrite, compiler\nrequest or hidden graph search is involved.",
+      "source": "docs/matvec-preparation.md#L21-L24"
+    },
+    {
+      "id": "matvec-preparation-02",
+      "title": "What is reused",
+      "text": "The immutable preparation owns a snapshot of the shared source and, according\nto its flags, companion tables for fixed multipliers and rotation index maps.\nA companion contains the quotient needed by the existing Shoup modular\nmultiplication primitive. Canonical normalization gives the same residue as\ngeneral modular multiplication, while avoiding division in the coefficient\nloop. The prepared source and evaluation-key coefficients are reused by\nmultiple rows and separate requests.",
+      "source": "docs/matvec-preparation.md#L28-L34"
+    },
+    {
+      "id": "matvec-preparation-03",
+      "title": "What is reused",
+      "text": "The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down\nand fused rescale. Those few scalar quotients are computed per invocation,\noutside coefficient loops, rather than retained in the artifact. Consequently\nits benchmark is explicitly **key companions plus per-call scalar hoisting**;\nit does not isolate the gain from retained key state alone. The vector-only\nand map-only modes isolate those retained components.",
+      "source": "docs/matvec-preparation.md#L44-L49"
+    },
+    {
+      "id": "matvec-preparation-04",
+      "title": "Intermediate values remain ordinary values",
+      "text": "`product` is an ordinary native ciphertext, independently usable by other\ncommands. The final request reuses the preparation's key companions and maps\nfor the remaining distances 2, 1. A product produced entirely by the existing\nordinary multiply command can also enter `contrib.matvec.reduce` at width 8.\nThe caller specifies the reduction boundary; the runtime does not infer it.",
+      "source": "docs/matvec-preparation.md#L62-L66"
+    },
+    {
+      "id": "matvec-preparation-05",
+      "title": "Intermediate values remain ordinary values",
+      "text": "Preparation requires a canonical two-component source at level >=1. Width must\nbe a power of two within its logical slots. A row must match source context,\nbasis, logical slots and scale. Reduction accepts the matching product level\nand scale and preserves the actual intermediate metadata. This deliberately\nbounded contract does not accept arbitrary mixed-scale matvec inputs.",
+      "source": "docs/matvec-preparation.md#L68-L72"
+    },
+    {
+      "id": "matvec-preparation-06",
+      "title": "Ownership and limits",
+      "text": "The contribution binds the source Value identity; a fresh same-shaped Value\ncannot silently replace it. The native preparation is an independent snapshot,\nso changing or freeing the original native source does not change the snapshot.\nWeak key identities prevent preparation from retaining the client or its keys.\nEvery consumer obtains current matching key leases for its duration; expired\nor replaced identities fail. Public wrappers retain context/library services.\nDirect C callers must destroy preparation before its context and serialize\ncalls using that context, as for the other native APIs.",
+      "source": "docs/matvec-preparation.md#L76-L83"
+    },
+    {
+      "id": "matvec-preparation-07",
+      "title": "Ownership and limits",
+      "text": "The exact coefficient/map slab estimate is reserved before allocation. Runtime\nbudgets count the retained artifact, source dependency and full staging/output\nbuffers. Final publication still uses unchanged `NativeRuntime::importCopy`;\nboth staging and copy cost are included in the timings. Native consumers use\nexisting context scratch and allocate no heap. Metadata, allocator overhead,\nkeys, tables and context scratch are outside the retained-slab accounting.",
+      "source": "docs/matvec-preparation.md#L85-L90"
+    },
+    {
+      "id": "matvec-preparation-08",
+      "title": "Ownership and limits",
+      "text": "This first implementation owns companions per preparation. It does not dedupe\nthe same key tables across distinct prepared sources. The measured width-8\ndefault artifact is several MiB; applications with many live prepared vectors\nmust account for that cost explicitly.",
+      "source": "docs/matvec-preparation.md#L92-L95"
+    },
+    {
+      "id": "matvec-preparation-09",
+      "title": "Validation and measurement",
+      "text": "The native/private tests compare every live residue against the unchanged\ngeneric kernels across levels, key decomposition counts and preparation flags.\nProvider tests check source identity, memory admission, lifecycle and ordinary\ncommand boundaries. The installed consumer links the exported contribution\ntarget using public headers only.",
+      "source": "docs/matvec-preparation.md#L99-L103"
+    },
+    {
+      "id": "matvec-preparation-10",
+      "title": "Validation and measurement",
+      "text": "`fhn-bench-runtime NATIVE_LIBRARY REPS matvec-reuse` runs the unchanged encrypted\n8×8 corpus app with the generic paths, preparation ablations and both split\nvariants. Every warmup and timed execution checks all 64 logical output values\nagainst the original independent oracle. All modes share ciphertexts and keys;\nonly the explicit region reference has compiler entrypoints available. Setup,\npreparation, retained bytes and warm complete-app samples are reported\nseparately. See the [measurement report](matvec-preparation-validation-2026-10-31.md).",
+      "source": "docs/matvec-preparation.md#L105-L111"
+    },
+    {
+      "id": "native-ckks-01",
+      "title": "Native CPU leveled RNS-CKKS",
+      "text": "`ckks_fhn` performs genuine RLWE public-key encryption and homomorphic CKKS\narithmetic. Its evaluator operates on RNS polynomial ciphertexts and public\nevaluation keys. It does not decrypt, retain a plaintext mirror, or\nre-encrypt intermediate values. ToyFHE remains a separate insecure reference.",
+      "source": "docs/native-ckks.md#L3-L6"
+    },
+    {
+      "id": "native-ckks-02",
+      "title": "Run",
+      "text": "Use `libckks_fhn.so` on Linux. This 8×8 workload encrypts both matrix rows and\nvector, verifies every output slot against the oracle, and compares native\n`HMULT`/`HROT_ADD` with complete primitive decomposition. Required execution\nfails on a skip. `ckks_fhn` also builds and installs with `BUILD_TEST=OFF`.\nThe existing C++ `Fhenon`/`Session` frontend and `fhn-bench-matvec` still use\nthe ToyFHE default; use the native FHN client API or corpus command above.",
+      "source": "docs/native-ckks.md#L19-L24"
+    },
+    {
+      "id": "native-ckks-03",
+      "title": "Compiled applications",
+      "text": "The optional [circuit API](circuit-execution.md) accepts value graphs and chooses\nlarger execution regions. It preserves levels for exact integer affine work,\ncombines compatible sums of products before one key switch/rescale, and reuses\nprepared storage. `fhn-bench-circuit` executes ten current corpus apps on the\nsame default profile and checks every output slot. The raw opcode contracts\nbelow remain unchanged and are useful as the comparison path.",
+      "source": "docs/native-ckks.md#L28-L33"
+    },
+    {
+      "id": "native-ckks-04",
+      "title": "What is implemented",
+      "text": "Each layer links only downward. L4 cannot include or link L5 key types.\nHybrid switching uses per-digit CRT projector messages `P * E_digit * s_old`\nunder the destination secret. Digit extension uses approximate BConv; removing\nP and reconstructing decoded coefficients use exact centered CRT. Lower-level\nswitches retain the full key's original Q-to-P offsets.",
+      "source": "docs/native-ckks.md#L47-L51"
+    },
+    {
+      "id": "native-ckks-05",
+      "title": "What is implemented",
+      "text": "The encoder supports positive power-of-two real vector lengths up to N/2.\nShort vectors repeat across physical slots, preserving signed cyclic rotations\nof their logical length. Positive rotation steps rotate left. Decryption\nrequires the exact original logical count. Unsupported counts, nonfinite values,\ncoefficient-encoding overflow (int64 or centered active-Q range), incompatible\nbuffers, missing keys and depleted\nlevels fail rather than substituting another computation.",
+      "source": "docs/native-ckks.md#L53-L59"
+    },
+    {
+      "id": "native-ckks-06",
+      "title": "What is implemented",
+      "text": "On the raw opcode path, `MULT_CC` is a 2×2 tensor product with three output components. `RELINEARIZE`\nreturns two components; `RESCALE` removes one actual Q limb and divides the\nscale. `HMULT` performs all three. Scalar multiplication also consumes one\nlevel, even for integer and zero constants. Add/subtract require equal levels,\ncomponent counts and scales within relative 1e-12; there is no automatic scale\nor level alignment. Plaintext-buffer and boolean/comparison opcodes are not\nadvertised. The circuit author remains responsible for numerical headroom.",
+      "source": "docs/native-ckks.md#L61-L67"
+    },
+    {
+      "id": "native-ckks-07",
+      "title": "Client and evaluator lifetime",
+      "text": "The additive `fhn_client_create/destroy/prepare/encrypt_vec_f64/decrypt_vec_f64`\nexports keep ABI version 1 and the existing vtable layout intact. Native symbol\nnames have the `ckks_` prefix. It deliberately does not export the old\nsame-compute-context encryption/decryption functions.",
+      "source": "docs/native-ckks.md#L71-L74"
+    },
+    {
+      "id": "native-ckks-08",
+      "title": "Client and evaluator lifetime",
+      "text": "Create a compute context, then one client for it. `client_prepare(program)`\ngenerates only the needed relinearization and Galois keys before execution.\nThe client owns the secret, public key, evaluation keys and its own workspace.\nThe compute context has no client or secret-key reference; it keeps weak\nobservers of evaluation keys, borrowed during one kernel call. Destroying the\nclient expires these keys: key-switching operations fail, while addition can\nstill execute. A compute context accepts only one client lifetime to prevent\naccidental mixing of independent key identities. Buffers are checked against\ntheir creating context. Free buffers and destroy the client before the context,\nand unload the library last. Calls on one context must be serialized.",
+      "source": "docs/native-ckks.md#L76-L85"
+    },
+    {
+      "id": "native-ckks-09",
+      "title": "Client and evaluator lifetime",
+      "text": "`CorpusBackend` resolves the complete optional client group, prepares the\nprogram and preserves that lifetime order, including move operations. Old\nscalar/packed backend APIs remain supported. The installed-package smoke test\nuses only installed public C-ABI headers and the installed native plugin to\nperform an encrypted fractional square and a compiled scaled-square circuit.",
+      "source": "docs/native-ckks.md#L87-L91"
+    },
+    {
+      "id": "native-ckks-10",
+      "title": "Default profile and boundaries",
+      "text": "The default profile is N=8192 (4096 physical slots), three distinct Q primes\nnear 2^50, 2^40, 2^40, one P prime near 2^60, dnum=3, and scale=2^40. Every prime\nis 1 modulo 2N. Fresh ciphertexts are level 2; two sequential `HMULT` operations\nreach level 0. The prime search is deterministic; secret keys, errors, public\nkeys and encryption randomness come from the OS CSPRNG, never a fixed seed.\nSecret/ephemeral polynomials are uniform ternary; errors use the difference\nof two independent 21-bit population counts. Uniform residues use rejection\nsampling. Entropy failure aborts the operation. Secret-key storage and key\noperation sensitive scratch are wiped on release.",
+      "source": "docs/native-ckks.md#L95-L103"
+    },
+    {
+      "id": "native-ckks-11",
+      "title": "Default profile and boundaries",
+      "text": "Optional JSON fields are `log_degree`, `main_primes`, `aux_primes`, `dnum`,\nand `log_default_scale`; unknown fields and unsupported profiles are rejected.\nAn empty object selects the default. Explicit prime arrays are decimal unsigned\nintegers. The adapter rejects sparse/terminal profiles and empty full-level\ndigits, and conservatively bounds the total QP bit length for degrees 1024\nthrough 32768 using the public uniform-ternary 128-bit classical table in\n[SEAL](https://github.com/microsoft/SEAL/blob/main/native/src/seal/util/hestdparms.h).\nThe default's conservative total is 190 bits against that table's 218-bit\nN=8192 bound. This is parameter screening, not an independent security audit\nor certification of this implementation.",
+      "source": "docs/native-ckks.md#L105-L114"
+    },
+    {
+      "id": "native-ckks-12",
+      "title": "Default profile and boundaries",
+      "text": "This is a leveled CPU implementation. Bootstrapping, general ciphertext\nserialization and cross-process transport, GPU kernels, side-channel hardening,\nsanitized/adversarial-result decryption and production security review remain\noutside this version. No competitive latency or throughput claim is made.",
+      "source": "docs/native-ckks.md#L116-L119"
+    },
+    {
+      "id": "native-ckks-13",
+      "title": "Memory accounting and validation",
+      "text": "No successful evaluation kernel allocates from the heap or generates a key.\nThe caller supplies fixed output storage and an Arena. The adapter stages\nresults in its preallocated workspace so rejected operations and output aliases\ndo not corrupt existing buffers. `scratchBytes` figures are conservative\nbounds including alignment, not exact minimum requirements. Setup explicitly\nprepares tables for all configured levels; it does not lazily allocate during\nexecution.",
+      "source": "docs/native-ckks.md#L123-L129"
+    },
+    {
+      "id": "native-ckks-14",
+      "title": "Memory accounting and validation",
+      "text": "Each native buffer reserves three full-QP polynomials: 786432 bytes for the\ndefault profile. Live two-component payload is 393216 bytes at level 2 and\nshrinks to 131072 bytes at level 0, while reserved capacity stays unchanged.\n`ckks_fhn_buffer_info` reports these separately along with workspace capacity\nand observed high water. `fhn_level_bytes` reports the fixed reserve at every\nvalid level. The movement model excludes keys, tables and workspace; this CPU\nbackend does not physically evict memory, so modeled transfer counts/budgets\nare not measured transfers or process-memory limits.",
+      "source": "docs/native-ckks.md#L131-L138"
+    },
+    {
+      "id": "native-ckks-15",
+      "title": "Memory accounting and validation",
+      "text": "Tests cover independent large-integer CRT oracles; key equations and noise\nconsistency across RNS limbs; fractional packing and full-Q decoding; randomized\npublic-key-only encryption and wrong-key mismatch; two sequential encrypted\nmultiplications; positive/negative/identity/conjugate rotations; multiple Q/P\nprimes per digit and lower levels; aliases, malformed metadata, scratch limits,\nexpired keys, entropy failure, secret wiping and zero successful-kernel heap\nallocations. Native 8×8 output is checked against both a plaintext oracle and\nprimitive fallback. Whole-suite Debug, sanitizer and installed-package results\nare recorded in the execution handoff rather than treated as a security proof.",
+      "source": "docs/native-ckks.md#L140-L148"
+    },
+    {
+      "id": "circuit-execution-01",
+      "title": "Native circuit execution",
+      "text": "The optional circuit API describes application values and compiles them into a\nreusable native CKKS execution plan. `MULTIPLY`, `SCALE`, and `ROTATE` are graph\nsemantics, not promises about kernel boundaries. The compiler can combine a\nwhole affine expression or a sum of products before choosing arithmetic and\nstorage. The existing `FhnProgram` opcode interface remains available with its\noriginal physical semantics.",
+      "source": "docs/circuit-execution.md#L3-L8"
+    },
+    {
+      "id": "circuit-execution-02",
+      "title": "Public API",
+      "text": "1. `ckks_fhn_compile_circuit`: copy a graph and encrypted input signatures into\n   an executable. Input values are not specialized into the plan.\n2. `ckks_fhn_client_prepare_executable`: prepare the public evaluation keys\n   required by that plan through the separate trusted client.\n3. `ckks_fhn_run_executable`: bind input/output buffers and evaluate repeatedly.\n4. `ckks_fhn_executable_stats`: report region counts and reserved slot/scratch\n   bytes.\n5. `ckks_fhn_executable_free`: release the plan before destroying its context.",
+      "source": "docs/circuit-execution.md#L17-L24"
+    },
+    {
+      "id": "circuit-execution-03",
+      "title": "Public API",
+      "text": "Calls on a context/executable are serialized by the caller. Inputs can be\nre-encrypted or rebound if their owner, packing, level and scale match the\ncompiled signatures. Execution performs no heap allocation. Public outputs are\npublished after evaluation succeeds; input/output aliasing is allowed. Different\noutput values need different destination buffers. The client owns secret and\npublic evaluation-key objects; the evaluator retains only weak public-key\nreferences and cannot decrypt. Destroying the client expires those keys.",
+      "source": "docs/circuit-execution.md#L26-L32"
+    },
+    {
+      "id": "circuit-execution-04",
+      "title": "Public API",
+      "text": "The circuit consists of explicit input IDs, topologically ordered value nodes,\nand output IDs. Nodes support addition, subtraction, multiplication, scalar\nscaling, scalar addition, negation, rotation and conjugation. The current native\nlowering uses exact signed integer coefficients for affine regions; fractional\nscaling uses a modulus-consuming path. Unsupported scale joins, insufficient\nlevels and out-of-range constants fail with diagnostics, without scale metadata\nrelabeling or a plaintext fallback. This first compiler bounds inputs plus nodes\nand output ports to 65,536 each, affine forms to 256 terms, and recursive\nmaterialization depth to 512; expressions exceeding these bounds are rejected\nwith diagnostics.",
+      "source": "docs/circuit-execution.md#L34-L43"
+    },
+    {
+      "id": "circuit-execution-05",
+      "title": "Execution regions",
+      "text": "Integer affine operations preserve level and scale. Compatible sums of products\ncan accumulate one three-component tensor and then perform one key switch and\nrescale. Linear terms in such a region are lifted by the common scale using\nmodular arithmetic. Rotations can absorb compatible affine additions.",
+      "source": "docs/circuit-execution.md#L47-L50"
+    },
+    {
+      "id": "circuit-execution-06",
+      "title": "Execution regions",
+      "text": "The native multiplication kernel also combines auxiliary-modulus removal and\nrescaling into one exact centered division. Its residues are tested against the\nseparate tensor/relinearize/rescale path on identical inputs and keys. This\nbit-exact statement applies to that kernel rewrite; graph-level scheduling can\nchange CKKS rounding/noise while retaining the application accuracy contract.",
+      "source": "docs/circuit-execution.md#L52-L56"
+    },
+    {
+      "id": "circuit-execution-07",
+      "title": "Execution regions",
+      "text": "Storage slots are reused after their last consumers. A region destination never\noverlaps live operands. Internal ciphertexts use their active Q basis and two\ncomponents; they need not reserve the public buffer's full three-component QP\ncapacity. `workspace_limit_bytes` bounds reserved internal slot and scratch\nbytes. It excludes public I/O buffers, the backend's existing context scratch,\nkey/table storage, graph metadata, and allocator overhead; it is not a process\nmemory limit. Statistics report slot and scratch bytes separately.",
+      "source": "docs/circuit-execution.md#L58-L64"
+    },
+    {
+      "id": "circuit-execution-08",
+      "title": "Corpus runner",
+      "text": "`fhn-bench-circuit` imports the existing corpus's mathematical semantics into\ncircuits. This is an explicit application importer, not a generic rewrite of\narbitrary physical `FhnProgram` sequences. Explicit relinearize/rescale/level\noperations and exact Boolean operations are rejected by that importer.",
+      "source": "docs/circuit-execution.md#L68-L71"
+    },
+    {
+      "id": "circuit-execution-09",
+      "title": "Corpus runner",
+      "text": "Use the platform's shared-library extension. Omit `--shape` to check the whole\ncorpus. `--require-execution` makes any skipped shape an error; zero executed\nshapes or incorrect results always fail. `UNSUPPORTED` includes a compile\nrejection such as an insufficient workspace budget, with the concrete reason.\n`--workspace-bytes`, `--config`, `--atol` and `--rtol` control those explicit\nconstraints. Defaults are the native profile and `atol=1e-4, rtol=1e-6`.",
+      "source": "docs/circuit-execution.md#L78-L83"
+    },
+    {
+      "id": "circuit-execution-10",
+      "title": "Corpus runner",
+      "text": "An optional `--baseline /path/to/preserved/plugin` compares with the legacy\ninterpreter using preallocated SSA buffers. Timing alternates baseline/current\norder, verifies all output slots before and after repetitions, and times only\ncompleted evaluation. Context/client creation, encryption, compilation,\nevaluation-key preparation and validation decryption are reported separately.\n`decrypt_verify_ms` is total decryption time across verification passes.\nBaseline execution failures are reported explicitly; an app newly enabled by\ncompilation has no baseline speedup. The plaintext oracle evaluates the original\ncorpus graph, independently of the imported circuit and native execution.",
+      "source": "docs/circuit-execution.md#L85-L93"
+    },
+    {
+      "id": "circuit-execution-11",
+      "title": "Corpus runner",
+      "text": "The current user-owned `examples/resnet_circuit.cpp` runs plaintext vectors and\nReLU, so it is not included as encrypted application evidence. The ordinary\n`Fhenon`/`Session` frontend still defaults to its existing backend; using this\ncircuit path is explicit. This implementation does not add bootstrapping, GPU\nexecution, serialization, or a security certification.",
+      "source": "docs/circuit-execution.md#L95-L99"
+    },
+    {
+      "id": "coarse-statistics-kernels-01",
+      "title": "Contributed statistics and packed dot kernels",
+      "text": "The separately linked `Fhenomenon::StatsKernels` target contributes four named\nrecipes. It uses the existing public runtime API and optional native CKKS\nexports; neither `Runtime` nor `NativeRuntime` needs a new opcode, payload type,\ndispatch branch, compiler pass or registry change.",
+      "source": "docs/coarse-statistics-kernels.md#L3-L6"
+    },
+    {
+      "id": "coarse-statistics-kernels-02",
+      "title": "Contributed statistics and packed dot kernels",
+      "text": "Attributes contain exactly `std::uint32_t width`, a nonzero power of two no\ngreater than the logical slot count. Partial reductions retain that slot count.\nThe native C implementation resides in its own translation unit and reuses\nexisting private region arithmetic. It does not invoke the circuit compiler.\nThe contribution registration/publication code lives outside the core library\nin `contributions/stats/StatsKernels.cpp` and uses public headers only.",
+      "source": "docs/coarse-statistics-kernels.md#L34-L39"
+    },
+    {
+      "id": "coarse-statistics-kernels-03",
+      "title": "Shared intermediate boundaries",
+      "text": "The variance kernel consumes a sum made by ordinary commands; it does not\nrecompute or privately cache that sum. The caller retains it as another output.\nThe same computation can expose an intermediate and cross boundaries again:",
+      "source": "docs/coarse-statistics-kernels.md#L43-L45"
+    },
+    {
+      "id": "coarse-statistics-kernels-04",
+      "title": "Shared intermediate boundaries",
+      "text": "Here `energy` has two ordinary consumers, and their result re-enters another\ncontributed kernel. It is an ordinary native ciphertext Value with its actual\nlevel/scale, not an opaque completed-app result. Similarly the original shared\nvector in `matvec-fused` feeds eight contributed dot kernels without reimporting\nor recomputing the input. A split variant performs the product and first\nrotate/add with ordinary commands, then uses the contributed partial reduction.",
+      "source": "docs/coarse-statistics-kernels.md#L56-L61"
+    },
+    {
+      "id": "coarse-statistics-kernels-05",
+      "title": "Arithmetic and supported envelope",
+      "text": "This is the existing `stats` variance proxy, with its original four outputs\nand independent oracle. Per dataset the new expression requires one tensor\nproduct and one relinearization/rescale, compared with two of each originally.\nThe total number of rotations is unchanged. Fusing the product/reduction also\nremoves repeated public buffer allocation/publication and operation boundaries.",
+      "source": "docs/coarse-statistics-kernels.md#L69-L73"
+    },
+    {
+      "id": "coarse-statistics-kernels-06",
+      "title": "Arithmetic and supported envelope",
+      "text": "The initially considered expression `reduce(x*(width*x-s))` has a first-order\ncancellation problem under CKKS error: constant -8 at width64 exceeded the\nunchanged absolute tolerance. The centered-square form passed that regression\nwithout changing tolerance. The benchmark still compares against the original\napplication oracle, not a newly defined encrypted-input oracle.",
+      "source": "docs/coarse-statistics-kernels.md#L75-L79"
+    },
+    {
+      "id": "coarse-statistics-kernels-07",
+      "title": "Arithmetic and supported envelope",
+      "text": "Division by width is represented explicitly by the actual output scale\n`width * input_scale^2 / dropped_prime`. It consumes no extra Q level but uses\nadditional modulus headroom. The runtime does not force this value to have the\nscale of an ordinary normalized product. Rotations and additions of matching\nintermediates preserve the scale; incompatible joins are rejected.",
+      "source": "docs/coarse-statistics-kernels.md#L81-L85"
+    },
+    {
+      "id": "coarse-statistics-kernels-08",
+      "title": "Arithmetic and supported envelope",
+      "text": "Statistics recipes conservatively require level >= 2 (three active Q primes).\nThe tested statistics envelope is default native N8192, Q50/40/40, P60, dnum3,\nwidth64 and input magnitudes <=8, with a correctly supplied sum. This admission\nis not a precision guarantee for arbitrary parameters, magnitudes or malformed\nsum provenance. Packed dot requires level >=1; reduction also supports level0,\nsubject to the usual CKKS value-range limits. Metadata cannot establish the\nperiodic plaintext or sum relationship.",
+      "source": "docs/coarse-statistics-kernels.md#L87-L93"
+    },
+    {
+      "id": "coarse-statistics-kernels-09",
+      "title": "Ownership and accounting",
+      "text": "Recipes retain their native context, adapter and library leases, never a client\nor secret key. Applicability examines public capability and ciphertext metadata;\nunavailable cases may fall through before execution. A native failure after\nselection is reported without retrying another implementation.",
+      "source": "docs/coarse-statistics-kernels.md#L97-L100"
+    },
+    {
+      "id": "coarse-statistics-kernels-10",
+      "title": "Ownership and accounting",
+      "text": "Each invocation reserves a native staging ciphertext through `makeValue` before\nallocation. After successful native execution, `importCopy` publishes the result\nusing the unchanged public native adapter. Both full allocations are charged\nduring this copy; staging is then released. This extra copy and allocation are\nincluded in every timing. The native kernel itself allocates no heap memory and\nuses the context's existing scratch. Scratch, evaluation keys and tables are\nexcluded from the runtime's retained-slab budget, as in the base runtime.",
+      "source": "docs/coarse-statistics-kernels.md#L102-L108"
+    },
+    {
+      "id": "coarse-statistics-kernels-12",
+      "title": "Validation and measurement",
+      "text": "`fhn-bench-runtime` retains the original immediate, shared-rotation-preparation\nand explicit-region modes. It adds contributed and split modes for `stats` and\n`matvec-fused`, plus `energy-only` for statistics: the same stable energy kernel\nfollowed by a fully ordinary reduction. That last comparison separates algebraic\nsavings from larger-kernel boundary savings.",
+      "source": "docs/coarse-statistics-kernels.md#L118-L122"
+    },
+    {
+      "id": "coarse-statistics-kernels-13",
+      "title": "Validation and measurement",
+      "text": "Every timed iteration includes ordinary sum construction, contribution staging,\npublication, dispatch, arithmetic and temporary release. Initial input import,\nprovider registration, optional preparation, encryption/decryption and final\noutput release are outside warm timing. Registration, input import, image load,\ngraph import and context/key/encryption setup are reported separately. All modes\nregister the same provider set and use identical ciphertexts/keys. Compiler\nentrypoints are absent in every mode except the explicit region reference.",
+      "source": "docs/coarse-statistics-kernels.md#L124-L130"
+    },
+    {
+      "id": "coarse-statistics-kernels-14",
+      "title": "Validation and measurement",
+      "text": "The benchmark checks every logical output slot against the unchanged corpus\noracle. Native tests additionally encrypt/check all 4096 physical slots with\nperiod-64 corpus and nearconstant data; separate constant regressions check all\n64 logical slots. Installed-package\ntests link the separate contribution target and exercise both shared-sum and\nsplit-intermediate execution using installed public interfaces.",
+      "source": "docs/coarse-statistics-kernels.md#L132-L137"
+    }
+  ],
+  "queries": [
+    {
+      "id": "dispatch",
+      "text": "How does the runtime select a registered recipe, and does it retry after execution fails?",
+      "relevant_document_ids": [
+        "lightweight-runtime-03",
+        "coarse-statistics-kernels-09"
+      ]
+    },
+    {
+      "id": "key-lifetime",
+      "text": "암호화 평가 중 클라이언트를 없애면 공개 평가 키와 연산은 어떻게 되나요?",
+      "relevant_document_ids": [
+        "native-ckks-08",
+        "matvec-preparation-06"
+      ]
+    },
+    {
+      "id": "packing",
+      "text": "How are short real vectors packed into CKKS slots, and which direction is a positive rotation?",
+      "relevant_document_ids": [
+        "native-ckks-05"
+      ]
+    },
+    {
+      "id": "memory",
+      "text": "런타임의 보유 메모리 예산에는 무엇이 포함되고 키와 작업 공간도 포함되나요?",
+      "relevant_document_ids": [
+        "lightweight-runtime-05",
+        "native-ckks-14",
+        "coarse-statistics-kernels-10",
+        "matvec-preparation-07"
+      ]
+    },
+    {
+      "id": "reuse",
+      "text": "What does a reusable matvec preparation retain for the shared vector and evaluation keys?",
+      "relevant_document_ids": [
+        "matvec-preparation-02",
+        "matvec-preparation-03",
+        "matvec-preparation-08"
+      ]
+    },
+    {
+      "id": "compile",
+      "text": "명시적으로 회로를 컴파일할 때 입력 암호문을 재사용하거나 새 입력으로 바꿀 수 있나요?",
+      "relevant_document_ids": [
+        "circuit-execution-03",
+        "lightweight-runtime-10"
+      ]
+    },
+    {
+      "id": "intermediate",
+      "text": "Can I pass an ordinary encrypted intermediate into a contributed reduction kernel?",
+      "relevant_document_ids": [
+        "matvec-preparation-04",
+        "coarse-statistics-kernels-04"
+      ]
+    },
+    {
+      "id": "security",
+      "text": "Is this CKKS implementation production audited, and does it support bootstrapping or cross-process ciphertext transport?",
+      "relevant_document_ids": [
+        "native-ckks-12"
+      ]
+    }
+  ]
+}

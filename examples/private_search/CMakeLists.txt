@@ -1,0 +1,6 @@
+add_executable(fhn-private-search main.cpp)
+target_link_libraries(fhn-private-search PRIVATE fhn_search_contribution nlohmann_json::nlohmann_json ${CMAKE_DL_LIBS})
+target_compile_definitions(fhn-private-search PRIVATE FHN_SEARCH_BUILD_TYPE="$<CONFIG>")
+add_dependencies(fhn-private-search ckks_fhn)
+install(TARGETS fhn-private-search RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES data/fixture.json DESTINATION ${CMAKE_INSTALL_DATADIR}/fhenomenon/private-search)

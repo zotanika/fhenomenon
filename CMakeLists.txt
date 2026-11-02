@@ -210,7 +210,16 @@ add_library(Fhenomenon::MatvecKernels ALIAS fhn_matvec_contribution)
 install(TARGETS fhn_matvec_contribution EXPORT ${PROJECT_LIB_NAME}Targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
+add_library(fhn_search_contribution STATIC contributions/search/SearchKernels.cpp)
+target_link_libraries(fhn_search_contribution PUBLIC fhn_matvec_contribution)
+set_target_properties(fhn_search_contribution PROPERTIES
+  POSITION_INDEPENDENT_CODE ON EXPORT_NAME SearchKernels)
+add_library(Fhenomenon::SearchKernels ALIAS fhn_search_contribution)
+install(TARGETS fhn_search_contribution EXPORT ${PROJECT_LIB_NAME}Targets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
 add_subdirectory(benchmarks)
+add_subdirectory(examples/private_search)
 
 if(BUILD_TEST)
   enable_testing()
