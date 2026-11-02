@@ -14,9 +14,7 @@ consumes budget that could have been a level.
 Given `L` primes and a chosen `dnum`, **which primes go into which digit?**
 
 We are not asking how to choose `dnum`. That is a parameter the caller sets
-explicitly, on purpose — see the `dnum` decision in
-[`../superpowers/plans/2026-07-28-builtin-ckks-backend.md`](../superpowers/plans/2026-07-28-builtin-ckks-backend.md).
-This is only about the partition that follows from it.
+explicitly, on purpose. This is only about the partition that follows from it.
 
 ## Why it is not obvious
 

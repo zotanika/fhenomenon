@@ -84,5 +84,4 @@ program-memory accounting. The CPU movement model has no physical eviction.
 
 The build directories, logs and review reports behind these results were local
 to the validating host and are not kept in the repository. The commands in
-[native usage](native-ckks.md) reproduce the checks. See also the
-[original handoff](superpowers/plans/2026-07-28-builtin-ckks-backend.md).
+[native usage](native-ckks.md) reproduce the checks.

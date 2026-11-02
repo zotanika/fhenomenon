@@ -48,6 +48,5 @@ tracks it.
 
 Decisions that are ours to make and have been made — scheme choice, the
 layering, key switching being parameterised by `dnum` rather than picked —
-live in `../superpowers/plans/` and `../superpowers/specs/` with their
-reasoning. This directory is only for questions where an outside answer would
-genuinely change what we build.
+are settled and not listed here. This directory is only for questions where an
+outside answer would genuinely change what we build.

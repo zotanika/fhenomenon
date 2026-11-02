@@ -1,7 +1,6 @@
 # Layer targets for the built-in CKKS backend.
 #
-# This file is invariant I5 from
-# docs/superpowers/specs/2026-07-26-builtin-ckks-backend-design.md made
+# This file makes invariant I5 of the built-in CKKS backend design
 # mechanical: "layer boundaries are link-time facts, not review comments".
 #
 # Two mechanisms enforce it, and they catch different mistakes:
