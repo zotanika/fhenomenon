@@ -23,14 +23,28 @@ class ScopeValue {
 };
 using ScopeValues = std::vector<ScopeValue>;
 
-// Caps cover recorded structure, not attribute/callback allocations or callback time.
+// Limits apply independently to each runScope()/native Session::run() call.
+// All numeric fields must be positive, even when use_kernels is false.
+// These bound recorded structure and matcher calls, not memory bytes or CPU time;
+// use RuntimeOptions::max_live_bytes for charged ciphertext/artifact storage.
 struct ScopeOptions {
+  // Recorded submit() calls, including commands declaring zero outputs.
   std::size_t max_commands = 256;
+  // Distinct imported identities + all declared output symbols, including dead ones.
+  // Repeated input() calls for the same concrete Value count only once.
   std::size_t max_values = 2048;
+  // Sum of command input counts; repeated uses of one symbol each count as an edge.
   std::size_t max_input_edges = 4096;
+  // Entries returned by the capture callback; duplicate exports each count.
   std::size_t max_exports = 2048;
+  // Maximum commands visible to one matcher, also limited by kernel.max_commands
+  // and the remaining sequence. Shortens the view; it is not an overflow error.
   std::size_t max_lookahead = 32;
+  // Total ScopeKernel::match calls over the whole run, including declines.
+  // Needing another call after this limit raises BudgetExceeded, without fallback.
   std::size_t max_match_attempts = 4096;
+  // False skips span matching but keeps capture, liveness and ordinary recipe
+  // selection. Prepared/fused recipes and explicitly supplied state still work.
   bool use_kernels = true;
 };
 

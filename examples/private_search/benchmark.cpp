@@ -1,9 +1,10 @@
 // Diagnostic harness: oracle, timing, memory accounting and four execution paths.
-// For the application workflow start at main.cpp; encrypted requests live in EncryptedSearch.cpp.
+// Start at main.cpp for the application; ScopedSearch/EncryptedSearch describe the two request paths.
 #include "FHN/contrib/SearchKernels.h"
 #include "Fixture.h"
 #include "ScopedSearch.h"
 #include "Session/Session.h"
+#include "Usage.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -45,8 +46,7 @@ struct Options {
   bool compare = false, all = false, scoped = false, scope_kernels = true;
 };
 Options options(int argc, char **argv) {
-  require(argc >= 3, "usage: fhn-bench-private-search NATIVE_LIBRARY FIXTURE_JSON [--query ID] [--compare] [--reps N] "
-                     "[--verify-all] [--limit-documents N] [--json OUTPUT] [--scoped] [--no-scope-kernels]");
+  require(argc >= 3, benchmark_usage);
   Options result;
   result.library = argv[1];
   result.fixture = argv[2];
@@ -301,6 +301,10 @@ json search(TrustedClient &client, Run &run, const Fixture &fixture, const Query
 
 int main(int argc, char **argv) {
   try {
+    if (helpRequested(argc, argv)) {
+      std::cout << benchmark_usage;
+      return 0;
+    }
     const auto opts = options(argc, argv);
     std::ifstream input(opts.fixture);
     require(bool(input), "cannot open fixture: " + opts.fixture);

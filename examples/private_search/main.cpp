@@ -1,5 +1,6 @@
 #include "ScopedSearch.h"
 #include "Session/Session.h"
+#include "Usage.h"
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -25,10 +26,12 @@ std::vector<std::size_t> topK(const std::vector<Document> &documents, const std:
 
 int main(int argc, char **argv) {
   try {
+    if (helpRequested(argc, argv)) {
+      std::cout << application_usage;
+      return 0;
+    }
     if ((argc != 3 && argc != 5) || (argc == 5 && std::string(argv[3]) != "--query"))
-      throw std::invalid_argument(
-        "usage: fhn-private-search NATIVE_LIBRARY FIXTURE_JSON [--query ID]\n"
-        "For --compare, --verify-all, --reps, --limit-documents or --json, use fhn-bench-private-search.");
+      throw std::invalid_argument(application_usage);
     std::ifstream input(argv[2]);
     if (!input)
       throw std::runtime_error("cannot open fixture");

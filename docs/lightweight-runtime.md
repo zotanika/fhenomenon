@@ -41,10 +41,26 @@ reserved slab size, including spare components. Rotation artifacts charge
 their snapshot and coefficient slabs. An explicit region reserves its entire
 chosen workspace cap; executable statistics separately expose used workspace.
 
-Diagnostics retain at most `max_trace_events` events (default 256); zero
-disables them. Calls on a runtime and on a native context are synchronous and
-must be serialized. Scope matching is opt-in and bounded; no background queue,
-automatic cache, autotuning or global representation search is hidden in dispatch.
+Configure these runtime-wide settings when constructing `Runtime`:
+
+| `RuntimeOptions` field | Default | Effect |
+| --- | ---: | --- |
+| `max_live_bytes` | `0` | Maximum bytes charged to retained Values/artifacts and pending reservations. Zero means unlimited. A new reservation that would exceed the limit fails with `BudgetExceeded` before its factory runs. Copies of a Value share its charge; nested recipe allocations use the same budget. |
+| `max_trace_events` | `256` | Maximum retained diagnostic events across requests and scopes. Zero disables trace retention. When full, the oldest events are dropped; execution continues. |
+
+This memory budget applies across scopes sharing the Runtime, including resources
+exported by earlier scopes. It is separate from `ScopeOptions`, which limits the
+recorded command structure and matching work rather than ciphertext bytes.
+For example, retaining many exported preparation artifacts can exhaust the
+memory budget even when each scope is small.
+
+The trace is a bounded history, not a complete execution log: recipe and scope
+selection, declines, completions and failures share it. Increase
+`max_trace_events` when diagnosing a long run, or set it to zero when retained
+diagnostics are unnecessary. Trace capacity does not change kernel selection.
+Calls on a runtime and on a native context are synchronous and must be serialized.
+Scope matching is opt-in and bounded; no background queue, automatic cache,
+autotuning or global representation search is hidden in dispatch.
 
 ## Native execution and reusable state
 
@@ -137,22 +153,82 @@ Executor failures release unpublished results and never retry another kernel;
 they do not undo an extension's external side effects. `scope.span` trace events
 show the chosen kernel, command start/count and live-in/live-out counts.
 
-`ScopeOptions` bounds recording and selection independently of ciphertext memory:
+### Scope options: limits, selection and fallback
 
-| Limit | Default |
-| --- | ---: |
-| Commands | 256 |
-| Imported and output symbols | 2048 |
-| Input edges | 4096 |
-| Export entries | 2048 |
-| Matcher lookahead | 32 commands |
-| Total matcher attempts | 4096 |
+`ScopeOptions` is copied into a native Session at `Session::create(runtime,
+options)`, or supplied to an individual `runtime.runScope(capture, options)`
+call. Every run starts fresh counters; the values are not a lifetime quota for
+the Session or Runtime. Changing the original options object later does not
+change an already-created Session.
 
-All numeric caps must be positive; exceeding one fails explicitly. Setting
-`use_kernels = false` retains capture and liveness but uses ordinary dispatch
-for each command. These limits do not bound arbitrary `std::any` allocations or
-extension callback time. There is no speculative replay, encrypted branch
-exploration, automatic key discovery or automatic reuse discovery.
+| `ScopeOptions` field | Default | What it controls |
+| --- | ---: | --- |
+| `max_commands` | `256` | Number of `Scope::submit` calls recorded, including zero-output commands. Requests composed internally by an executing kernel do not count as additional recorded commands. |
+| `max_values` | `2048` | Distinct imported Value identities plus every declared command output symbol. Repeated `scope.input(value)` calls share one symbol. Output symbols count even when never used or exported; this is not a peak-live-value limit. |
+| `max_input_edges` | `4096` | Sum of input entries across recorded commands. Using one symbol twice in a command counts twice, as does using it again in another command. This bounds dependency bookkeeping independently of the number of distinct symbols. |
+| `max_exports` | `2048` | Entries returned by the capture callback, including duplicates and imported values returned without any computation. Exports need not be distinct. |
+| `max_lookahead` | `32` | Maximum number of consecutive commands shown to one matcher. The actual window is the minimum of this value, that kernel's `max_commands`, and the number of commands remaining. A smaller window limits eligible spans by truncating the view rather than raising an overflow error. |
+| `max_match_attempts` | `4096` | Total `ScopeKernel::match` calls permitted across the entire run, including declines. The counter does not reset at each command. It does not count ordinary recipe applicability checks or requests composed inside an executor. |
+| `use_kernels` | `true` | Enables contributed scope-span matching. With `false`, each recorded command goes through ordinary `Runtime::submit` while capture, dependency tracking, resource release and exports remain active. |
+
+All six numeric fields must be positive, even with `use_kernels = false`.
+A zero field raises `InvalidRequest` before the capture callback runs. Exceeding
+`max_commands`, `max_values` or `max_input_edges` raises `BudgetExceeded` during
+recording. `max_exports` is checked after the callback returns, before any
+recorded command executes. Recording errors that escape the callback, and
+export-limit errors, abort the scope before any recorded command executes. The
+runtime never silently truncates the program or splits it into smaller scopes.
+
+The matching budget is different: when another matcher call would exceed
+`max_match_attempts`, execution fails with `BudgetExceeded` instead of switching
+to ordinary fallback. Exactly that many calls are allowed if no further call is
+needed. Earlier spans may already have executed; unpublished results are
+released, but extension side effects are not rolled back. With span matching
+disabled, no matcher attempts are consumed. `max_lookahead` only clips a window
+and therefore has no corresponding quota-exhaustion failure.
+
+`use_kernels = false` does **not** disable prepared or fused ordinary recipes,
+remove imported preparation, or change the plaintext meaning of the program.
+For example, a prepared search block still selects its ordinary prepared recipe;
+only the layer grouping several recorded commands is bypassed. This makes it a
+useful comparison when checking the effect of scope selection. It does not make
+the run an unprepared or primitive-only baseline. If a recorded operation has no
+applicable ordinary recipe, fallback reports `Unsupported`; it does not synthesize
+an implementation for a command supported only by a scope kernel.
+
+```cpp
+// runtime, native, x and prepared are the concrete objects created above.
+ScopeOptions limits;
+limits.max_commands = 128;
+limits.max_lookahead = 8;
+limits.max_match_attempts = 1024;
+auto capture = [&](Scope &scope) {
+  auto source = scope.input(x);
+  auto preparation = scope.input(prepared);
+  return ScopeValues{native.rotate(scope, source, 1, preparation)};
+};
+auto bounded_session = Session::create(runtime, limits);
+auto selected = bounded_session->run(capture);
+
+// The same capture and preparation, with only scope-span selection disabled.
+limits.use_kernels = false;
+auto ordinary = runtime.runScope(capture, limits);
+```
+
+Choose command/value/edge/export caps for the largest scope the application
+intends to record. Raise only the limit reported by an expected larger workload,
+or explicitly divide the work into scopes and carry exported state between them.
+Lowering `max_lookahead` can exclude larger kernels; raising it only helps when a
+registered kernel accepts a larger span. The built-in search collection kernel
+has its own eight-command cap, so lookahead above eight does not enlarge it.
+A larger kernel registry or many declines may need more matcher attempts; inspect
+`scope.span` diagnostics before increasing that budget.
+
+These settings bound structural counts, not callback time, arbitrary
+`std::any` allocations, bytes held by captured attributes, or total process
+memory. They do not guarantee a latency bound or the fastest kernel choice.
+There is no speculative replay, encrypted branch exploration, automatic key
+discovery or automatic reuse discovery.
 
 The [search scope contribution](../contributions/search/README.md#native-session-scopes)
 selects multi-block and single-block implementations over separately recorded

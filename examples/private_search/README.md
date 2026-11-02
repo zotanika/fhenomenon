@@ -95,43 +95,141 @@ Use `libckks_fhn.so` on Linux. Both executables build with tests disabled and ar
 installed along with the fixture. Running them needs no Python, model download,
 network connection or remote embedding service.
 
+### Application arguments and options
+
 ```text
 fhn-private-search NATIVE_LIBRARY FIXTURE_JSON [--query ID]
+fhn-private-search --help | -h
 ```
 
-The default is the first query with prepared eight-document tiles. The demo
-prints the client's top-five matches and the selected scope spans, including
-start/count and required live values.
-Use the benchmark executable for layout comparisons and numerical verification:
+| Argument / option | Default | Meaning |
+| --- | --- | --- |
+| `NATIVE_LIBRARY` | Required | Path to the native CKKS plugin, such as `./build-search/lib/libckks_fhn.dylib` on macOS or `libckks_fhn.so` on Linux. |
+| `FIXTURE_JSON` | Required | Path to a fixture containing precomputed document and query embeddings, such as `examples/private_search/data/fixture.json`. |
+| `--query ID` | First query in the fixture | Choose an existing query by its `id`; this is not a free-form question or an embedding-model call. The bundled first query is `dispatch`. |
+| `--help`, `-h` | — | Show the option descriptions and an example. Invoke either on its own; no library or fixture arguments are needed and no cryptographic setup runs. |
 
-```sh
-./build-search/bin/fhn-bench-private-search \
-  ./build-search/lib/libckks_fhn.dylib \
-  examples/private_search/data/fixture.json \
-  --compare --verify-all --reps 3 --json /tmp/private-search-results.json
-```
+The bundled query IDs are `dispatch`, `key-lifetime`, `packing`, `memory`,
+`reuse`, `compile`, `intermediate` and `security`. The application always uses
+**scoped execution with prepared eight-document tiles** and the entire fixture.
+It prints the owner's top-five matches and selected scope spans. Benchmark-only
+flags are rejected with a pointer to `fhn-bench-private-search`.
+
+### Benchmark options
 
 ```text
 fhn-bench-private-search NATIVE_LIBRARY FIXTURE_JSON
   [--query ID] [--compare] [--reps N] [--verify-all]
   [--limit-documents N] [--json OUTPUT] [--scoped] [--no-scope-kernels]
+fhn-bench-private-search --help | -h
 ```
 
-The previous diagnostic flags moved to `fhn-bench-private-search`. The demo
-rejects them with a pointer to that executable rather than silently ignoring
-them. `--limit-documents 9` on the benchmark exercises a full tile and a
-one-document tail; `--limit-documents 17` exercises collection plus tail selection.
-The four modes are row-ordinary, row-prepared, tile-ordinary and tile-prepared.
-By default they retain the original immediate collection request and timing
-scope, so existing measurement files stay comparable.
+The two required paths have the same meaning as in the application. With no
+options, the benchmark uses the **first query, tile-prepared mode, immediate
+execution, one warm-up and three measured evaluations**. Its immediate default
+preserves the timing scope of the historical measurements; the application
+itself defaults to scoped execution.
 
-Add `--scoped` to record separate block commands and include capture/selection
-in the evaluation interval. Add `--no-scope-kernels` with it to compare the same
-recording through ordinary request fallback. Prepared modes import their existing
-query preparation into every scope; its setup remains reported separately. JSON
-marks scoped execution and includes a bounded mode-lifetime span trace snapshot,
-which may include earlier queries/evaluations. The example and both benchmark
-paths work with native compiler services disabled.
+| Option | Default | Meaning and constraints |
+| --- | --- | --- |
+| `--query ID` | First fixture query | Evaluate one existing query ID. Mutually exclusive with `--verify-all`. |
+| `--verify-all` | Off | Evaluate every query in the fixture. Every warm-up and measured result is checked against plaintext scores even without this flag; the flag expands query coverage. |
+| `--compare` | Off | Run all four layout/preparation modes below, instead of only `tile-prepared`. Applies the chosen execution style to each mode; it does not itself enable scopes. |
+| `--reps N` | `3` | Number of measured evaluations per query and mode, from `1` through `1000`. One additional warm-up is run, verified and reported separately for each pair. |
+| `--limit-documents N` | All documents | Keep the first `N` documents in fixture order, from `1` through `100000`; this is not random sampling. If `N` exceeds the corpus size, all documents are used. Query selection is unchanged. This option does not raise scope budgets. |
+| `--json OUTPUT` | Console only | Also write timings, numeric errors, rankings, memory accounting and selected-kernel diagnostics as JSON. The parent directory must exist. An existing output file is overwritten; the input fixture cannot be used as the output. |
+| `--scoped` | Off | Record separate score-block commands, then select scope kernels at scope exit. Capture and selection are included in evaluation timing. Query preparation is imported into each scope in prepared modes and its setup cost remains separate. |
+| `--no-scope-kernels` | Off | Requires `--scoped`. Keep capture, dependencies and last-use cleanup, but execute each recorded command through ordinary recipe dispatch. Prepared recipes and query-state reuse remain active; this does not select the `ordinary` arithmetic modes. |
+| `--help`, `-h` | — | Show detailed help as a standalone invocation, before loading any fixture or plugin. |
+
+Layout and preparation are one comparison axis:
+
+| Mode | Documents per ciphertext | Query preparation |
+| --- | ---: | --- |
+| `row-ordinary` | 1 (repeated across slots) | No shared prepared query artifact |
+| `row-prepared` | 1 (repeated across slots) | Explicit artifact reused across block requests and evaluations |
+| `tile-ordinary` | Up to 8 | No shared prepared query artifact |
+| `tile-prepared` | Up to 8 | Explicit artifact reused across block requests and evaluations |
+
+Execution style is a separate axis:
+
+| Flags | Evaluation path |
+| --- | --- |
+| Neither scope flag | One immediate collection request that composes block recipes |
+| `--scoped` | Recorded block commands with contributed span selection; unmatched commands use ordinary dispatch |
+| `--scoped --no-scope-kernels` | The same recording with span matching disabled; ordinary recipe dispatch handles every command |
+
+The built-in search scope kernels recognize prepared commands. Unprepared modes
+therefore use request fallback even with `--scoped`. With prepared tiles,
+`--limit-documents 9` exercises a full block plus a one-document tail;
+`--limit-documents 17` provides two full blocks for collection selection plus a
+tail. The whole 65-document fixture provides eight full blocks plus a tail.
+
+None of these flags enables compilation. The current collection scope kernel
+composes the existing block calculations; selecting it demonstrates a larger
+execution boundary, not new cryptographic fusion or a promised speedup.
+
+### Reproducible comparisons
+
+From the repository root on macOS (change the library suffix to `.so` on Linux):
+
+```sh
+search_library=./build-search/lib/libckks_fhn.dylib
+search_fixture=examples/private_search/data/fixture.json
+
+# Immediate tile-prepared baseline: one query, 17 documents.
+./build-search/bin/fhn-bench-private-search "$search_library" "$search_fixture" \
+  --query memory --limit-documents 17 --reps 3 \
+  --json /tmp/search-immediate.json
+
+# Same workload with scope capture and span selection.
+./build-search/bin/fhn-bench-private-search "$search_library" "$search_fixture" \
+  --query memory --limit-documents 17 --reps 3 --scoped \
+  --json /tmp/search-scoped.json
+
+# Same recording with span matching disabled; query preparation is still reused.
+./build-search/bin/fhn-bench-private-search "$search_library" "$search_fixture" \
+  --query memory --limit-documents 17 --reps 3 --scoped --no-scope-kernels \
+  --json /tmp/search-scoped-fallback.json
+```
+
+Keep query, document count, repetitions, build type and machine conditions the
+same when comparing these files. Run timed comparisons separately from other
+CPU-heavy work. Evaluation timings exclude key/index/query setup, preparation,
+warm-up, decryption and ranking. Add setup and preparation costs when assessing
+a one-shot application request; the scoped evaluation interval additionally
+includes capture and kernel selection.
+
+For all four modes and all bundled queries, use:
+
+```sh
+./build-search/bin/fhn-bench-private-search "$search_library" "$search_fixture" \
+  --compare --verify-all --reps 1 --scoped --json /tmp/search-all-scoped.json
+```
+
+This runs 8 queries × 4 modes × (1 warm-up + 1 measured evaluation) = 64 full
+search evaluations for the bundled fixture. Omit `--scoped` for the immediate
+path, or add `--no-scope-kernels` for the scoped fallback comparison.
+
+### Reading scope diagnostics
+
+The application prints `scope.span` selections. `start` is a zero-based index
+in the recorded command sequence; `count` is the number of commands covered.
+`liveins` counts distinct input symbols coming from outside the span, and `liveouts` counts
+results needed by later commands or explicitly exported. A `runtime.submit`
+span means one command used ordinary request dispatch.
+
+Scoped benchmark JSON adds `scoped_execution`, `scope_kernels_enabled` and each
+search record's `selected_scope_spans`. The span list is a bounded mode-lifetime
+trace snapshot and can include earlier queries/evaluations, so it is not a
+per-query kernel invocation count. See `scope_span_trace_scope` and
+`timing_scope` in the report. The benchmark prepares query state before timing;
+the application records preparation inside its scope, so their command indices
+differ even for the same query and document packing.
+
+The C++ [scope options](../../docs/lightweight-runtime.md#scope-options-limits-selection-and-fallback)
+control capture size and matching limits. They are separate from the benchmark's
+query/layout flags and its retained-ciphertext memory accounting.
 
 ## Roles, keys and execution scope
 

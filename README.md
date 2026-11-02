@@ -28,7 +28,10 @@ vault; decryption and ranking stay with the single owning client.
 Start with its [short application workflow](examples/private_search/main.cpp),
 then follow the [encrypted computation and contribution contract](contributions/search/README.md).
 The [separate benchmark runner](examples/private_search/benchmark.cpp) retains
-the oracle, layout comparisons and performance diagnostics.
+the oracle, layout comparisons and performance diagnostics. Its
+[option reference and comparison commands](examples/private_search/README.md#benchmark-options)
+explain defaults, scoped selection and request fallback; both search executables
+also provide standalone `--help`.
 
 The core bet is simple: fully homomorphic encryption will not become practical by pretending that arbitrary software can be compiled unchanged into encrypted execution. It will also not become practical by making every backend maximally general and then accepting unusable speed. The useful boundary is closer to GPU computing. A trusted host should orchestrate public control flow, while an untrusted executor runs branchless, data-oblivious, coarse-grained encrypted kernels.
 
