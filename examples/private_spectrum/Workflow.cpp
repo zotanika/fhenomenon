@@ -127,48 +127,103 @@ const EncryptedSpectrum &EncryptedMonitor::result() const {
   return accumulated_;
 }
 
+void EncryptedMonitor::resetWindow() {
+  accumulated_ = {};
+  frames_ = 0;
+  inputScale_ = 0;
+}
+
 namespace {
 using Clock = std::chrono::steady_clock;
 double elapsed(Clock::time_point start) {
   return std::chrono::duration<double, std::milli>(Clock::now() - start).count();
 }
 
-Spectrum runMode(const std::string &path, const std::vector<Frame> &frames, const Spectrum &expected, Mode mode) {
-  Runtime runtime({0, 8192});
-  auto start = Clock::now();
-  Client owner(runtime, path);
-  const auto clientSetupMs = elapsed(start);
-  EncryptedMonitor monitor(runtime, owner.computeServices(), path, mode);
+using WindowAlarms = std::array<Alarm, 2>;
+struct TrustedScenario {
+  Scenario scenario;
+  ScenarioFrames frames;
+  Spectrum baseline;
+  std::array<Spectrum, 2> observations;
+  WindowAlarms expected;
+};
 
+// The synthetic fixture and its cleartext oracle belong to the trusted test
+// harness. The evaluator never receives the cleartext spectra or detector state.
+std::vector<TrustedScenario> trustedScenarios(const std::string &selection, unsigned frames) {
+  std::vector<Scenario> selected;
+  for (const auto scenario : {Scenario::Normal, Scenario::LocalDisturbance, Scenario::SharedOscillation})
+    if (selection == "all" || selection == scenarioName(scenario))
+      selected.push_back(scenario);
+  if (selected.empty())
+    throw std::invalid_argument("--scenario requires all, normal, local, or shared");
+
+  std::vector<TrustedScenario> result;
+  for (const auto scenario : selected) {
+    TrustedScenario item{scenario, makeScenario(scenario, frames), {}, {}, {Alarm::Quiet, Alarm::Quiet}};
+    item.baseline = cleartextSpectrum(item.frames.baseline);
+    if (scenario == Scenario::SharedOscillation)
+      item.expected[1] = Alarm::SharedAnomaly;
+    JointDetector oracle(item.baseline, frames);
+    for (unsigned window = 0; window < item.observations.size(); ++window) {
+      item.observations[window] = cleartextSpectrum(item.frames.observations[window]);
+      if (oracle.observe(item.observations[window], frames) != item.expected[window])
+        throw std::runtime_error("cleartext detector differs from the literal scenario expectation");
+    }
+    result.push_back(std::move(item));
+  }
+  return result;
+}
+
+struct ExecutionEvidence {
   double encryptMs = 0;
   double evaluatorMs = 0;
-  std::vector<PreparationEvidence> evidence;
+  double trustedMs = 0;
+  unsigned preparations = 0;
+  PreparationEvidence firstPreparation;
+  std::uint64_t previousPreparation = 0;
+};
+
+void evaluateWindow(Runtime &runtime, Client &owner, EncryptedMonitor &monitor, const std::vector<Frame> &frames,
+                    const Spectrum &expected, ExecutionEvidence &evidence) {
+  monitor.resetWindow();
+  if (runtime.stats().live_resources != 0)
+    throw std::runtime_error("previous window retained ciphertexts after reset");
   for (const auto &frame : frames) {
-    start = Clock::now();
+    auto start = Clock::now();
     const auto encrypted = owner.encrypt(frame);
-    encryptMs += elapsed(start);
+    evidence.encryptMs += elapsed(start);
     start = Clock::now();
     const auto reuse = monitor.append(encrypted);
-    evaluatorMs += elapsed(start);
-    evidence.push_back(reuse);
+    evidence.evaluatorMs += elapsed(start);
+    if (reuse.prepared) {
+      if (reuse.prepared != reuse.reused || reuse.prepared == evidence.previousPreparation)
+        throw std::runtime_error("frame preparation was not freshly created and reused across scopes");
+      if (!evidence.preparations)
+        evidence.firstPreparation = reuse;
+      ++evidence.preparations;
+      evidence.previousPreparation = reuse.prepared;
+    }
   }
-  start = Clock::now();
-  const auto result = owner.decrypt(monitor.result());
-  const auto decryptMs = elapsed(start);
-  const auto error = maxComplexError(result, expected);
+  if (runtime.stats().live_resources != 7)
+    throw std::runtime_error("completed window must retain seven ciphertexts");
+  const auto start = Clock::now();
+  const auto error = owner.verify(monitor.result(), expected);
+  evidence.trustedMs += elapsed(start);
   if (error > tolerance)
     throw std::runtime_error("decrypted spectra differ from the complex oracle");
+}
 
-  std::cout << "\n" << modeName(mode) << "\n"
-            << "  Evaluator append time " << evaluatorMs << " ms\n"
-            << "  Client setup " << clientSetupMs << " ms, encrypt " << encryptMs << " ms, decrypt "
-            << decryptMs << " ms\n"
-            << "  Max complex error " << error << "\n"
+void printExecutionEvidence(const Runtime &runtime, const ExecutionEvidence &evidence, double clientSetupMs) {
+  std::cout << "  Evaluator append time " << evidence.evaluatorMs << " ms\n"
+            << "  Client setup " << clientSetupMs << " ms, encrypt " << evidence.encryptMs
+            << " ms, trusted verification/verdict " << evidence.trustedMs << " ms\n"
+            << "  Retained ciphertexts: 7 per completed window, 0 after reset\n"
             << "  Peak accounted bytes " << runtime.stats().peak_live_bytes << " (excludes keys and scratch)\n";
-  for (unsigned i = 0; i < evidence.size(); ++i)
-    if (evidence[i].prepared)
-      std::cout << "  Frame " << i + 1 << " preparation " << evidence[i].prepared
-                << " imported as " << evidence[i].reused << "\n";
+  if (evidence.preparations)
+    std::cout << "  Reference preparations " << evidence.preparations << ", all reused across scopes"
+              << " (first " << evidence.firstPreparation.prepared << " imported as "
+              << evidence.firstPreparation.reused << ")\n";
   std::set<std::string> seen;
   for (const auto &event : runtime.trace()) {
     if (event.kind != TraceKind::Selected || (event.operation == "scope.span" && event.recipe == "runtime.submit"))
@@ -177,32 +232,61 @@ Spectrum runMode(const std::string &path, const std::vector<Frame> &frames, cons
     if (seen.insert(description).second)
       std::cout << "  Selected " << description << "\n";
   }
-  return result;
+}
+
+std::vector<WindowAlarms> runMode(const std::string &path, const std::vector<TrustedScenario> &scenarios, Mode mode) {
+  Runtime runtime({0, 8192});
+  auto start = Clock::now();
+  Client owner(runtime, path);
+  const auto clientSetupMs = elapsed(start);
+  EncryptedMonitor monitor(runtime, owner.computeServices(), path, mode);
+  ExecutionEvidence evidence;
+  std::vector<WindowAlarms> outcomes;
+  std::cout << "\n" << modeName(mode) << "\n";
+  for (const auto &scenario : scenarios) {
+    std::cout << "  Scenario " << scenarioName(scenario.scenario) << "\n";
+    evaluateWindow(runtime, owner, monitor, scenario.frames.baseline, scenario.baseline, evidence);
+    start = Clock::now();
+    owner.startMonitoring(monitor.result(), monitor.frames());
+    evidence.trustedMs += elapsed(start);
+    WindowAlarms alarms;
+    for (unsigned window = 0; window < alarms.size(); ++window) {
+      evaluateWindow(runtime, owner, monitor, scenario.frames.observations[window], scenario.observations[window],
+                     evidence);
+      start = Clock::now();
+      alarms[window] = owner.observe(monitor.result(), monitor.frames());
+      evidence.trustedMs += elapsed(start);
+      if (alarms[window] != scenario.expected[window])
+        throw std::runtime_error("encrypted verdict differs from the cleartext and literal scenario expectations");
+      std::cout << "    Window " << window + 1 << " alarm: " << alarmName(alarms[window]) << "\n";
+    }
+    std::cout << "    Final alarm: " << alarmName(alarms.back()) << "\n";
+    outcomes.push_back(alarms);
+  }
+  monitor.resetWindow();
+  if (runtime.stats().live_resources != 0)
+    throw std::runtime_error("last window retained ciphertexts after reset");
+  printExecutionEvidence(runtime, evidence, clientSetupMs);
+  return outcomes;
 }
 } // namespace
 
-void run(const std::string &path, unsigned frameCount, Mode mode, bool compare) {
-  const auto frames = makeFrames(frameCount);
-  const auto expected = cleartextSpectrum(frames);
-  std::cout << "Monitoring " << frameCount << " frames, " << sensorCount << " sensors, " << binCount
-            << " selected bins per sensor\n";
-  const auto result = runMode(path, frames, expected, mode);
+void run(const std::string &path, unsigned frameCount, Mode mode, bool compare, const std::string &selection) {
+  const auto scenarios = trustedScenarios(selection, frameCount);
+  std::cout << "Synthetic joint monitoring: " << frameCount << " frames per window, " << binCount
+            << " selected bins per sensor\n"
+            << "Each scenario uses a baseline and two observation windows.\n";
+  for (const auto name : contributorNames)
+    std::cout << "  " << name << ", one sensor\n";
+  const auto result = runMode(path, scenarios, mode);
   if (compare) {
-    for (const auto baseline : {Mode::Tile, Mode::Pair, Mode::Native}) {
-      if (baseline == mode)
-        continue;
-      const auto other = runMode(path, frames, expected, baseline);
-      if (maxComplexError(result, other) > 2 * tolerance)
-        throw std::runtime_error("evaluator modes disagree");
+    for (const auto otherMode : {Mode::Tile, Mode::Pair, Mode::Native}) {
+      if (otherMode != mode && runMode(path, scenarios, otherMode) != result)
+        throw std::runtime_error("evaluator modes disagree on alarms");
     }
-  }
-  std::cout << "\nDecrypted diagnostics at selected bin 0\n";
-  for (unsigned sensor = 0; sensor < sensorCount; ++sensor) {
-    std::cout << "  Sensor " << sensor << "  ";
-    if (const auto value = diagnostic(result, sensor, 0))
-      std::cout << "phase " << value->phase << " rad, coherence " << value->coherence << "\n";
-    else
-      std::cout << "unavailable\n";
+    // Each mode checks every complex bin against the same oracle, bounding any
+    // pairwise spectral difference by twice the verification tolerance.
+    std::cout << "\nAll modes agree on alarms and pass every complex-bin oracle check.\n";
   }
 }
 } // namespace private_spectrum

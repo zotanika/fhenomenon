@@ -38,15 +38,20 @@ uses both parts of CKKS complex slots. Four synchronized sensor streams contribu
 frequency-bin vectors; the server accumulates cross-spectra and power spectra.
 Pair and pair-tile kernels share one prepared reference across scopes, while
 ordinary native commands consume the products and carry accumulated state into
-the next frame. The owning client decrypts the spectra and computes phase and
-coherence.
+the next frame. Normal, local-disturbance and shared-oscillation cases run
+through a baseline and two observation windows. A trusted key owner combines
+power growth, coherence and persistence to deliver a joint alarm to the monitor;
+individual spectra stay inside that role.
 It illustrates signal analysis on ciphertexts without adding privacy noise to
 the inputs; CKKS approximation error is checked against a cleartext oracle.
 The contribution links separately as `Fhenomenon::SpectralKernels` and makes no
 changes to the runtime core.
 Its [background and deployment boundaries](examples/private_spectrum/README.md#why-combine-sensor-streams-on-a-server)
 connect the workload to [PNNL's cloud ESAMS demonstration](https://www.pnnl.gov/publications/cloud-based-demonstration-eastern-interconnection-situational-awareness-monitoring)
-and explain the remaining multi-operator key-custody and result-disclosure work.
+and describe the intended multi-operator application: the monitor learns a
+joint anomaly verdict from encrypted contributions. Encrypted Boolean verdicts and
+[CKKS/CGGI conversion](examples/private_spectrum/README.md#todo-encrypted-anomaly-verdicts)
+remain future work, along with deployment key custody.
 The example currently uses
 synthetic inputs under one owner's key in a single process.
 

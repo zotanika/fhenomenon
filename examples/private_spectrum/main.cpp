@@ -5,18 +5,24 @@
 
 namespace {
 void usage(std::ostream &out) {
-  out << "Usage: fhn-private-spectrum <plugin> [--frames N] [--no-scope-kernels] [--compare]\n"
+  out << "Usage: fhn-private-spectrum <plugin> [--scenario all|normal|local|shared]\n"
+      << "                            [--frames N] [--no-scope-kernels] [--compare]\n"
       << "       fhn-private-spectrum [-h|--help]\n"
-      << "\nAccumulate encrypted cross/power spectra for four sensors and eight complex bins.\n"
+      << "\nSimulate a joint alarm for four operators, one sensor each, and eight complex bins.\n"
       << "  <plugin>            Native CKKS shared library (.dylib on macOS, .so on Linux).\n"
-      << "  --frames N          Use 2..16 synthetic synchronized frames (default 4).\n"
+      << "  --scenario NAME     Run normal, local disturbance, shared oscillation,\n"
+      << "                      or all three scenarios (default all).\n"
+      << "  --frames N          Use 2..16 frames per window (default 4); each scenario\n"
+      << "                      has a baseline and two observation windows.\n"
       << "  --no-scope-kernels  Skip span matching; keep scopes, prepared pair recipes,\n"
       << "                      and reference reuse across scopes.\n"
       << "  --compare           Verify and time all three paths: pair tiles, ordinary\n"
       << "                      pair recipes, and native ops with a shared conjugate.\n"
       << "  -h, --help          Show this help without loading the plugin.\n"
-      << "\nDefault: scoped pair tiles. Every run checks all decrypted complex bins\n"
-      << "against a cleartext oracle. Client phase/coherence uses the finite-window sums.\n";
+      << "\nDefault: scoped pair tiles. The trusted key-holder verifies every spectral bin\n"
+      << "and releases only per-window/final alarms. The synthetic rule requires power\n"
+      << "gain and coherent participation in the same bin for two consecutive windows.\n"
+      << "This single-owner fixture is not distributed key management; CGGI is a TODO.\n";
 }
 
 unsigned frameCount(std::string_view input) {
@@ -46,6 +52,7 @@ int main(int argc, char **argv) {
     auto mode = Mode::Tile;
     bool compare = false;
     bool help = false;
+    std::string scenario = "all";
     for (int i = 2; i < argc; ++i) {
       const std::string_view option = argv[i];
       if (option == "--no-scope-kernels")
@@ -54,6 +61,11 @@ int main(int argc, char **argv) {
         compare = true;
       else if (option == "--frames" && i + 1 < argc)
         frames = frameCount(argv[++i]);
+      else if (option == "--scenario" && i + 1 < argc) {
+        scenario = argv[++i];
+        if (scenario != "all" && scenario != "normal" && scenario != "local" && scenario != "shared")
+          throw std::invalid_argument("--scenario requires all, normal, local, or shared");
+      }
       else if (option == "-h" || option == "--help")
         help = true;
       else
@@ -63,7 +75,7 @@ int main(int argc, char **argv) {
       usage(std::cout);
       return 0;
     }
-    run(std::string(plugin), frames, mode, compare);
+    run(std::string(plugin), frames, mode, compare, scenario);
     return 0;
   } catch (const std::exception &error) {
     std::cerr << "fhn-private-spectrum: " << error.what() << "\n";

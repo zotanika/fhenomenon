@@ -4,6 +4,18 @@
 #include <stdexcept>
 
 namespace private_spectrum {
+const char *scenarioName(Scenario scenario) {
+  switch (scenario) {
+  case Scenario::Normal:
+    return "normal";
+  case Scenario::LocalDisturbance:
+    return "local";
+  case Scenario::SharedOscillation:
+    return "shared";
+  }
+  throw std::invalid_argument("unknown spectrum scenario");
+}
+
 std::vector<Frame> makeFrames(unsigned count) {
   if (count < minFrames || count > maxFrames)
     throw std::invalid_argument("frame count must be between 2 and 16");
@@ -21,6 +33,23 @@ std::vector<Frame> makeFrames(unsigned count) {
   }
   return frames;
 }
+
+ScenarioFrames makeScenario(Scenario scenario, unsigned count) {
+  (void)scenarioName(scenario);
+  ScenarioFrames result;
+  result.baseline = makeFrames(count);
+  result.observations.fill(result.baseline);
+  for (auto &window : result.observations)
+    for (auto &frame : window) {
+      if (scenario == Scenario::LocalDisturbance)
+        frame[1][3] *= 2;
+      if (scenario == Scenario::SharedOscillation)
+        for (unsigned sensor : {0u, 1u, 3u})
+          frame[sensor][3] *= 2;
+    }
+  return result;
+}
+
 Spectrum cleartextSpectrum(const std::vector<Frame> &frames) {
   Spectrum result;
   for (const auto &frame : frames)

@@ -23,7 +23,17 @@ struct Diagnostic {
   double coherence;
 };
 
+enum class Scenario { Normal, LocalDisturbance, SharedOscillation };
+const char *scenarioName(Scenario);
+inline constexpr std::array<const char *, sensorCount> contributorNames{
+  "Simulated operator A (reference)", "Simulated operator B", "Simulated operator C", "Simulated operator D"};
+struct ScenarioFrames {
+  std::vector<Frame> baseline;
+  std::array<std::vector<Frame>, 2> observations;
+};
+
 std::vector<Frame> makeFrames(unsigned count);
+ScenarioFrames makeScenario(Scenario, unsigned count);
 Spectrum cleartextSpectrum(const std::vector<Frame> &);
 double maxComplexError(const Spectrum &, const Spectrum &);
 std::optional<Diagnostic> diagnostic(const Spectrum &, unsigned sensor, unsigned bin);

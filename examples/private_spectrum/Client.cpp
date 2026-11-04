@@ -26,6 +26,7 @@ struct Client::Impl {
   NativeRuntime native;
   FhnClientEncryptVectorComplex64Fn encrypt;
   FhnClientDecryptVectorComplex64Fn decrypt;
+  std::unique_ptr<JointDetector> detector;
 
   template <class T> T symbol(const char *name) const {
     auto fn = reinterpret_cast<T>(dlsym(library.get(), name));
@@ -88,6 +89,15 @@ struct Client::Impl {
       result[bin] = {decoded[bin].real, decoded[bin].imag};
     return result;
   }
+
+  Spectrum decode(const EncryptedSpectrum &encrypted) const {
+    Spectrum result;
+    for (unsigned sensor = 0; sensor < sensorCount; ++sensor) {
+      result.cross[sensor] = decode(encrypted.cross[sensor]);
+      result.power[sensor] = decode(encrypted.power[sensor]);
+    }
+    return result;
+  }
 };
 
 Client::Client(Runtime &runtime, const std::string &path) : impl_(std::make_unique<Impl>(runtime, path)) {}
@@ -99,12 +109,16 @@ EncryptedFrame Client::encrypt(const Frame &frame) {
     encrypted[sensor] = impl_->encode(frame[sensor]);
   return encrypted;
 }
-Spectrum Client::decrypt(const EncryptedSpectrum &encrypted) {
-  Spectrum result;
-  for (unsigned sensor = 0; sensor < sensorCount; ++sensor) {
-    result.cross[sensor] = impl_->decode(encrypted.cross[sensor]);
-    result.power[sensor] = impl_->decode(encrypted.power[sensor]);
-  }
-  return result;
+void Client::startMonitoring(const EncryptedSpectrum &baseline, unsigned frames) {
+  impl_->detector = std::make_unique<JointDetector>(impl_->decode(baseline), frames);
 }
+Alarm Client::observe(const EncryptedSpectrum &window, unsigned frames) {
+  if (!impl_->detector)
+    throw std::logic_error("monitoring baseline has not been established");
+  return impl_->detector->observe(impl_->decode(window), frames);
+}
+double Client::verify(const EncryptedSpectrum &encrypted, const Spectrum &expected) {
+  return maxComplexError(impl_->decode(encrypted), expected);
+}
+Spectrum Client::decrypt(const EncryptedSpectrum &encrypted) { return impl_->decode(encrypted); }
 } // namespace private_spectrum

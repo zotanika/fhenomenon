@@ -1,12 +1,26 @@
 #include "Workflow.h"
+#include "Detector.h"
+#include <dlfcn.h>
 #include <gtest/gtest.h>
 #include <limits>
+#include <memory>
 
 namespace {
 using namespace private_spectrum;
 using namespace fhenomenon::runtime;
 
-TEST(PrivateSpectrumWorkflow, AccumulatesComplexProductsInAllModes) {
+class PrivateSpectrumWorkflow : public ::testing::Test {
+  public:
+  static void SetUpTestSuite() {
+    // Keep the plugin loaded across tests and repetitions. Apple ASan can
+    // retain global registrations after unloading an instrumented dylib.
+    static const std::unique_ptr<void, decltype(&dlclose)> library{
+        dlopen(FHN_NATIVE_TEST_LIBRARY, RTLD_NOW | RTLD_LOCAL), dlclose};
+    ASSERT_NE(library, nullptr) << dlerror();
+  }
+};
+
+TEST_F(PrivateSpectrumWorkflow, AccumulatesComplexProductsInAllModes) {
   const auto frames = makeFrames(4);
   const auto expected = cleartextSpectrum(frames);
   for (auto mode : {Mode::Tile, Mode::Pair, Mode::Native}) {
@@ -35,7 +49,7 @@ TEST(PrivateSpectrumWorkflow, AccumulatesComplexProductsInAllModes) {
   EXPECT_LT(diagnostic(expected, 2, 0)->coherence, 0.5);
 }
 
-TEST(PrivateSpectrumWorkflow, RejectsForeignAndMissingInputsWithoutChangingState) {
+TEST_F(PrivateSpectrumWorkflow, RejectsForeignAndMissingInputsWithoutChangingState) {
   Runtime runtime;
   Client owner(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedMonitor monitor(runtime, owner.computeServices(), FHN_NATIVE_TEST_LIBRARY, Mode::Tile);
@@ -53,7 +67,7 @@ TEST(PrivateSpectrumWorkflow, RejectsForeignAndMissingInputsWithoutChangingState
   EXPECT_EQ(monitor.frames(), 1u);
 }
 
-TEST(PrivateSpectrumWorkflow, StopsAtTheFiniteWindowLimit) {
+TEST_F(PrivateSpectrumWorkflow, StopsAtTheFiniteWindowLimit) {
   Runtime runtime;
   Client owner(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedMonitor monitor(runtime, owner.computeServices(), FHN_NATIVE_TEST_LIBRARY, Mode::Native);
@@ -67,7 +81,80 @@ TEST(PrivateSpectrumWorkflow, StopsAtTheFiniteWindowLimit) {
   EXPECT_LT(maxComplexError(owner.decrypt(monitor.result()), cleartextSpectrum(frames)), tolerance);
 }
 
-TEST(PrivateSpectrumWorkflow, RejectsUnavailableDiagnosticsAndNonfiniteResults) {
+TEST_F(PrivateSpectrumWorkflow, ResetReleasesWindowAndPreservesEvaluationAcrossWindows) {
+  for (const auto mode : {Mode::Tile, Mode::Pair, Mode::Native}) {
+    SCOPED_TRACE(modeName(mode));
+    Runtime runtime({0, 8192});
+    Client owner(runtime, FHN_NATIVE_TEST_LIBRARY);
+    EncryptedMonitor monitor(runtime, owner.computeServices(), FHN_NATIVE_TEST_LIBRARY, mode);
+    const auto fullWindow = makeFrames(maxFrames);
+    for (const auto &frame : fullWindow)
+      monitor.append(owner.encrypt(frame));
+    EXPECT_EQ(runtime.stats().live_resources, 7u);
+
+    monitor.resetWindow();
+    EXPECT_EQ(monitor.frames(), 0u);
+    EXPECT_EQ(runtime.stats().live_resources, 0u);
+    EXPECT_THROW(monitor.result(), std::logic_error);
+    monitor.resetWindow();
+    EXPECT_EQ(runtime.stats().live_resources, 0u);
+
+    const auto nextWindow = makeFrames(minFrames);
+    const auto traceStart = runtime.trace().size();
+    for (const auto &frame : nextWindow) {
+      const auto evidence = monitor.append(owner.encrypt(frame));
+      EXPECT_EQ(runtime.stats().live_resources, 7u);
+      if (mode != Mode::Native) {
+        EXPECT_NE(evidence.prepared, 0u);
+        EXPECT_EQ(evidence.prepared, evidence.reused);
+      }
+    }
+    EXPECT_EQ(monitor.frames(), minFrames);
+    EXPECT_LT(maxComplexError(owner.decrypt(monitor.result()), cleartextSpectrum(nextWindow)), tolerance);
+    const auto trace = runtime.trace();
+    bool tileSelected = false;
+    for (auto i = traceStart; i < trace.size(); ++i)
+      tileSelected |= trace[i].kind == TraceKind::Selected && trace[i].recipe == "contrib.spectral.scope.pair-tile";
+    EXPECT_EQ(tileSelected, mode == Mode::Tile);
+  }
+}
+
+TEST_F(PrivateSpectrumWorkflow, TrustedClientReportsLiteralScenarioOutcomesAcrossWindows) {
+  for (const auto mode : {Mode::Tile, Mode::Pair, Mode::Native}) {
+    SCOPED_TRACE(modeName(mode));
+    Runtime runtime({0, 8192});
+    Client owner(runtime, FHN_NATIVE_TEST_LIBRARY);
+    EncryptedMonitor monitor(runtime, owner.computeServices(), FHN_NATIVE_TEST_LIBRARY, mode);
+    EXPECT_THROW(owner.observe(EncryptedSpectrum{}, 2), std::logic_error);
+    // Shared comes first so subsequent scenarios must replace its baseline and
+    // persistence, rather than inheriting the previous scenario's alarm.
+    for (const auto scenario : {Scenario::SharedOscillation, Scenario::Normal, Scenario::LocalDisturbance}) {
+      SCOPED_TRACE(scenarioName(scenario));
+      const auto windows = makeScenario(scenario, 4);
+      const auto evaluate = [&](const std::vector<Frame> &frames) -> const EncryptedSpectrum & {
+        monitor.resetWindow();
+        EXPECT_EQ(runtime.stats().live_resources, 0u);
+        for (const auto &frame : frames) {
+          monitor.append(owner.encrypt(frame));
+          EXPECT_EQ(runtime.stats().live_resources, 7u);
+        }
+        EXPECT_LT(owner.verify(monitor.result(), cleartextSpectrum(frames)), tolerance);
+        return monitor.result();
+      };
+      owner.startMonitoring(evaluate(windows.baseline), 4);
+      auto incorrect = cleartextSpectrum(windows.baseline);
+      incorrect.power[3][7] += 1;
+      EXPECT_GT(owner.verify(monitor.result(), incorrect), 0.9);
+      EXPECT_EQ(owner.observe(evaluate(windows.observations[0]), 4), Alarm::Quiet);
+      const auto expectedFinal = scenario == Scenario::SharedOscillation ? Alarm::SharedAnomaly : Alarm::Quiet;
+      EXPECT_EQ(owner.observe(evaluate(windows.observations[1]), 4), expectedFinal);
+      monitor.resetWindow();
+      EXPECT_EQ(runtime.stats().live_resources, 0u);
+    }
+  }
+}
+
+TEST_F(PrivateSpectrumWorkflow, RejectsUnavailableDiagnosticsAndNonfiniteResults) {
   Spectrum data{};
   EXPECT_FALSE(diagnostic(data, 1, 0));
   data.power[0][0] = 1;
