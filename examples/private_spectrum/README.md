@@ -1,5 +1,46 @@
 # Private spectrum monitoring
 
+## Why combine sensor streams on a server?
+
+PNNL's 2026 [ESAMS field-demonstration report (PNNL-39487)](https://www.pnnl.gov/publications/cloud-based-demonstration-eastern-interconnection-situational-awareness-monitoring)
+describes a six-month AWS deployment receiving synchrophasor measurements from
+ISO New England and PJM for wide-area oscillation detection and source
+localization. It gives a concrete reason to combine measurements across sites
+and organizations: a local device's DSP does not have that shared view.
+
+This example explores encrypted cross-spectrum accumulation motivated by that
+setting, using synthetic frequency bins. It does not reproduce ESAMS's
+detection/localization algorithms or claim that the PNNL deployment used FHE.
+The [report's security discussion](https://www.pnnl.gov/main/publications/external/technical_reports/PNNL-39487.pdf#page=22)
+explicitly identifies protection of shared data and derived results, controlled
+access and auditing as requirements for long-term participation. It describes
+conventional cloud controls, including encryption in transit and at rest.
+This supports the need for data protection; whether operators would additionally
+require the analysis service itself to remain unable to read their measurements
+is a deployment question to validate with them.
+
+## Shared insight without exposing the raw signal
+
+An operator may want the benefits of a shared view while keeping control of its
+own measurements. FHE offers an appealing way to separate those concerns:
+encrypt the frequency bins, compute their cross-spectra on the server, and
+decrypt the permitted results. The input need not be deliberately distorted
+with privacy noise to keep it hidden from the evaluator. Phase and correlation
+are computed with the same analysis formula; this sample measures CKKS's
+approximation error against the cleartext result.
+
+Differential privacy addresses a different disclosure boundary. Local DP
+perturbs contributors' inputs, creating a signal-fidelity tradeoff; central DP
+can instead perturb released results while trusting a data curator. FHE can
+protect the computation, and DP can still be applied to the outputs if their
+disclosure needs statistical protection. These distinctions and combinations
+are described in [NIST SP 800-226, Section 4.2](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-226.pdf#page=65).
+The story demonstrated here is encrypted signal analysis without added input
+privacy noise. A complete multi-operator service still needs the key and
+result-release design described below.
+
+## Run
+
 Build and run with the native CKKS plugin for your platform. This example is
 built even with `BUILD_TEST=OFF`.
 
@@ -43,6 +84,32 @@ conjugation evaluation keys, and decrypts the accumulated spectra. The
 encrypted evaluator receives ciphertexts and evaluation services in the
 same process. Real deployments would need a separate owner/evaluator
 boundary. The example has no rotation keys because bins are independent.
+
+## Ownership and result disclosure
+
+A deployment where the cloud only evaluates ciphertexts and each grid operator
+receives only authorized results needs an explicit agreement about key custody,
+decryption authority and result release. Giving every operator the same secret
+key would also let them decrypt input ciphertexts they could access. Depending
+on the trust model, a design might use a trusted key custodian, a
+threshold/collective scheme, or another suitable protocol; this sample
+implements no multi-owner protocol or per-recipient result-release service.
+
+Native CKKS already generates secret, public and evaluation keys and separates
+the client and evaluator objects. The legacy [KeyManager](../../include/KeyManager.h)
+facade records configured key paths; it does not provide cross-operator key
+distribution or decryption authorization. Serialized ciphertext transport and
+cross-process deployment are also outside this example.
+
+For sustained participation, operators need to decide which measurements they
+will contribute, who can use them, and which results may be released. Encrypted
+arithmetic alone does not hide public metadata or establish what can safely be
+inferred from released spectra and diagnostics. Those disclosure rules need
+their own design. The contribution here is the encrypted computation and
+reusable kernel boundary; the synthetic single-owner fixture does not establish
+a deployable multi-operator privacy protocol.
+
+## Scoped computation
 
 For each frame the evaluator prepares the conjugated reference once.
 The first `Session::run` scope records two adjacent spectral pairs, exports the reference

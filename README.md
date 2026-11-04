@@ -40,8 +40,15 @@ Pair and pair-tile kernels share one prepared reference across scopes, while
 ordinary native commands consume the products and carry accumulated state into
 the next frame. The owning client decrypts the spectra and computes phase and
 coherence.
+It illustrates signal analysis on ciphertexts without adding privacy noise to
+the inputs; CKKS approximation error is checked against a cleartext oracle.
 The contribution links separately as `Fhenomenon::SpectralKernels` and makes no
 changes to the runtime core.
+Its [background and deployment boundaries](examples/private_spectrum/README.md#why-combine-sensor-streams-on-a-server)
+connect the workload to [PNNL's cloud ESAMS demonstration](https://www.pnnl.gov/publications/cloud-based-demonstration-eastern-interconnection-situational-awareness-monitoring)
+and explain the remaining multi-operator key-custody and result-disclosure work.
+The example currently uses
+synthetic inputs under one owner's key in a single process.
 
 The core bet is simple: fully homomorphic encryption will not become practical by pretending that arbitrary software can be compiled unchanged into encrypted execution. It will also not become practical by making every backend maximally general and then accepting unusable speed. The useful boundary is closer to GPU computing. A trusted host should orchestrate public control flow, while an untrusted executor runs branchless, data-oblivious, coarse-grained encrypted kernels.
 
@@ -222,14 +229,14 @@ The instruction stream itself is public by design. Opcode sequences, rotation
 distances, loop trip counts, and program shape are all visible to the executor
 — that is the contract, and programs must be written so their shape is safe to
 reveal (in encrypted inference, for example, the program shape reveals the
-model architecture). What the shape may reveal is the application's
-responsibility to bound; FHN's responsibility is that nothing else leaks.
+model architecture). Applications must bound that disclosure. The interface
+separation is not a guarantee against every other leakage channel; backend
+implementations and deployment boundaries still require security review.
 
-One known caveat inherited from approximate schemes: for CKKS-style backends,
-decrypting and *acting on* approximate results can leak key material
-(IND-CPA-D / decryption-oracle attacks). `decrypt()` in the current frontend is
-a development convenience; a sanitized-decryption path (noise flooding) is
-roadmap work that must land before any multi-party deployment story.
+Adversarial-result decryption, including the treatment of approximate CKKS
+outputs, requires a threat-model-specific design and review. `decrypt()` in the
+current frontend is a development convenience; it does not provide a reviewed
+decryption and output-release protocol for mutually distrustful participants.
 
 ### Fused Operations
 
