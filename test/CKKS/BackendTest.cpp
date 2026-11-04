@@ -1,9 +1,11 @@
 #include "CKKS/Backend.h"
 #include <array>
 #include <cmath>
+#include <complex>
 #include <gtest/gtest.h>
 #include <limits>
 #include <memory>
+#include <vector>
 
 #include <cstdlib>
 #include <new>
@@ -109,6 +111,124 @@ TEST(CkksBackend, RealFractionalArithmeticAndLevelAccounting) {
   ASSERT_EQ(ckks_fhn_client_decrypt_vec_f64(client.get(), out.ptr, values.data(), 4), 0);
   for (size_t i = 0; i < 4; ++i)
     EXPECT_NEAR(values[i], std::pow(a[i] * b[i], 2), 1e-4);
+}
+TEST(CkksBackend, ComplexRoundTripAndArithmetic) {
+  Context ctx(ckks_fhn_create(nullptr), ckks_fhn_destroy);
+  ASSERT_TRUE(ctx);
+  Client client(ckks_fhn_client_create(ctx.get()), ckks_fhn_client_destroy);
+  ASSERT_TRUE(client);
+  Buffer x(ctx.get()), y(ctx.get()), real(ctx.get()), out(ctx.get());
+  const std::array<FhnComplex64, 4> a{{{2.5, -3}, {-0.75, 0.5}, {0, 4}, {1, -0.125}}};
+  const std::array<FhnComplex64, 4> b{{{0.5, 2}, {-2, -0.25}, {1.5, 0}, {-3, 0.5}}};
+  const std::array<double, 4> r{0.5, -1.25, 2, 0.125};
+  FhnClientEncryptVectorComplex64Fn encrypt = ckks_fhn_client_encrypt_vec_c64;
+  FhnClientDecryptVectorComplex64Fn decrypt = ckks_fhn_client_decrypt_vec_c64;
+  ASSERT_EQ(encrypt(client.get(), x.ptr, a.data(), a.size()), 0);
+  ASSERT_EQ(encrypt(client.get(), y.ptr, b.data(), b.size()), 0);
+  ASSERT_EQ(ckks_fhn_client_encrypt_vec_f64(client.get(), real.ptr, r.data(), r.size()), 0);
+  auto complex = [](FhnComplex64 z) { return std::complex<double>(z.real, z.imag); };
+  auto check = [&](const FhnBuffer *buffer, auto expected) {
+    std::array<FhnComplex64, 4> values{};
+    ASSERT_EQ(decrypt(client.get(), buffer, values.data(), values.size()), 0);
+    for (size_t i = 0; i < values.size(); ++i) {
+      EXPECT_NEAR(values[i].real, expected(i).real(), 1e-5) << "slot " << i;
+      EXPECT_NEAR(values[i].imag, expected(i).imag(), 1e-5) << "slot " << i;
+    }
+  };
+  check(x.ptr, [&](size_t i) { return complex(a[i]); });
+  check(real.ptr, [&](size_t i) { return std::complex<double>(r[i]); });
+  std::array<double, 4> projected{};
+  ASSERT_EQ(ckks_fhn_client_decrypt_vec_f64(client.get(), x.ptr, projected.data(), projected.size()), 0);
+  for (size_t i = 0; i < a.size(); ++i)
+    EXPECT_NEAR(projected[i], a[i].real, 1e-5);
+
+  FhnInstruction inst[3]{};
+  inst[0].opcode = FHN_CONJUGATE;
+  inst[1].opcode = FHN_ROTATE;
+  inst[1].params[0] = 1;
+  inst[2].opcode = FHN_HMULT;
+  auto p = program(inst, 3);
+  ASSERT_EQ(ckks_fhn_client_prepare(client.get(), &p), 0);
+  const FhnBuffer *args[]{x.ptr, y.ptr};
+  auto conjugate = kernel(ctx.get(), FHN_CONJUGATE);
+  auto rotate = kernel(ctx.get(), FHN_ROTATE);
+  auto multiply = kernel(ctx.get(), FHN_HMULT);
+  ASSERT_NE(conjugate, nullptr);
+  ASSERT_NE(rotate, nullptr);
+  ASSERT_NE(multiply, nullptr);
+  ASSERT_EQ(conjugate(ctx.get(), out.ptr, args, inst[0].params, nullptr), 0);
+  check(out.ptr, [&](size_t i) { return std::conj(complex(a[i])); });
+  ASSERT_EQ(rotate(ctx.get(), out.ptr, args, inst[1].params, nullptr), 0);
+  check(out.ptr, [&](size_t i) { return complex(a[(i + 1) % a.size()]); });
+  ASSERT_EQ(multiply(ctx.get(), out.ptr, args, inst[2].params, nullptr), 0);
+  check(out.ptr, [&](size_t i) { return complex(a[i]) * complex(b[i]); });
+  args[1] = real.ptr;
+  ASSERT_EQ(multiply(ctx.get(), out.ptr, args, inst[2].params, nullptr), 0);
+  check(out.ptr, [&](size_t i) { return complex(a[i]) * r[i]; });
+}
+
+TEST(CkksBackend, ComplexValidationLeavesOutputsUnchanged) {
+  Context ctx(ckks_fhn_create(nullptr), ckks_fhn_destroy);
+  ASSERT_TRUE(ctx);
+  Client client(ckks_fhn_client_create(ctx.get()), ckks_fhn_client_destroy);
+  ASSERT_TRUE(client);
+  Context other(ckks_fhn_create(nullptr), ckks_fhn_destroy);
+  ASSERT_TRUE(other);
+  Buffer input(ctx.get()), empty(ctx.get()), foreign(other.get());
+  const std::array<FhnComplex64, 2> slots{{{2.5, -3}, {-0.75, 0.5}}};
+  auto encrypt = ckks_fhn_client_encrypt_vec_c64;
+  auto decrypt = ckks_fhn_client_decrypt_vec_c64;
+  ASSERT_EQ(encrypt(client.get(), input.ptr, slots.data(), slots.size()), 0);
+  EXPECT_NE(encrypt(nullptr, input.ptr, slots.data(), 2), 0);
+  EXPECT_NE(encrypt(client.get(), nullptr, slots.data(), 2), 0);
+  EXPECT_NE(encrypt(client.get(), foreign.ptr, slots.data(), 2), 0);
+  EXPECT_NE(encrypt(client.get(), input.ptr, nullptr, 2), 0);
+  EXPECT_NE(encrypt(client.get(), input.ptr, slots.data(), 0), 0);
+  const std::array<FhnComplex64, 3> uneven{};
+  EXPECT_NE(encrypt(client.get(), input.ptr, uneven.data(), uneven.size()), 0);
+  // The default degree is 8192, with 4096 physical slots.
+  const std::vector<FhnComplex64> oversized(8192);
+  EXPECT_NE(encrypt(client.get(), input.ptr, oversized.data(), oversized.size()), 0);
+  for (const FhnComplex64 invalid : {FhnComplex64{0, std::numeric_limits<double>::infinity()},
+                                    FhnComplex64{std::numeric_limits<double>::quiet_NaN(), 0},
+                                    FhnComplex64{0, 0x1p63}, FhnComplex64{-0x1p63, 0}})
+    EXPECT_NE(encrypt(client.get(), input.ptr, &invalid, 1), 0);
+  std::array<FhnComplex64, 3> actual{{{7, -7}, {9, -9}, {11, -11}}};
+  EXPECT_NE(decrypt(nullptr, input.ptr, actual.data(), 2), 0);
+  EXPECT_NE(decrypt(client.get(), nullptr, actual.data(), 2), 0);
+  EXPECT_NE(decrypt(client.get(), foreign.ptr, actual.data(), 2), 0);
+  EXPECT_NE(decrypt(client.get(), empty.ptr, actual.data(), 2), 0);
+  EXPECT_NE(decrypt(client.get(), input.ptr, nullptr, 2), 0);
+  EXPECT_NE(decrypt(client.get(), input.ptr, actual.data(), 1), 0);
+  EXPECT_NE(decrypt(client.get(), input.ptr, actual.data(), 3), 0);
+  EXPECT_EQ(actual[0].real, 7);
+  EXPECT_EQ(actual[0].imag, -7);
+  EXPECT_EQ(actual[1].real, 9);
+  EXPECT_EQ(actual[1].imag, -9);
+  EXPECT_EQ(actual[2].real, 11);
+  EXPECT_EQ(actual[2].imag, -11);
+  ASSERT_EQ(decrypt(client.get(), input.ptr, actual.data(), slots.size()), 0);
+  for (size_t i = 0; i < slots.size(); ++i) {
+    EXPECT_NEAR(actual[i].real, slots[i].real, 1e-5);
+    EXPECT_NEAR(actual[i].imag, slots[i].imag, 1e-5);
+  }
+}
+TEST(CkksBackend, ComplexFullSlotCapacity) {
+  Context ctx(ckks_fhn_create(nullptr), ckks_fhn_destroy);
+  ASSERT_TRUE(ctx);
+  Client client(ckks_fhn_client_create(ctx.get()), ckks_fhn_client_destroy);
+  ASSERT_TRUE(client);
+  Buffer input(ctx.get());
+  std::vector<FhnComplex64> slots(4096);
+  for (size_t i = 0; i < slots.size(); ++i)
+    slots[i] = {static_cast<double>(i % 9) - 4, static_cast<double>(i % 13) - 6};
+  std::vector<FhnComplex64> actual(slots.size());
+  ASSERT_EQ(ckks_fhn_client_encrypt_vec_c64(client.get(), input.ptr, slots.data(), slots.size()), 0);
+  ASSERT_EQ(ckks_fhn_client_decrypt_vec_c64(client.get(), input.ptr, actual.data(), actual.size()), 0);
+  for (size_t i = 0; i < slots.size(); ++i) {
+    EXPECT_NEAR(actual[i].real, slots[i].real, 1e-5) << "slot " << i;
+    EXPECT_NEAR(actual[i].imag, slots[i].imag, 1e-5) << "slot " << i;
+  }
 }
 TEST(CkksBackend, KeysExpireWithoutSecretInComputeContext) {
   Context ctx(ckks_fhn_create(nullptr), ckks_fhn_destroy);

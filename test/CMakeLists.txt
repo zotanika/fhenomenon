@@ -73,6 +73,25 @@ target_compile_definitions(SearchContributionTest PRIVATE
 add_dependencies(SearchContributionTest ckks_fhn)
 add_gtest_target_to_ctest(SearchContributionTest)
 
+add_executable(SpectralContributionTest SpectralContributionTest.cpp)
+target_link_libraries(SpectralContributionTest PRIVATE fhn_spectral_contribution gtest_main)
+target_compile_definitions(SpectralContributionTest PRIVATE
+  FHN_NATIVE_TEST_LIBRARY="$<TARGET_FILE:ckks_fhn>")
+add_dependencies(SpectralContributionTest ckks_fhn)
+add_gtest_target_to_ctest(SpectralContributionTest)
+
+add_executable(PrivateSpectrumWorkflowTest PrivateSpectrumWorkflowTest.cpp)
+target_link_libraries(PrivateSpectrumWorkflowTest PRIVATE fhn_private_spectrum_example gtest_main)
+target_compile_definitions(PrivateSpectrumWorkflowTest PRIVATE
+  FHN_NATIVE_TEST_LIBRARY="$<TARGET_FILE:ckks_fhn>")
+add_dependencies(PrivateSpectrumWorkflowTest ckks_fhn)
+add_gtest_target_to_ctest(PrivateSpectrumWorkflowTest)
+
+add_test(NAME PrivateSpectrumExample COMMAND fhn-private-spectrum
+  "$<TARGET_FILE:ckks_fhn>" --frames 4 --compare)
+set_tests_properties(PrivateSpectrumExample PROPERTIES TIMEOUT 600)
+add_test(NAME PrivateSpectrumHelp COMMAND fhn-private-spectrum --help)
+
 add_executable(PrivateSearchFixtureTest PrivateSearchFixtureTest.cpp)
 target_link_libraries(PrivateSearchFixtureTest PRIVATE nlohmann_json::nlohmann_json gtest_main)
 add_gtest_target_to_ctest(PrivateSearchFixtureTest)

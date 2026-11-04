@@ -7,6 +7,7 @@
 #include <complex>
 #include <limits>
 #include <new>
+#include <type_traits>
 
 namespace fhenomenon::ckks::encoding {
 namespace {
@@ -54,27 +55,28 @@ uint64_t signedResidue(int64_t value, uint64_t q) {
   const uint64_t remainder = magnitude % q;
   return remainder == 0 ? 0 : q - remainder;
 }
-} // namespace
+bool finite(double value) { return std::isfinite(value); }
+bool finite(Complex value) { return finite(value.real()) && finite(value.imag()); }
 
-std::size_t scratchBytes(const Params &params) noexcept {
-  // Decode dominates: one Q polynomial, one complex FFT, and CRT vectors.
-  // Include coefficient rounding storage and alignment as a conservative bound.
-  const std::size_t n = params.degree();
-  return n * (sizeof(Complex) + sizeof(int64_t) + params.levelCount() * sizeof(uint64_t)) +
-         2 * params.levelCount() * sizeof(uint64_t) + 512;
+template <typename Slot> Slot slotValue(Complex value) {
+  if constexpr (std::is_same_v<Slot, double>)
+    return value.real();
+  else
+    return value;
 }
 
 // Rounded coefficients must fit both the int64 encoding bound and the centered
 // interval [-floor(Qactive/2), floor(Qactive/2)]. Reject before any output write.
-bool encode(RnsPolyView &out, const double *values, uint32_t count, double scale, const EvaluationTables &tables,
-            Arena &arena) {
+template <typename Slot>
+bool encodeSlots(RnsPolyView &out, const Slot *values, uint32_t count, double scale, const EvaluationTables &tables,
+                 Arena &arena) {
   const auto &params = tables.params();
   const std::size_t n = params.degree();
   if (!validPoly(asConst(out), tables) || values == nullptr || count == 0 || count > n / 2 ||
       (count & (count - 1)) != 0 || !std::isfinite(scale) || scale <= 0 || arena.remaining() < scratchBytes(params))
     return false;
   for (uint32_t i = 0; i < count; ++i)
-    if (!std::isfinite(values[i]))
+    if (!finite(values[i]))
       return false;
   uint64_t modulus_product = 1;
   bool product_fits = true;
@@ -97,12 +99,14 @@ bool encode(RnsPolyView &out, const double *values, uint32_t count, double scale
     return false;
   for (std::size_t i = 0; i < n; ++i)
     new (frequency + i) Complex(0.0, 0.0);
+  // Pair each slot evaluation with its conjugate at the reflected odd
+  // root. This symmetry gives real coefficients after interpolation.
   uint64_t exponent = 1;
   const uint64_t two_n = 2 * n;
   for (std::size_t j = 0; j < n / 2; ++j) {
-    const double value = values[j % count];
+    const Complex value = values[j % count];
     frequency[(exponent - 1) / 2] = value;
-    frequency[(two_n - exponent - 1) / 2] = value;
+    frequency[(two_n - exponent - 1) / 2] = std::conj(value);
     exponent = (exponent * 5) % two_n;
   }
   transform(frequency, n, false);
@@ -130,8 +134,9 @@ bool encode(RnsPolyView &out, const double *values, uint32_t count, double scale
   return true;
 }
 
-bool decode(double *values, uint32_t count, ConstRnsPolyView input, double scale, const EvaluationTables &tables,
-            Arena &arena) {
+template <typename Slot>
+bool decodeSlots(Slot *values, uint32_t count, ConstRnsPolyView input, double scale, const EvaluationTables &tables,
+                 Arena &arena) {
   const auto &params = tables.params();
   const std::size_t n = params.degree();
   if (!validPoly(input, tables) || values == nullptr || count == 0 || count > n / 2 || !std::isfinite(scale) ||
@@ -168,15 +173,41 @@ bool decode(double *values, uint32_t count, ConstRnsPolyView input, double scale
   transform(frequency, n, true);
   uint64_t exponent = 1;
   for (uint32_t j = 0; j < count; ++j) {
-    if (!std::isfinite(frequency[(exponent - 1) / 2].real()))
+    if (!finite(slotValue<Slot>(frequency[(exponent - 1) / 2])))
       return false;
     exponent = (exponent * 5) % (2 * n);
   }
   exponent = 1;
   for (uint32_t j = 0; j < count; ++j) {
-    values[j] = frequency[(exponent - 1) / 2].real();
+    values[j] = slotValue<Slot>(frequency[(exponent - 1) / 2]);
     exponent = (exponent * 5) % (2 * n);
   }
   return true;
+}
+} // namespace
+
+std::size_t scratchBytes(const Params &params) noexcept {
+  // Decode dominates: one Q polynomial, one complex FFT, and CRT vectors.
+  // Include coefficient rounding storage and alignment as a conservative bound.
+  const std::size_t n = params.degree();
+  return n * (sizeof(Complex) + sizeof(int64_t) + params.levelCount() * sizeof(uint64_t)) +
+         2 * params.levelCount() * sizeof(uint64_t) + 512;
+}
+
+bool encode(RnsPolyView &out, const double *values, uint32_t count, double scale, const EvaluationTables &tables,
+            Arena &arena) {
+  return encodeSlots(out, values, count, scale, tables, arena);
+}
+bool encode(RnsPolyView &out, const Complex *values, uint32_t count, double scale, const EvaluationTables &tables,
+            Arena &arena) {
+  return encodeSlots(out, values, count, scale, tables, arena);
+}
+bool decode(double *values, uint32_t count, ConstRnsPolyView input, double scale, const EvaluationTables &tables,
+            Arena &arena) {
+  return decodeSlots(values, count, input, scale, tables, arena);
+}
+bool decode(Complex *values, uint32_t count, ConstRnsPolyView input, double scale, const EvaluationTables &tables,
+            Arena &arena) {
+  return decodeSlots(values, count, input, scale, tables, arena);
 }
 } // namespace fhenomenon::ckks::encoding

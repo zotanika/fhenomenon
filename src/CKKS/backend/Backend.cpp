@@ -9,9 +9,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <new>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -33,7 +35,9 @@ std::size_t computeScratch(const Params &p) {
   return bound + 6 * strideWords(p) * sizeof(uint64_t) + 512;
 }
 std::size_t clientScratch(const Params &p) {
-  return std::max(keyScratchBytes(p), encoding::scratchBytes(p)) + 4 * strideWords(p) * sizeof(uint64_t) + 512;
+  const std::size_t complex_slots = p.numSlots() * sizeof(std::complex<double>);
+  return std::max(keyScratchBytes(p), encoding::scratchBytes(p) + complex_slots) +
+         4 * strideWords(p) * sizeof(uint64_t) + 512;
 }
 uint64_t primeBelow(uint32_t bits, uint32_t log_degree, const std::vector<uint64_t> &used) {
   const uint64_t step = uint64_t{1} << (log_degree + 1);
@@ -256,6 +260,82 @@ FhnKernelEntry entries[]{{FHN_NOP, kernel<FHN_NOP>, "copy"},
                          {FHN_HROT_ADD, kernel<FHN_HROT_ADD>, "rotate_add"},
                          {FHN_HCONJ_ADD, kernel<FHN_HCONJ_ADD>, "conjugate_add"}};
 FhnKernelTable kernel_table{static_cast<uint32_t>(sizeof(entries) / sizeof(entries[0])), entries};
+
+bool encodeVector(RnsPolyView &plain, const double *values, uint32_t count, double scale,
+                  const EvaluationTables &tables, Arena &arena) {
+  return encoding::encode(plain, values, count, scale, tables, arena);
+}
+bool encodeVector(RnsPolyView &plain, const FhnComplex64 *values, uint32_t count, double scale,
+                  const EvaluationTables &tables, Arena &arena) {
+  Arena::Scope scope(arena);
+  auto *slots = arena.allocate<std::complex<double>>(count);
+  if (!slots)
+    return false;
+  for (uint32_t i = 0; i < count; ++i)
+    new (slots + i) std::complex<double>(values[i].real, values[i].imag);
+  return encoding::encode(plain, slots, count, scale, tables, arena);
+}
+bool decodeVector(double *values, uint32_t count, ConstRnsPolyView plain, double scale,
+                  const EvaluationTables &tables, Arena &arena) {
+  return encoding::decode(values, count, plain, scale, tables, arena);
+}
+bool decodeVector(FhnComplex64 *values, uint32_t count, ConstRnsPolyView plain, double scale,
+                  const EvaluationTables &tables, Arena &arena) {
+  Arena::Scope scope(arena);
+  auto *slots = arena.allocate<std::complex<double>>(count);
+  if (!slots)
+    return false;
+  for (uint32_t i = 0; i < count; ++i)
+    new (slots + i) std::complex<double>();
+  if (!encoding::decode(slots, count, plain, scale, tables, arena))
+    return false;
+  for (uint32_t i = 0; i < count; ++i)
+    values[i] = {slots[i].real(), slots[i].imag()};
+  return true;
+}
+
+template <typename Slot>
+int encryptVector(FhnClientCtx *client, FhnBuffer *out, const Slot *values, uint32_t count) {
+  if (!client || !out || out->owner != client->backend || !values || !count || (count & (count - 1)))
+    return -1;
+  try {
+    auto *ctx = client->backend;
+    const auto &p = ctx->tables->params();
+    if (count > p.numSlots())
+      return -1;
+    Arena::Scope scope(client->scratch);
+    auto layout = freshPoly(p);
+    auto *data = client->scratch.allocate<uint64_t>(layout.wordCount());
+    RnsPolyView plain{data, layout.wordCount(), layout};
+    auto output = staging(ctx, client->scratch);
+    const double scale = std::ldexp(1.0, static_cast<int>(p.logDefaultScale()));
+    if (!data || !output.data || !encodeVector(plain, values, count, scale, *ctx->tables, client->scratch) ||
+        !encrypt(output, asConst(plain), scale, *client->public_key, client->random, *ctx->tables, client->scratch))
+      return -1;
+    commit(out, asConst(output), count);
+    return 0;
+  } catch (...) {
+    return -1;
+  }
+}
+template <typename Slot>
+int decryptVector(FhnClientCtx *client, const FhnBuffer *in, Slot *values, uint32_t count) {
+  if (!client || !ready(client->backend, in) || !values || count != in->logical_slots)
+    return -1;
+  try {
+    auto *ctx = client->backend;
+    Arena::Scope scope(client->scratch);
+    const auto layout = in->layout.poly;
+    auto *data = client->scratch.allocate<uint64_t>(layout.wordCount());
+    RnsPolyView plain{data, layout.wordCount(), layout};
+    return data && decrypt(plain, in->view(), *client->secret, *ctx->tables, client->scratch) &&
+               decodeVector(values, count, asConst(plain), in->layout.scale, *ctx->tables, client->scratch)
+             ? 0
+             : -1;
+  } catch (...) {
+    return -1;
+  }
+}
 } // namespace
 
 extern "C" {
@@ -360,47 +440,16 @@ int ckks_fhn_client_prepare(FhnClientCtx *client, const FhnProgram *program) {
   }
 }
 int ckks_fhn_client_encrypt_vec_f64(FhnClientCtx *client, FhnBuffer *out, const double *values, uint32_t count) {
-  if (!client || !out || out->owner != client->backend || !values || !count || (count & (count - 1)))
-    return -1;
-  try {
-    auto *ctx = client->backend;
-    const auto &p = ctx->tables->params();
-    if (count > p.numSlots())
-      return -1;
-    for (uint32_t i = 0; i < count; ++i)
-      if (!std::isfinite(values[i]))
-        return -1;
-    Arena::Scope scope(client->scratch);
-    auto layout = freshPoly(p);
-    auto *data = client->scratch.allocate<uint64_t>(layout.wordCount());
-    RnsPolyView plain{data, layout.wordCount(), layout};
-    auto output = staging(ctx, client->scratch);
-    const double scale = std::ldexp(1.0, static_cast<int>(p.logDefaultScale()));
-    if (!data || !output.data || !encoding::encode(plain, values, count, scale, *ctx->tables, client->scratch) ||
-        !encrypt(output, asConst(plain), scale, *client->public_key, client->random, *ctx->tables, client->scratch))
-      return -1;
-    commit(out, asConst(output), count);
-    return 0;
-  } catch (...) {
-    return -1;
-  }
+  return encryptVector(client, out, values, count);
 }
 int ckks_fhn_client_decrypt_vec_f64(FhnClientCtx *client, const FhnBuffer *in, double *values, uint32_t count) {
-  if (!client || !ready(client->backend, in) || !values || count != in->logical_slots)
-    return -1;
-  try {
-    auto *ctx = client->backend;
-    Arena::Scope scope(client->scratch);
-    const auto layout = in->layout.poly;
-    auto *data = client->scratch.allocate<uint64_t>(layout.wordCount());
-    RnsPolyView plain{data, layout.wordCount(), layout};
-    return data && decrypt(plain, in->view(), *client->secret, *ctx->tables, client->scratch) &&
-               encoding::decode(values, count, asConst(plain), in->layout.scale, *ctx->tables, client->scratch)
-             ? 0
-             : -1;
-  } catch (...) {
-    return -1;
-  }
+  return decryptVector(client, in, values, count);
+}
+int ckks_fhn_client_encrypt_vec_c64(FhnClientCtx *client, FhnBuffer *out, const FhnComplex64 *values, uint32_t count) {
+  return encryptVector(client, out, values, count);
+}
+int ckks_fhn_client_decrypt_vec_c64(FhnClientCtx *client, const FhnBuffer *in, FhnComplex64 *values, uint32_t count) {
+  return decryptVector(client, in, values, count);
 }
 int ckks_fhn_buffer_info(FhnBackendCtx *ctx, const FhnBuffer *buffer, FhnCkksBufferInfo *out) {
   if (!ctx || !buffer || buffer->owner != ctx || !out)

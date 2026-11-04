@@ -2,11 +2,24 @@
 #include "Session/Session.h"
 #include <algorithm>
 #include <cmath>
+#include <dlfcn.h>
 #include <gtest/gtest.h>
+#include <memory>
 
 namespace {
 using namespace private_search;
 using namespace fhenomenon::runtime;
+
+class SearchScope : public ::testing::Test {
+  public:
+  static void SetUpTestSuite() {
+    // Keep the plugin loaded across tests and repetitions. Apple ASan can
+    // retain global registrations after unloading an instrumented dylib.
+    static const std::unique_ptr<void, decltype(&dlclose)> library{
+        dlopen(FHN_NATIVE_TEST_LIBRARY, RTLD_NOW | RTLD_LOCAL), dlclose};
+    ASSERT_NE(library, nullptr) << dlerror();
+  }
+};
 
 std::vector<Document> documents(unsigned count = 17) {
   std::vector<Document> result;
@@ -38,7 +51,7 @@ void scoresEqual(TrustedClient &client, const EncryptedScores &scores) {
 
 // Without scoped search contributions this still computes correct ciphertexts
 // through ordinary fallback, but cannot select the required two-command span.
-TEST(SearchScope, PreparedFullBlocksSelectCollectionAndTailSelectsBlock) {
+TEST_F(SearchScope, PreparedFullBlocksSelectCollectionAndTailSelectsBlock) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);
@@ -67,7 +80,7 @@ TEST(SearchScope, PreparedFullBlocksSelectCollectionAndTailSelectsBlock) {
 } // namespace
 
 namespace {
-TEST(SearchScope, DisabledKernelsAndUnpreparedRequestsUseOrdinaryDispatch) {
+TEST_F(SearchScope, DisabledKernelsAndUnpreparedRequestsUseOrdinaryDispatch) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);
@@ -106,7 +119,7 @@ TEST(SearchScope, DisabledKernelsAndUnpreparedRequestsUseOrdinaryDispatch) {
 }
 
 namespace {
-TEST(SearchScope, TypedRecorderExportsPreparationAndReusesExactArtifactInLaterScope) {
+TEST_F(SearchScope, TypedRecorderExportsPreparationAndReusesExactArtifactInLaterScope) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);
@@ -152,7 +165,7 @@ TEST(SearchScope, TypedRecorderExportsPreparationAndReusesExactArtifactInLaterSc
 }
 
 namespace {
-TEST(SearchScope, ExternalScopeKernelReplacesBuiltinsAndNestedBlockOverridesRemainVisible) {
+TEST_F(SearchScope, ExternalScopeKernelReplacesBuiltinsAndNestedBlockOverridesRemainVisible) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);
@@ -223,7 +236,7 @@ TEST(SearchScope, ExternalScopeKernelReplacesBuiltinsAndNestedBlockOverridesRema
   EXPECT_EQ(selected(runtime, "contrib.search.scope.block"), 1u);
 }
 
-TEST(SearchScope, CopiedPreparationPayloadAndDifferentQueryCannotEnterSealedScopeKernels) {
+TEST_F(SearchScope, CopiedPreparationPayloadAndDifferentQueryCannotEnterSealedScopeKernels) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);
@@ -250,7 +263,7 @@ TEST(SearchScope, CopiedPreparationPayloadAndDifferentQueryCannotEnterSealedScop
   scoresEqual(client, {actual, docs.shape});
 }
 
-TEST(SearchScope, CollectionStopsAtEightCommandsAndReturnsOnlyRequestedLiveouts) {
+TEST_F(SearchScope, CollectionStopsAtEightCommandsAndReturnsOnlyRequestedLiveouts) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);
@@ -278,7 +291,7 @@ TEST(SearchScope, CollectionStopsAtEightCommandsAndReturnsOnlyRequestedLiveouts)
   EXPECT_TRUE(collection_detail);
 }
 
-TEST(SearchScope, CollectionSeparatesDifferentPreparationSymbolsAndBlockCapacities) {
+TEST_F(SearchScope, CollectionSeparatesDifferentPreparationSymbolsAndBlockCapacities) {
   Runtime runtime({0, 4096});
   TrustedClient client(runtime, FHN_NATIVE_TEST_LIBRARY);
   EncryptedSearch evaluator(runtime, client.computeServices(), FHN_NATIVE_TEST_LIBRARY);

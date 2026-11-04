@@ -221,6 +221,16 @@ install(TARGETS fhn_search_contribution EXPORT ${PROJECT_LIB_NAME}Targets
 add_subdirectory(benchmarks)
 add_subdirectory(examples/private_search)
 
+# Complex spectral workloads use the same public contribution/runtime boundary.
+add_library(fhn_spectral_contribution STATIC contributions/spectral/SpectralKernels.cpp)
+target_link_libraries(fhn_spectral_contribution PUBLIC fhn_matvec_contribution)
+set_target_properties(fhn_spectral_contribution PROPERTIES
+  POSITION_INDEPENDENT_CODE ON EXPORT_NAME SpectralKernels)
+add_library(Fhenomenon::SpectralKernels ALIAS fhn_spectral_contribution)
+install(TARGETS fhn_spectral_contribution EXPORT ${PROJECT_LIB_NAME}Targets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+add_subdirectory(examples/private_spectrum)
+
 if(BUILD_TEST)
   enable_testing()
   add_subdirectory(test)

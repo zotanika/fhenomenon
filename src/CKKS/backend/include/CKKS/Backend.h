@@ -20,6 +20,9 @@ int ckks_fhn_client_prepare(FhnClientCtx *, const FhnProgram *);
 int ckks_fhn_client_encrypt_vec_f64(FhnClientCtx *, FhnBuffer *, const double *, uint32_t);
 int ckks_fhn_client_decrypt_vec_f64(FhnClientCtx *, const FhnBuffer *, double *, uint32_t);
 
+int ckks_fhn_client_encrypt_vec_c64(FhnClientCtx *, FhnBuffer *, const FhnComplex64 *, uint32_t);
+int ckks_fhn_client_decrypt_vec_c64(FhnClientCtx *, const FhnBuffer *, FhnComplex64 *, uint32_t);
+
 // Diagnostic metadata only: no plaintext or secret-key access. The movement
 // model reserves full buffer capacity at every level; live payload can shrink.
 

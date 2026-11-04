@@ -33,6 +33,16 @@ the oracle, layout comparisons and performance diagnostics. Its
 explain defaults, scoped selection and request fallback; both search executables
 also provide standalone `--help`.
 
+[Encrypted power/equipment monitoring](examples/private_spectrum/README.md)
+uses both parts of CKKS complex slots. Four synchronized sensor streams contribute
+frequency-bin vectors; the server accumulates cross-spectra and power spectra.
+Pair and pair-tile kernels share one prepared reference across scopes, while
+ordinary native commands consume the products and carry accumulated state into
+the next frame. The owning client decrypts the spectra and computes phase and
+coherence.
+The contribution links separately as `Fhenomenon::SpectralKernels` and makes no
+changes to the runtime core.
+
 The core bet is simple: fully homomorphic encryption will not become practical by pretending that arbitrary software can be compiled unchanged into encrypted execution. It will also not become practical by making every backend maximally general and then accepting unusable speed. The useful boundary is closer to GPU computing. A trusted host should orchestrate public control flow, while an untrusted executor runs branchless, data-oblivious, coarse-grained encrypted kernels.
 
 Fhenomenon treats constraints as performance contracts. A fast kernel that only works for a particular scheme, parameter set, packing layout, tensor shape, device residency, or application pattern is not a second-class hack. It is a valuable fast path, as long as its constraints are explicit enough for the runtime to dispatch, compose, benchmark, and replace it safely.

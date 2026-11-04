@@ -41,7 +41,7 @@ below remain unchanged and are useful as the comparison path.
 | L2 | Fixed 64-byte-aligned slabs, checked non-owning polynomial/ciphertext views, read-only evaluation-key views. |
 | L3 | Caller-owned bounded workspace with scoped rewind. |
 | L4 | Immutable setup tables; ciphertext arithmetic, tensor product, hybrid relinearization, exact divide-and-round rescale, Galois rotation/conjugation, scalar operations and level reduction. |
-| L5 | Canonical real CKKS packing, public-key encryption, decryption, secret/public/evaluation-key ownership, OS entropy. |
+| L5 | Canonical real/complex CKKS packing, public-key encryption, decryption, secret/public/evaluation-key ownership, OS entropy. |
 | L6 | FHN compute plugin, semantic circuit compiler/reusable executables, and separately owned trusted-client data plane. |
 
 Each layer links only downward. L4 cannot include or link L5 key types.
@@ -50,13 +50,19 @@ under the destination secret. Digit extension uses approximate BConv; removing
 P and reconstructing decoded coefficients use exact centered CRT. Lower-level
 switches retain the full key's original Q-to-P offsets.
 
-The encoder supports positive power-of-two real vector lengths up to N/2.
+The encoder supports positive power-of-two real or complex vector lengths up to N/2.
 Short vectors repeat across physical slots, preserving signed cyclic rotations
 of their logical length. Positive rotation steps rotate left. Decryption
 requires the exact original logical count. Unsupported counts, nonfinite values,
 coefficient-encoding overflow (int64 or centered active-Q range), incompatible
 buffers, missing keys and depleted
 levels fail rather than substituting another computation.
+
+Complex slots use a conjugate-symmetric canonical embedding: each slot `z` is
+paired with `conj(z)` at the reflected root. The existing ring arithmetic,
+rotations and conjugation operate on both components. There is no universal
+`|z| < 1` input restriction: the scale, encoded coefficient range, modulus and
+subsequent computation determine usable magnitude and precision.
 
 On the raw opcode path, `MULT_CC` is a 2×2 tensor product with three output components. `RELINEARIZE`
 returns two components; `RESCALE` removes one actual Q limb and divides the
@@ -72,6 +78,17 @@ The additive `fhn_client_create/destroy/prepare/encrypt_vec_f64/decrypt_vec_f64`
 exports keep ABI version 1 and the existing vtable layout intact. Native symbol
 names have the `ckks_` prefix. It deliberately does not export the old
 same-compute-context encryption/decryption functions.
+
+Optional `ckks_fhn_client_encrypt_vec_c64` and
+`ckks_fhn_client_decrypt_vec_c64` add packed complex I/O. Resolve them independently
+using `FhnClientEncryptVectorComplex64Fn` and `FhnClientDecryptVectorComplex64Fn`;
+each element is the C-compatible `FhnComplex64 { double real, imag; }` from
+`FHN/fhn_backend_api.h`. Both components must be finite, and decryption requires
+the exact logical count. Rejected calls leave the output unchanged. The real
+and complex functions share the same ciphertext representation: real decryption
+returns its real projection. ABI version 1 and the vtable layout remain unchanged.
+See the [complex monitoring example](../examples/private_spectrum/README.md) for
+scoped cross-spectrum evaluation through a separately linked contribution.
 
 Create a compute context, then one client for it. `client_prepare(program)`
 generates only the needed relinearization and Galois keys before execution.

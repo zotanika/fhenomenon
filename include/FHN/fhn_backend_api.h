@@ -160,6 +160,22 @@ typedef int (*FhnClientDecryptVectorDoubleFn)(FhnClientCtx *client, const FhnBuf
                                            double *values, uint32_t count);
 
 
+/* Optional packed-complex trusted-client exports, resolved as a pair:
+   fhn_client_encrypt_vec_c64 / fhn_client_decrypt_vec_c64 (plus backend prefix).
+   The trusted-client and exact-count contracts above apply. Both components
+   must be finite and within the supported encoding range. Real and complex
+   entry points use the same ciphertext kind. Complex decoding of a real
+   input yields an approximately zero imaginary component, while real
+   decoding returns the real projection. ABI 1 and FhnBackendVTable are unchanged. */
+typedef struct FhnComplex64 {
+  double real;
+  double imag;
+} FhnComplex64;
+typedef int (*FhnClientEncryptVectorComplex64Fn)(FhnClientCtx *client, FhnBuffer *out,
+                                               const FhnComplex64 *values, uint32_t count);
+typedef int (*FhnClientDecryptVectorComplex64Fn)(FhnClientCtx *client, const FhnBuffer *in,
+                                               FhnComplex64 *values, uint32_t count);
+
 /* Optional advanced exports (NULL if not provided) */
 typedef FhnExecHandle *(*FhnSubmitFn)(FhnBackendCtx *ctx, const FhnProgram *program, FhnBuffer **inputs,
                                       uint32_t num_inputs);
