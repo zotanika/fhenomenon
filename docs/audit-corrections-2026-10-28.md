@@ -23,7 +23,7 @@
 - 새 Debug 빌드: CTest **23/23 통과**, GoogleTest **241개 통과**.
 - 새 ASan/UBSan 빌드: LTO를 끄고 오류 즉시 중단 설정으로 CTest **23/23 통과**. LeakSanitizer 검증은 포함하지 않는다.
 - Release, `BUILD_TEST=OFF`, `DISABLE_LTO=ON`: 빌드와 별도 설치 폴더의 외부 소비자 프로그램 실행 통과.
-- packed 8×8 행렬–벡터 계산: 모든 출력 슬롯을 평문 기준값과 비교하고, 전용 연산과 기본 연산 대체 경로의 일치를 확인했다. 결과는 `planned=1 executed=1 skipped=0 failed=0`이다.
+- packed $8\times 8$ 행렬–벡터 계산: 모든 출력 슬롯을 평문 기준값과 비교하고, 전용 연산과 기본 연산 대체 경로의 일치를 확인했다. 결과는 `planned=1 executed=1 skipped=0 failed=0`이다.
 - 기존 64슬롯 matvec, 스칼라 정수·실수 전용 백엔드 호환성, 잘못된 옵션과 실행 생략의 실패 처리를 확인했다.
 - 수치 범위를 넘는 ToyFHE `stats`·`logreg`는 실제 불일치를 실패로 보고한다. 이 실패를 정상적으로 감지하는 검사도 포함했다.
 - 독립 Astra 검토에서 발견한 입력 공유·바이트 합계 넘침·Session 통합·옵션 검증과 대체 회전 연산 지원 판정 문제를 재현 후 수정했다. CKKS는 별도 정수 기준값과 경계 Layout·Arena 검사로 교차 확인했다.

@@ -82,7 +82,7 @@ and sensor 3 has a stable offset with a varying amplitude.
 
 These are synthetic post-FFT inputs, not a recording or an implementation of
 FFT, sensor synchronization or calibration. The phase convention is
-`sensor phase - reference phase`; sensor 1's bin-zero offset is -0.65 radians.
+$\text{sensor phase} - \text{reference phase}$; sensor 1's bin-zero offset is $-0.65$ radians.
 The eight logical slots repeat across the native profile's 4096 physical slots.
 This small example demonstrates composition and reuse, not efficient full-slot
 packing or production monitoring throughput.
@@ -188,9 +188,16 @@ between windows while preserving the session and registered recipes. Baseline
 statistics and per-bin persistence live in the trusted detector, not in an
 ever-growing encrypted execution history.
 
-For each bin the diagnostic helper can compute the signed phase `arg(C_i)` and
-magnitude-squared coherence `|C_i|² / (P_i P_0)` from decrypted sums
-`C_i = Σ X_i conj(X_0)` and `P_i = Σ |X_i|²`. The phase and coherence
+For each bin the diagnostic helper can compute the signed phase $\arg(C_i)$ and
+magnitude-squared coherence $\frac{\lvert C_i\rvert^2}{P_i P_0}$ from decrypted sums
+
+$$
+C_i = \sum_{f=1}^{F} X_{i,f}\,\overline{X_{0,f}},
+\qquad
+P_i = \sum_{f=1}^{F} \lvert X_{i,f}\rvert^2,
+$$
+
+where $f$ indexes the $F$ frames in the window. The phase and coherence
 are reported as unavailable if powers, denominator, or cross magnitude
 fall at or below the diagnostic floor or if the calculation is nonfinite.
 The helper also treats materially imaginary power or coherence above one
@@ -198,7 +205,7 @@ as unavailable, with a small tolerance for CKKS error.
 These decoded diagnostics remain available for low-level validation; the
 application reports only joint alarms. Every complex cross and power result
 is checked against an independent cleartext oracle with an absolute tolerance
-of 1e-5.
+of $10^{-5}$.
 
 The output reports client key setup, encryption and decryption separately
 from evaluator append time. Peak accounted bytes cover retained runtime

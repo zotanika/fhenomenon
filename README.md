@@ -313,7 +313,7 @@ Run the fused-vs-decomposed benchmark:
 ```
 
 This is the project's thesis in one program: an encrypted matrix–vector
-product (row method — n fused multiplies plus n·log₂(n) rotate-and-add
+product (row method — $n$ fused multiplies plus $n\log_2 n$ rotate-and-add
 reduction steps) is built once as a single FHN program, then executed two
 ways — against the backend's full kernel table (fused `FHN_HMULT` /
 `FHN_HROT_ADD` dispatch) and against a filtered table with the fused opcodes
@@ -331,7 +331,7 @@ Run the genuine CPU CKKS path (use `.so` on Linux):
   --atol 1e-4 --rtol 1e-6 --budget-bytes min
 ```
 
-This encrypts an 8×8 matrix and vector with actual RLWE public-key encryption,
+This encrypts an $8\times 8$ matrix and vector with actual RLWE public-key encryption,
 checks all output slots, and compares fused and primitive execution. The native
 default profile supports two sequential multiplication levels. See
 [native CKKS configuration and limits](docs/native-ckks.md). The earlier C++

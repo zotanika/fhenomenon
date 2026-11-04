@@ -21,9 +21,9 @@ adoption claim.
 | --- | --- | --- |
 | `matvec` | Scalar-weighted cyclic rotations of one packed vector; a circulant-style transform. | Common-source rotation preparation and fan-out. |
 | `matmul-tile` | Two such transforms in sequence. | Multi-stage execution, not a general matrix-multiplication implementation. |
-| `matvec-fused` | Eight encrypted row dot products with a shared encrypted vector. | Real encrypted 8x8 matrix application, multiple outputs, shared input. |
-| `stats` | For two datasets: `sum(x)` and `64*sum(x*x)-sum(x)^2`. | Escaping intermediate values and four outputs. The second result is `4096 * population_variance` for 64 elements. |
-| `logreg` | Three dot products, each transformed by `3*d-d^3`, then summed. | Execution of that polynomial, not validation of a logistic model. |
+| `matvec-fused` | Eight encrypted row dot products with a shared encrypted vector. | Real encrypted $8 \times 8$ matrix application, multiple outputs, shared input. |
+| `stats` | For two datasets: $\sum_j x_j$ and $64\sum_j x_j^2 - (\sum_j x_j)^2$. | Escaping intermediate values and four outputs. The second result is $4096 \cdot \mathrm{population\_variance}$ for 64 elements. |
+| `logreg` | Three dot products, each transformed by $3d - d^3$, then summed. | Execution of that polynomial, not validation of a logistic model. |
 | `psi-eq` | AND of 32 aligned-pair equality results. | Exact Boolean requirements, not a private set intersection protocol. |
 
 These descriptions follow `benchmarks/corpus/corpus_shapes.cpp`. The current
@@ -36,11 +36,12 @@ Freeze the following before timing or choosing a provider:
 
 - Original graph, all input/output IDs, encryption status, logical slots and
   independently evaluated output meaning.
-- Current native profile for like-for-like comparison: N8192, Q approximately
-  50/40/40 bits, P approximately 60 bits, dnum3, initial scale 2^40. This profile's
+- Current native profile for like-for-like comparison: $N=8192$, $Q$ prime bit
+  widths $(50,40,40)$, $P$ prime bit width $60$, $\mathrm{dnum}=3$,
+  initial scale $2^{40}$. This profile's
   public-table screening is not independent security certification.
 - Every required output slot must satisfy
-  `abs(actual-expected) <= 1e-4 + 1e-6*abs(expected)`.
+  $\lvert \mathrm{actual} - \mathrm{expected} \rvert \le 10^{-4} + 10^{-6}\lvert \mathrm{expected} \rvert$.
 - This initial profile uses explicit `conformance_only` numerical assurance.
   Admission records a reviewed complete-plan recipe and actual execution
   evidence. A new numerical composition needs new evidence. Passing these cases
@@ -144,15 +145,20 @@ This is a concrete architecture stress case, not evidence of present scheme
 switching support. A real service may refine the application requirements before
 implementation; do not treat this invented fixture as adoption evidence.
 
-Inputs are eight encrypted records `x_i`, each with eight features, and one
-shared encrypted weight vector `w`. Thresholds `tau_i` are public configuration.
+Inputs are eight encrypted records $x_i$, each with eight features, and one
+shared encrypted weight vector $w$. Thresholds $\tau_i$ are public configuration.
 
-```text
-s_i = sum_j x_ij * w_j
-m_i = 1 if s_i >= tau_i else 0
-count = sum_i m_i
-selected_score = sum_i m_i * s_i
-```
+$$
+\begin{aligned}
+s_i &= \sum_j x_{ij}w_j, \\
+m_i &= \begin{cases}
+1, & s_i \ge \tau_i, \\
+0, & \text{otherwise},
+\end{cases} \\
+\mathrm{count} &= \sum_i m_i, \\
+\mathrm{selected\_score} &= \sum_i m_i s_i.
+\end{aligned}
+$$
 
 Inputs use nine ciphertexts, each holding eight logical values. Outputs are two
 ciphertexts, each scalar replicated over eight logical slots, in the specified
@@ -167,12 +173,12 @@ Two **separate** numerical contracts are possible:
 | --- | --- | --- |
 | Intended bridge | A genuinely supported BFV/CGGI pair. | A genuinely supported CKKS/CGGI pair. |
 | Values | Signed 8-bit inputs/weights; signed 19-bit score and thresholds; signed 22-bit selected-score accumulator; count 0 through 8. | Explicit bounded input/score ranges and numerical error budget. |
-| Predicate | Signed `>=`, including equality. No unintended modular wrap. | Correct outside a public margin `delta`; behavior inside the margin must be explicitly accepted by the application. |
-| Extra requirement | A subtract-based comparator must accommodate signed 20-bit score-minus-threshold. Actual parameter selection must cover every algorithm intermediate. | The justified total score/switching/quantization error must be strictly below `delta`; no secret-dependent exclusion of boundary cases. |
+| Predicate | Signed $\ge$, including equality. No unintended modular wrap. | Correct outside a public margin $\delta$; behavior inside the margin must be explicitly accepted by the application. |
+| Extra requirement | A subtract-based comparator must accommodate signed 20-bit score-minus-threshold. Actual parameter selection must cover every algorithm intermediate. | The justified total score/switching/quantization error must be strictly below $\delta$; no secret-dependent exclusion of boundary cases. |
 | Final result | Exact under the admitted correctness/failure policy. | Count and aggregate consistent with permitted masks and the numeric error bound. |
 
-For the exact fixture, a score can reach `8 * (-128) * (-128) = 131072`;
-eight selected scores can reach `1048576`. The stated widths include these
+For the exact fixture, a score can reach $8 \cdot (-128) \cdot (-128) = 131072$;
+eight selected scores can reach $1048576$. The stated widths include these
 positive endpoints. Bit widths alone do not select a valid batched plaintext
 modulus or supply a switching protocol.
 

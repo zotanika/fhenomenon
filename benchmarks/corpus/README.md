@@ -85,11 +85,17 @@ their outputs. The second checks all 64 slots of the original matvec shape.
   passes file contents to `fhn_create`. The optional all-or-nothing
   `fhn_client_*` group keeps secret material in a separate trusted handle.
   Evaluation-only backends load but skip execution without a usable host data plane.
-- Floating-point checks use `abs(actual-expected) <= atol + rtol*abs(expected)`.
+- Floating-point checks use
+
+  $$
+  \lvert \mathrm{actual}-\mathrm{expected}\rvert
+  \le \mathrm{atol}+\mathrm{rtol}\,\lvert \mathrm{expected}\rvert.
+  $$
+
   `--atol` and `--rtol` default to `1e-6`; nonfinite outputs fail. Integer
   scalar I/O retains exact comparisons.
 - ToyFHE is an insecure CPU reference. Packed fixed-point values have a step
-  of `1/65536` and centered magnitude below roughly `32768`. Intermediate
+  of $\frac{1}{65536}$ and centered magnitude below roughly $32768$. Intermediate
   overflow is possible even in shallow graphs. The current packed `stats`
   and `logreg` exceed that range and correctly fail verification; tests pin
   this behavior. `--max-depth` is a filter, not a numerical safety proof.

@@ -16,7 +16,7 @@ build/bin/fhn-corpus --backend build/lib/libckks_fhn.dylib --prefix ckks_ \
   --atol 1e-4 --rtol 1e-6 --budget-bytes min
 ```
 
-Use `libckks_fhn.so` on Linux. This 8×8 workload encrypts both matrix rows and
+Use `libckks_fhn.so` on Linux. This $8\times8$ workload encrypts both matrix rows and
 vector, verifies every output slot against the oracle, and compares native
 `HMULT`/`HROT_ADD` with complete primitive decomposition. Required execution
 fails on a skip. `ckks_fhn` also builds and installs with `BUILD_TEST=OFF`.
@@ -45,30 +45,31 @@ below remain unchanged and are useful as the comparison path.
 | L6 | FHN compute plugin, semantic circuit compiler/reusable executables, and separately owned trusted-client data plane. |
 
 Each layer links only downward. L4 cannot include or link L5 key types.
-Hybrid switching uses per-digit CRT projector messages `P * E_digit * s_old`
-under the destination secret. Digit extension uses approximate BConv; removing
-P and reconstructing decoded coefficients use exact centered CRT. Lower-level
-switches retain the full key's original Q-to-P offsets.
+Hybrid switching uses per-digit CRT projector messages
+$P E_{\mathrm{digit}} s_{\mathrm{old}}$ under the destination secret.
+Digit extension uses approximate BConv; removing
+$P$ and reconstructing decoded coefficients use exact centered CRT. Lower-level
+switches retain the full key's original $Q$-to-$P$ offsets.
 
-The encoder supports positive power-of-two real or complex vector lengths up to N/2.
+The encoder supports positive power-of-two real or complex vector lengths up to $N/2$.
 Short vectors repeat across physical slots, preserving signed cyclic rotations
 of their logical length. Positive rotation steps rotate left. Decryption
 requires the exact original logical count. Unsupported counts, nonfinite values,
-coefficient-encoding overflow (int64 or centered active-Q range), incompatible
+coefficient-encoding overflow (int64 or centered active-$Q$ range), incompatible
 buffers, missing keys and depleted
 levels fail rather than substituting another computation.
 
-Complex slots use a conjugate-symmetric canonical embedding: each slot `z` is
-paired with `conj(z)` at the reflected root. The existing ring arithmetic,
+Complex slots use a conjugate-symmetric canonical embedding: each slot $z$ is
+paired with $\overline{z}$ at the reflected root. The existing ring arithmetic,
 rotations and conjugation operate on both components. There is no universal
-`|z| < 1` input restriction: the scale, encoded coefficient range, modulus and
+$\lvert z\rvert < 1$ input restriction: the scale, encoded coefficient range, modulus and
 subsequent computation determine usable magnitude and precision.
 
-On the raw opcode path, `MULT_CC` is a 2×2 tensor product with three output components. `RELINEARIZE`
-returns two components; `RESCALE` removes one actual Q limb and divides the
+On the raw opcode path, `MULT_CC` is a $2\times2$ tensor product with three output components. `RELINEARIZE`
+returns two components; `RESCALE` removes one actual $Q$ limb and divides the
 scale. `HMULT` performs all three. Scalar multiplication also consumes one
 level, even for integer and zero constants. Add/subtract require equal levels,
-component counts and scales within relative 1e-12; there is no automatic scale
+component counts and scales within relative $10^{-12}$; there is no automatic scale
 or level alignment. Plaintext-buffer and boolean/comparison opcodes are not
 advertised. The circuit author remains responsible for numerical headroom.
 
@@ -109,9 +110,10 @@ perform an encrypted fractional square and a compiled scaled-square circuit.
 
 ## Default profile and boundaries
 
-The default profile is N=8192 (4096 physical slots), three distinct Q primes
-near 2^50, 2^40, 2^40, one P prime near 2^60, dnum=3, and scale=2^40. Every prime
-is 1 modulo 2N. Fresh ciphertexts are level 2; two sequential `HMULT` operations
+The default profile is $N=8192$ (4096 physical slots), three distinct $Q$ primes
+near $2^{50}, 2^{40}, 2^{40}$, one $P$ prime near $2^{60}$, $\mathrm{dnum}=3$,
+and scale $2^{40}$. Every prime is $1$ modulo $2N$. Fresh ciphertexts are level 2;
+two sequential `HMULT` operations
 reach level 0. The prime search is deterministic; secret keys, errors, public
 keys and encryption randomness come from the OS CSPRNG, never a fixed seed.
 Secret/ephemeral polynomials are uniform ternary; errors use the difference
@@ -123,11 +125,11 @@ Optional JSON fields are `log_degree`, `main_primes`, `aux_primes`, `dnum`,
 and `log_default_scale`; unknown fields and unsupported profiles are rejected.
 An empty object selects the default. Explicit prime arrays are decimal unsigned
 integers. The adapter rejects sparse/terminal profiles and empty full-level
-digits, and conservatively bounds the total QP bit length for degrees 1024
+digits, and conservatively bounds the total $QP$ bit length for degrees 1024
 through 32768 using the public uniform-ternary 128-bit classical table in
 [SEAL](https://github.com/microsoft/SEAL/blob/main/native/src/seal/util/hestdparms.h).
 The default's conservative total is 190 bits against that table's 218-bit
-N=8192 bound. This is parameter screening, not an independent security audit
+$N=8192$ bound. This is parameter screening, not an independent security audit
 or certification of this implementation.
 
 This is a leveled CPU implementation. Bootstrapping, general ciphertext
@@ -145,7 +147,7 @@ bounds including alignment, not exact minimum requirements. Setup explicitly
 prepares tables for all configured levels; it does not lazily allocate during
 execution.
 
-Each native buffer reserves three full-QP polynomials: 786432 bytes for the
+Each native buffer reserves three full-$QP$ polynomials: 786432 bytes for the
 default profile. Live two-component payload is 393216 bytes at level 2 and
 shrinks to 131072 bytes at level 0, while reserved capacity stays unchanged.
 `ckks_fhn_buffer_info` reports these separately along with workspace capacity
@@ -155,11 +157,11 @@ backend does not physically evict memory, so modeled transfer counts/budgets
 are not measured transfers or process-memory limits.
 
 Tests cover independent large-integer CRT oracles; key equations and noise
-consistency across RNS limbs; fractional packing and full-Q decoding; randomized
+consistency across RNS limbs; fractional packing and full-$Q$ decoding; randomized
 public-key-only encryption and wrong-key mismatch; two sequential encrypted
-multiplications; positive/negative/identity/conjugate rotations; multiple Q/P
+multiplications; positive/negative/identity/conjugate rotations; multiple $Q$/$P$
 primes per digit and lower levels; aliases, malformed metadata, scratch limits,
 expired keys, entropy failure, secret wiping and zero successful-kernel heap
-allocations. Native 8×8 output is checked against both a plaintext oracle and
+allocations. Native $8\times8$ output is checked against both a plaintext oracle and
 primitive fallback. Whole-suite Debug, sanitizer and installed-package results
 are recorded in the execution handoff rather than treated as a security proof.

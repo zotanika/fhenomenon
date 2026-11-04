@@ -1,6 +1,6 @@
 # Matvec preparation validation — 2026-10-31
 
-The unchanged encrypted 8×8 `matvec-fused` application takes **80.532 ms**
+The unchanged encrypted $8\times8$ `matvec-fused` application takes **80.532 ms**
 with immediate commands, **79.444 ms** with the previous contributed
 packed-dot kernel, and **39.444 ms** with the new shared preparation.
 That is **2.04× speedup / 51.02% less execution time** versus immediate
@@ -43,15 +43,19 @@ was only a candidate-selection experiment, not the application speedup claim.
 contain 24 measured executions and two warmups per mode. Measurement order
 rotates, covering two complete cycles through the 12 modes. All modes use one
 fixture's identical ciphertexts, context and keys. Every execution verifies all
-8 outputs × 8 logical slots against the unchanged independent oracle; maximum
-absolute error is 2.91260545e-07, identical across modes and below the unchanged
-`1e-4 + 1e-6*abs(expected)` tolerance. Private/native differential tests also
+$8\text{ outputs}\times8\text{ logical slots}$ against the unchanged independent
+oracle; maximum absolute error is $2.91260545\times10^{-7}$, identical across
+modes and below the unchanged
+$10^{-4}+10^{-6}\lvert y_{\mathrm{expected}}\rvert$ tolerance, where
+$y_{\mathrm{expected}}$ is the expected output. Private/native differential tests also
 require exact ciphertext residues, rather than tolerance-only equivalence.
 
 Environment: macOS arm64, AppleClang 21.0.0, Release, LTO disabled,
-`BUILD_TEST=OFF`. Parameters: N8192, Q50/40/40, P60, dnum3, scale 2^40;
+`BUILD_TEST=OFF`. Parameters: $N=8192$, $Q$ prime bit widths $(50,40,40)$,
+$P$ prime bit width $60$, $\mathrm{dnum}=3$, scale $2^{40}$;
 8 logical slots repeated over the native physical packing. Input vector is
-`[1,-2,3,0,-1,2,1,-3]`; matrix row j is `(j*3+k*2)%5-2`.
+$[1,-2,3,0,-1,2,1,-3]$; matrix entry $(j,k)$ is
+$((3j+2k)\bmod 5)-2$.
 No other project builds/tests/timing jobs ran during this measurement.
 
 | Mode | Warm median ms | P10–P90 ms | Preparation ms | Artifact MiB | Peak tracked MiB |
@@ -80,7 +84,7 @@ No other project builds/tests/timing jobs ran during this measurement.
   original generic arithmetic and maps.
 - `matvec-maps` / `matvec-vector`: add only cached maps or source companions.
 - `matvec-keys`: retained evaluation-key companions **plus per-call fixed-scalar
-  Shoup hoisting** for P-lift/mod-down/rescale. It does not isolate retained-key
+  Shoup hoisting** for $P$-lift/mod-down/rescale. It does not isolate retained-key
   state from the scalar arithmetic improvement.
 - `matvec-full`: all selected components; one artifact is shared by eight
   independent dot requests.
@@ -120,8 +124,14 @@ and selected artifact; shared backend keys/tables remain outside these budgets.
 
 Using the observed warm medians, preparation plus one complete eight-row app
 is **45.892 ms**, below the old coarse kernel's 79.444 ms.
-The estimated break-even is
-`ceil(preparation / (old_coarse - prepared)) = 1` complete application. This is
+The estimated break-even number of complete applications is
+
+$$
+\left\lceil\frac{T_{\mathrm{prep}}}{T_{\mathrm{old}}-T_{\mathrm{prepared}}}\right\rceil=1,
+$$
+
+where $T_{\mathrm{prep}}$ is preparation time, $T_{\mathrm{old}}$ is the old coarse
+kernel's execution time and $T_{\mathrm{prepared}}$ is the prepared execution time. This is
 an amortization estimate from separately measured setup and warm execution,
 **not a measurement of cold first-request/service latency**. Registration,
 initial input import, image load, graph import, context creation, key generation
@@ -148,8 +158,8 @@ sets, other CPUs, batching policies or distributed services.
 - Full ASan+UBSan: **43/43 passed**. Halt-on-error and ODR checks enabled;
   LeakSanitizer disabled because unsupported by this macOS host.
 - New coverage: 5 private arithmetic tests, 11 native preparation tests and
-  9 contribution tests. Exact differential matrices cover levels, dnum1/2/4,
-  all eight flags, multi-P and 62-bit arithmetic; signed/identity rotations;
+  9 contribution tests. Exact differential matrices cover levels, $\mathrm{dnum}\in\{1,2,4\}$,
+  all eight flags, multi-$P$ and 62-bit arithmetic; signed/identity rotations;
   ordinary and prepared intermediate boundaries; source snapshot/identity;
   weak key expiry/replacement; budgets, no-allocation consumption, rollback,
   aliases, capacity and scratch failures; plugin compatibility and lifetimes.

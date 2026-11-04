@@ -56,8 +56,8 @@ bit-exact statement applies to that kernel rewrite; graph-level scheduling can
 change CKKS rounding/noise while retaining the application accuracy contract.
 
 Storage slots are reused after their last consumers. A region destination never
-overlaps live operands. Internal ciphertexts use their active Q basis and two
-components; they need not reserve the public buffer's full three-component QP
+overlaps live operands. Internal ciphertexts use their active $Q$ basis and two
+components; they need not reserve the public buffer's full three-component $QP$
 capacity. `workspace_limit_bytes` bounds reserved internal slot and scratch
 bytes. It excludes public I/O buffers, the backend's existing context scratch,
 key/table storage, graph metadata, and allocator overhead; it is not a process

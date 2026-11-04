@@ -83,10 +83,14 @@ auto right = native.rotate(x, -1, prepared);
 
 Import copies the ciphertext. Subsequent mutation/freeing of the original
 buffer cannot invalidate the runtime value. A rotation preparation owns a
-canonical source snapshot and inverse-NTT c1 limbs. Each consumer applies its
+canonical source snapshot and inverse-NTT $c_1$ limbs. Each consumer applies its
 own coefficient automorphism and basis conversion/key switch. It reuses inverse
-transforms, not the entire hoisted key-switch decomposition. Its exact reserve
-is `3 * active_q_limbs * polynomial_degree * sizeof(uint64_t)`.
+transforms, not the entire hoisted key-switch decomposition. Its exact reserve is
+
+$$
+3 \cdot \mathrm{active\_q\_limbs} \cdot \mathrm{polynomial\_degree} \cdot \operatorname{sizeof}(\mathrm{uint64\_t}).
+$$
+
 The adapter checks source identity before reuse, including when the supplied
 replacement has the same ciphertext layout. The raw optional C exports in
 `FHN/fhn_prepared_api.h` instead operate on the owned snapshot directly.
@@ -294,7 +298,7 @@ records tests, measured costs and review corrections. Complete timing samples
 are in [the result JSON](../benchmarks/results/2026-10-31-lightweight-runtime-release.json).
 
 `stats` computes sums and scaled population variances of two 64-slot datasets;
-`matvec-fused` computes an encrypted 8×8 matrix/vector example with eight
+`matvec-fused` computes an encrypted $8 \times 8$ matrix/vector example with eight
 outputs; `matvec` is the existing cyclic rotation/scalar workload. Names do not
 establish general application coverage.
 

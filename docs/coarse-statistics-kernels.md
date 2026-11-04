@@ -24,12 +24,15 @@ auto variance = runtime.submit({"contrib.stats.variance", {x, sum},
 // sum remains independently available as the application's other output.
 ```
 
+Let $n$ denote `width`, $x_i$ an input slot and $s=\sum_{i=0}^{n-1}x_i$
+the corresponding replicated `sum`.
+
 | Recipe | Inputs | Returned canonical ciphertext |
 |---|---|---|
-| `contrib.stats.energy` | `x`, corresponding `sum` | `(width*x-sum)^2/width` per slot |
+| `contrib.stats.energy` | `x`, corresponding `sum` | $(n x_i-s)^2/n$ per slot |
 | `contrib.stats.variance` | `x`, corresponding `sum` | Rotate-add reduction of that energy |
-| `contrib.packed.dot` | encrypted `a`, encrypted `b` | Rotate-add reduction of `a*b` |
-| `contrib.packed.reduce` | encrypted intermediate | Rotate-add reduction, distances `width/2,...,1` |
+| `contrib.packed.dot` | encrypted `a`, encrypted `b` | Rotate-add reduction of $a_i b_i$ |
+| `contrib.packed.reduce` | encrypted intermediate | Rotate-add reduction, distances $n/2,\ldots,1$ |
 
 Attributes contain exactly `std::uint32_t width`, a nonzero power of two no
 greater than the logical slot count. Partial reductions retain that slot count.
@@ -62,9 +65,12 @@ rotate/add with ordinary commands, then uses the contributed partial reduction.
 
 ## Arithmetic and supported envelope
 
-For a period-width input with corresponding replicated sum `s`,
+For an input of period $n$ with corresponding replicated sum $s$,
 
-`reduce((width*x-s)^2/width) = width*sum(x^2) - sum(x)^2`.
+$$
+\sum_{i=0}^{n-1}\frac{(n x_i-s)^2}{n}
+= n\sum_{i=0}^{n-1}x_i^2-s^2.
+$$
 
 This is the existing `stats` variance proxy, with its original four outputs
 and independent oracle. Per dataset the new expression requires one tensor
@@ -72,23 +78,30 @@ product and one relinearization/rescale, compared with two of each originally.
 The total number of rotations is unchanged. Fusing the product/reduction also
 removes repeated public buffer allocation/publication and operation boundaries.
 
-The initially considered expression `reduce(x*(width*x-s))` has a first-order
-cancellation problem under CKKS error: constant -8 at width64 exceeded the
+The initially considered expression $\sum_{i=0}^{n-1}x_i(n x_i-s)$ has a first-order
+cancellation problem under CKKS error: constant $-8$ at $n=64$ exceeded the
 unchanged absolute tolerance. The centered-square form passed that regression
 without changing tolerance. The benchmark still compares against the original
 application oracle, not a newly defined encrypted-input oracle.
 
-Division by width is represented explicitly by the actual output scale
-`width * input_scale^2 / dropped_prime`. It consumes no extra Q level but uses
+Division by $n$ is represented explicitly by the actual output scale
+
+$$
+\Delta_{\mathrm{out}}=\frac{n\Delta_{\mathrm{in}}^2}{q_{\mathrm{drop}}},
+$$
+
+where $\Delta_{\mathrm{in}}$ is the input scale and $q_{\mathrm{drop}}$ is the
+dropped prime. It consumes no extra $Q$ level but uses
 additional modulus headroom. The runtime does not force this value to have the
 scale of an ordinary normalized product. Rotations and additions of matching
 intermediates preserve the scale; incompatible joins are rejected.
 
-Statistics recipes conservatively require level >= 2 (three active Q primes).
-The tested statistics envelope is default native N8192, Q50/40/40, P60, dnum3,
-width64 and input magnitudes <=8, with a correctly supplied sum. This admission
+Statistics recipes conservatively require level $\ge 2$ (three active $Q$ primes).
+The tested statistics envelope is the default native profile: $N=8192$,
+$Q$ prime bit widths $(50,40,40)$, $P$ prime bit width $60$, $\mathrm{dnum}=3$,
+$n=64$ and input magnitudes $\le8$, with a correctly supplied sum. This admission
 is not a precision guarantee for arbitrary parameters, magnitudes or malformed
-sum provenance. Packed dot requires level >=1; reduction also supports level0,
+sum provenance. Packed dot requires level $\ge1$; reduction also supports level 0,
 subject to the usual CKKS value-range limits. Metadata cannot establish the
 periodic plaintext or sum relationship.
 

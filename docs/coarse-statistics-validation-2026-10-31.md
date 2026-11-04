@@ -8,7 +8,8 @@ were checked after implementation and are preserved in the
 
 ## Performance result
 
-Same encrypted inputs and keys, default N8192 Q50/40/40 P60 dnum3 profile,
+Same encrypted inputs and keys, default profile with $N=8192$, $Q$ prime bit
+widths $(50,40,40)$, $P$ prime bit width $60$ and $\mathrm{dnum}=3$,
 AppleClang 21.0.0 on macOS arm64, Release with LTO/tests disabled. Two warmups
 and seven measured runs per mode; measurement order rotates. All other agent
 build/test/timing work was idle.
@@ -75,7 +76,8 @@ as actual used workspace.
 - The original corpus graphs, inputs, output IDs and independent plaintext
   oracle were not changed. All four stats outputs and eight matrix/vector
   outputs pass every logical slot check on every warmup and measured run.
-- The original tolerance remains `1e-4 + 1e-6*abs(expected)`. Maximum stats
+- The original tolerance remains $10^{-4}+10^{-6}\lvert y_{\mathrm{expected}}\rvert$,
+  where $y_{\mathrm{expected}}$ is the expected output. Maximum stats
   absolute error was 0.000182663 on the original path and 0.000184993 on the
   contribution/split/energy-only paths; both satisfy the mixed tolerance.
 - A sum made by ordinary commands is also an output and is passed into the
@@ -88,16 +90,21 @@ as actual used workspace.
   or client pointer in compute providers. Native coarse calls allocate no heap
   memory. They use existing context scratch and publish output only on success.
 
-The initial reassociation `reduce(x*(n*x-s))` was rejected: on constant −8 data
-it produced about 1.66e-4 error versus 1.92e-5 for the original expression, failing
-the unchanged 1e-4 absolute bound. The stable `(n*x-s)^2/n` form passed the
-retained regression, with an observed maximum 3.8e-10 in a focused run.
+Let $n$ be the reduction width, $x_i$ an input slot and
+$s=\sum_{i=0}^{n-1}x_i$ the corresponding replicated sum. The initial
+reassociation $\sum_{i=0}^{n-1}x_i(n x_i-s)$ was rejected: on constant $-8$ data
+it produced about $1.66\times10^{-4}$ error versus $1.92\times10^{-5}$ for the
+original expression, failing
+the unchanged $10^{-4}$ absolute bound. The stable $(n x_i-s)^2/n$ form passed the
+retained regression, with an observed maximum $3.8\times10^{-10}$ in a focused run.
 
-Its division is represented by actual output scale `n*input_scale^2/q_drop`.
+Its division is represented by actual output scale
+$\Delta_{\mathrm{out}}=n\Delta_{\mathrm{in}}^2/q_{\mathrm{drop}}$, where
+$\Delta_{\mathrm{in}}$ is the input scale and $q_{\mathrm{drop}}$ is the dropped prime.
 It needs extra modulus headroom and is not interchangeable with an equal-level
-ordinary product's scale. Statistics recipes require level >= 2; the tested
-default-profile width 64 envelope has |x|<=8 and a correctly supplied period-64
-sum. Other parameter/magnitude choices need their own accuracy validation.
+ordinary product's scale. Statistics recipes require level $\ge 2$; the tested
+default-profile width 64 envelope has $\lvert x_i\rvert\le8$ and a correctly
+supplied period-64 sum. Other parameter/magnitude choices need their own accuracy validation.
 Ordinary operations preserve this scale; incompatible joins are explicitly
 rejected. No tolerance or value metadata was falsified to obtain a speedup.
 

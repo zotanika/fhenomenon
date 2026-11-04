@@ -3,7 +3,7 @@
 This contribution links as `Fhenomenon::SpectralKernels`, using only installed
 public runtime interfaces. The [monitoring example](../../examples/private_spectrum/README.md)
 supplies encrypted complex frequency bins from multiple sensors under one key.
-It computes `X_i[k] * conj(R[k])` and carries the sums across finite frame scopes.
+It computes $X_i[k]\,\overline{R[k]}$ and carries the sums across finite frame scopes.
 The runtime core does not know what a sensor or a spectrum is.
 
 ## Commands and reusable state
@@ -83,7 +83,7 @@ Matvec preparation while retaining a shared conjugated reference.
 ## Numerical and ownership contract
 
 Reference and sensor ciphertexts need two components, equal positive levels,
-matching logical slot counts and compatible scales (relative tolerance `1e-12`).
+matching logical slot counts and compatible scales (relative tolerance $10^{-12}$).
 They must belong to the registered native context and runtime; that context's
 single client lifetime supplies one key identity. HMULT consumes one level.
 Accumulation requires compatible product metadata and a finite magnitude/error

@@ -16,7 +16,7 @@ Do not use this small sample as a search-quality benchmark.
 - `fixture.json`: schema version 1; `model` has `id`, `revision`, and `dimensions`.
   `documents` contain string `id`, `title`, `text`, `source`, and `embedding`.
   `queries` contain `id`, `text`, `relevant_document_ids`, and `embedding`.
-  Every vector contains 384 finite real numbers and has unit L2 norm.
+  Every vector contains 384 finite real numbers and has unit $\ell_2$ norm.
 - `source_provenance.json`: exact repository paths, inclusive 1-based line ranges,
   SHA-256 of complete source files, and SHA-256 of each excerpt's UTF-8 text.
   The fixture's `source` string is `path#Lstart-Lend`. Text retains source line
@@ -31,7 +31,7 @@ The model is
 [`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/tree/e8f8c211226b894fcb81acc59f3b34ba3efd5f42),
 revision `e8f8c211226b894fcb81acc59f3b34ba3efd5f42`. The exporter checks all
 inference-file hashes before loading it. It embeds **text only** with the real
-transformer, attention-mask mean pooling, then L2 normalization. It does not
+transformer, attention-mask mean pooling, then $\ell_2$ normalization. It does not
 embed titles or add query instructions. The pinned model truncates inputs at
 128 tokens; the provenance reports affected excerpts explicitly. Longer source
 paragraphs remain intact for display. These are actual model outputs, not

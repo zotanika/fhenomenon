@@ -207,7 +207,7 @@ For all four modes and all bundled queries, use:
   --compare --verify-all --reps 1 --scoped --json /tmp/search-all-scoped.json
 ```
 
-This runs 8 queries × 4 modes × (1 warm-up + 1 measured evaluation) = 64 full
+This runs $8\text{ queries} \times 4\text{ modes} \times (1\text{ warm-up} + 1\text{ measured evaluation}) = 64$ full
 search evaluations for the bundled fixture. Omit `--scoped` for the immediate
 path, or add `--no-scope-kernels` for the scoped fallback comparison.
 
@@ -262,7 +262,7 @@ across eight blocks in 4096 slots. Row layout repeats one document in a whole
 ciphertext (65 ciphertexts); tile layout places eight independent documents in
 each ciphertext (nine ciphertexts, including one partial tile).
 
-Only lane `j * 512` contains document `j`'s score in a result block. Other lanes
+Only lane $j\cdot512$ contains document $j$'s score in a result block. Other lanes
 contain mixed sliding sums. The trusted client extracts only valid score lanes
 before ranking, and excludes the zero-filled tail. Common-key encryption,
 query repetition and document placement are client contracts that public

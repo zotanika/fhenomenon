@@ -30,14 +30,15 @@ program paths remain separate; applications opt into this runtime API.
 
 The three benchmark workloads use the unchanged corpus graph and independent
 oracle. Every output and logical slot is checked at warmup and on each measured
-run with `abs(error) <= 1e-4 + 1e-6*abs(expected)`. `stats` has larger-magnitude
+run with $\lvert \mathrm{error} \rvert \le 10^{-4} + 10^{-6}\lvert \mathrm{expected} \rvert$. `stats` has larger-magnitude
 results; its measured maximum absolute error of 0.00021023 satisfies this mixed
 tolerance. This is not a universal absolute-accuracy claim.
 
 ## Measured execution
 
-macOS arm64, AppleClang 21.0.0, Release, no LTO, default native N8192 profile
-(Q 50/40/40, P60, dnum3). Two warmups and seven measured repetitions per mode;
+macOS arm64, AppleClang 21.0.0, Release, no LTO, default native profile with
+$N=8192$, $Q$ prime bit widths $(50,40,40)$, $P$ prime bit width $60$ and
+$\mathrm{dnum}=3$. Two warmups and seven measured repetitions per mode;
 mode order rotates. No other agent build, test or timing ran concurrently.
 Raw samples and accounting are preserved in the
 [result JSON](../benchmarks/results/2026-10-31-lightweight-runtime-release.json).

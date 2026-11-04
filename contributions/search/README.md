@@ -22,15 +22,15 @@ public evaluation keys. It produces encrypted scores. It never embeds text,
 decrypts a value, compares encrypted scores, or selects the final top-k. Those
 steps belong to the client; see the short application workflow linked above.
 
-For padded width `W`, the block request promises:
+For padded width $W$, the block request promises:
 
-```text
-score[j] = sum(query[t] * document[j][t], t = 0 .. W-1)
-```
+$$
+\mathrm{score}_j = \sum_{t=0}^{W-1} \mathrm{query}_t\,\mathrm{document}_{j,t}.
+$$
 
-This equals cosine similarity for L2-normalized vectors, up to CKKS error.
+This equals cosine similarity for $\ell_2$-normalized vectors, up to CKKS error.
 The default example has 384 meaningful components followed by 128 zeros, so
-`W = 512`. It repeats the query eight times in 4096 slots. A document block
+$W = 512$. It repeats the query eight times in 4096 slots. A document block
 contains either one repeated document or up to eight distinct documents.
 
 ## Ciphertext and layout contract
@@ -42,29 +42,29 @@ one native ciphertext Value.
 | Property | Requirement or result |
 | --- | --- |
 | Width | Positive power of two, fitting the logical slot count |
-| Capacity | Positive; `width * documents_per_ciphertext <= logical_slots` |
+| Capacity | Positive; $\mathtt{width}\cdot\mathtt{documents\_per\_ciphertext} \le \mathtt{logical\_slots}$ |
 | Valid documents | Between one and capacity for a block request |
 | Query packing | The same width-slot query repeats across logical slots |
-| Document packing | Document `j` occupies width-slot block `j`; unused tail blocks are zero |
+| Document packing | Document $j$ occupies width-slot block $j$; unused tail blocks are zero |
 | Input context and key | Same native context and owning encryption key |
-| Input metadata | Two components, equal logical slot counts and levels `L >= 1`; scales match within relative `1e-12` |
-| Output metadata | Two components at level `L-1`; the native multiplication/rescale scale |
-| Valid output lanes | Only slot `j * width`, for `j < valid_document_count` |
+| Input metadata | Two components, equal logical slot counts and levels $L \ge 1$; scales match within relative $10^{-12}$ |
+| Output metadata | Two components at level $L-1$; the native multiplication/rescale scale |
+| Valid output lanes | Only slot $j\cdot\mathtt{width}$, for $j < \mathtt{valid\_document\_count}$ |
 
-If both input scales are `s`, the product is rescaled by the dropped modulus
-prime, producing scale `s*s/q_L`. The default profile starts at level two; this
+If both input scales are $s$, the product is rescaled by the dropped modulus
+prime, producing scale $\frac{s^2}{q_L}$. The default profile starts at level two; this
 search consumes one level. Rotation and addition preserve that product's level
 and scale. No implicit scale/level alignment, bootstrapping or scheme switching
 occurs here.
 
 The ordinary block implementation multiplies the encrypted vectors, then adds
-positive rotations at distances `W/2, W/4, ..., 1`. Native positive rotation
-moves slot `i+distance` to slot `i`. At a block-start lane this sums exactly the
-document's `W` products. Other lanes contain sliding sums that may cross document
+positive rotations at distances $W/2, W/4, \ldots, 1$. Native positive rotation
+moves slot $i+\mathrm{distance}$ to slot $i$. At a block-start lane this sums exactly the
+document's $W$ products. Other lanes contain sliding sums that may cross document
 boundaries; **they are not document scores and must not enter ranking**.
 
-Collection scoring uses `ceil(document_count / capacity)` ciphertext blocks.
-Document `d` is read from result buffer `d / capacity`, lane `(d % capacity)*W`.
+Collection scoring uses $\left\lceil\frac{\mathtt{document\_count}}{\mathtt{capacity}}\right\rceil$ ciphertext blocks.
+Document $d$ is read from result buffer $\left\lfloor\frac{d}{\mathtt{capacity}}\right\rfloor$, lane $(d \bmod \mathtt{capacity})W$.
 A final one-document tile selects the row recipe while retaining the tile's
 original capacity and result mapping.
 

@@ -41,7 +41,7 @@ multiple rows and separate requests.
 | `FHN_MATVEC_PREPARE_MAPS` | Additionally, rotation permutation maps |
 | `FHN_MATVEC_PREPARE_ALL` | All three; default |
 
-The key flag also selects fixed-scalar Shoup arithmetic for P-lift/mod-down
+The key flag also selects fixed-scalar Shoup arithmetic for $P$-lift/mod-down
 and fused rescale. Those few scalar quotients are computed per invocation,
 outside coefficient loops, rather than retained in the artifact. Consequently
 its benchmark is explicitly **key companions plus per-call scalar hoisting**;
@@ -65,7 +65,7 @@ for the remaining distances 2, 1. A product produced entirely by the existing
 ordinary multiply command can also enter `contrib.matvec.reduce` at width 8.
 The caller specifies the reduction boundary; the runtime does not infer it.
 
-Preparation requires a canonical two-component source at level >=1. Width must
+Preparation requires a canonical two-component source at level $\ge1$. Width must
 be a power of two within its logical slots. A row must match source context,
 basis, logical slots and scale. Reduction accepts the matching product level
 and scale and preserves the actual intermediate metadata. This deliberately
@@ -103,7 +103,7 @@ command boundaries. The installed consumer links the exported contribution
 target using public headers only.
 
 `fhn-bench-runtime NATIVE_LIBRARY REPS matvec-reuse` runs the unchanged encrypted
-8×8 corpus app with the generic paths, preparation ablations and both split
+$8\times8$ corpus app with the generic paths, preparation ablations and both split
 variants. Every warmup and timed execution checks all 64 logical output values
 against the original independent oracle. All modes share ciphertexts and keys;
 only the explicit region reference has compiler entrypoints available. Setup,

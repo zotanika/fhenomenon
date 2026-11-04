@@ -47,9 +47,9 @@ not included as encrypted evidence.
   Weighted sums, the repeated update, and the diamond collapse to one region.
   Wide-front accumulates 24 ciphertext products and its linear terms before one
   relinearization/rescale.
-- Native multiplication performs one exact combined Pq reduction. The exact
+- Native multiplication performs one exact combined $Pq$ reduction. The exact
   residues match the old separate tensor/relinearize/rescale calculation with
-  identical inputs and keys, including rounding boundaries and multi-prime P.
+  identical inputs and keys, including rounding boundaries and multi-prime $P$.
 - Source digit NTT values are reused. Rotations calculate one permutation map
   per call and reuse it across components/limbs. The first measured version
   repeated that indexing and regressed two apps by about 4–5%; the final code
@@ -61,15 +61,21 @@ not included as encrypted evidence.
 ## Measurement conditions and interpretation
 
 Measured on macOS 26.6.2 arm64 with Apple Clang 21.0.0, Release `-O3 -DNDEBUG`,
-LTO disabled. Both plugins use N8192, Q near 50/40/40 bits, P near 60 bits,
-dnum3 and initial scale 2^40. Each run freshly encrypts the same application
+LTO disabled. Both plugins use $N=8192$, $Q$ prime bit widths $(50,40,40)$,
+$P$ prime bit width $60$, $\mathrm{dnum}=3$ and initial scale $2^{40}$.
+Each run freshly encrypts the same application
 inputs; encrypted matrix rows remain encrypted. All output slots are checked
 before and after timing against plaintext execution of the original corpus
 graph, independently of its imported circuit. This oracle is not a separate
 specification of every application.
 
-The acceptance rule is `abs(actual-expected) <= 1e-4 + 1e-6*abs(expected)`;
-nonfinite results fail. Absolute errors can exceed 1e-4 for large outputs, as
+The acceptance rule is
+
+$$
+\lvert \mathrm{actual} - \mathrm{expected} \rvert \le 10^{-4} + 10^{-6}\lvert \mathrm{expected} \rvert;
+$$
+
+nonfinite results fail. Absolute errors can exceed $10^{-4}$ for large outputs, as
 the recorded per-app maximum errors show. The criterion was not relaxed for
 compiled execution.
 
