@@ -189,9 +189,9 @@ TEST(CkksBackend, ComplexValidationLeavesOutputsUnchanged) {
   // The default degree is 8192, with 4096 physical slots.
   const std::vector<FhnComplex64> oversized(8192);
   EXPECT_NE(encrypt(client.get(), input.ptr, oversized.data(), oversized.size()), 0);
-  for (const FhnComplex64 invalid : {FhnComplex64{0, std::numeric_limits<double>::infinity()},
-                                    FhnComplex64{std::numeric_limits<double>::quiet_NaN(), 0},
-                                    FhnComplex64{0, 0x1p63}, FhnComplex64{-0x1p63, 0}})
+  for (const FhnComplex64 invalid :
+       {FhnComplex64{0, std::numeric_limits<double>::infinity()},
+        FhnComplex64{std::numeric_limits<double>::quiet_NaN(), 0}, FhnComplex64{0, 0x1p63}, FhnComplex64{-0x1p63, 0}})
     EXPECT_NE(encrypt(client.get(), input.ptr, &invalid, 1), 0);
   std::array<FhnComplex64, 3> actual{{{7, -7}, {9, -9}, {11, -11}}};
   EXPECT_NE(decrypt(nullptr, input.ptr, actual.data(), 2), 0);

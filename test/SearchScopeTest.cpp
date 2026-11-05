@@ -16,7 +16,7 @@ class SearchScope : public ::testing::Test {
     // Keep the plugin loaded across tests and repetitions. Apple ASan can
     // retain global registrations after unloading an instrumented dylib.
     static const std::unique_ptr<void, decltype(&dlclose)> library{
-        dlopen(FHN_NATIVE_TEST_LIBRARY, RTLD_NOW | RTLD_LOCAL), dlclose};
+      dlopen(FHN_NATIVE_TEST_LIBRARY, RTLD_NOW | RTLD_LOCAL), dlclose};
     ASSERT_NE(library, nullptr) << dlerror();
   }
 };
@@ -89,24 +89,26 @@ TEST_F(SearchScope, DisabledKernelsAndUnpreparedRequestsUseOrdinaryDispatch) {
   for (bool prepared : {false, true}) {
     ScopeOptions options;
     options.use_kernels = !prepared;
-    auto values = runtime.runScope([&](Scope &scope) {
-      const auto qs = scope.input(q.ciphertext);
-      ScopeValue prep;
-      if (prepared)
-        prep = scope.submit("contrib.search.prepare-query", {qs}, std::uint32_t{width}).at(0);
-      ScopeValues exports;
-      unsigned remaining = docs.shape.document_count;
-      for (const auto &block : docs.blocks) {
-        auto shape = docs.shape;
-        shape.document_count = std::min(remaining, shape.documents_per_ciphertext);
-        ScopeValues inputs{qs, scope.input(block)};
+    auto values = runtime.runScope(
+      [&](Scope &scope) {
+        const auto qs = scope.input(q.ciphertext);
+        ScopeValue prep;
         if (prepared)
-          inputs.push_back(prep);
-        exports.push_back(scope.submit("contrib.search.score-block", inputs, shape).at(0));
-        remaining -= shape.document_count;
-      }
-      return exports;
-    }, options);
+          prep = scope.submit("contrib.search.prepare-query", {qs}, std::uint32_t{width}).at(0);
+        ScopeValues exports;
+        unsigned remaining = docs.shape.document_count;
+        for (const auto &block : docs.blocks) {
+          auto shape = docs.shape;
+          shape.document_count = std::min(remaining, shape.documents_per_ciphertext);
+          ScopeValues inputs{qs, scope.input(block)};
+          if (prepared)
+            inputs.push_back(prep);
+          exports.push_back(scope.submit("contrib.search.score-block", inputs, shape).at(0));
+          remaining -= shape.document_count;
+        }
+        return exports;
+      },
+      options);
     scoresEqual(client, {values, docs.shape});
     EXPECT_EQ(selected(runtime, "contrib.search.scope.collection"), 0u);
     EXPECT_EQ(selected(runtime, "contrib.search.scope.block"), 0u);
@@ -116,7 +118,7 @@ TEST_F(SearchScope, DisabledKernelsAndUnpreparedRequestsUseOrdinaryDispatch) {
   EXPECT_EQ(selected(runtime, "contrib.search.score-block.tile.prepared"), 2u);
   EXPECT_EQ(selected(runtime, "contrib.search.score-block.row.prepared"), 1u);
 }
-}
+} // namespace
 
 namespace {
 TEST_F(SearchScope, TypedRecorderExportsPreparationAndReusesExactArtifactInLaterScope) {
@@ -162,7 +164,7 @@ TEST_F(SearchScope, TypedRecorderExportsPreparationAndReusesExactArtifactInLater
   EXPECT_EQ(selected(runtime, "contrib.matvec.prepare.native"), 1u);
   scoresEqual(client, reused.scores);
 }
-}
+} // namespace
 
 namespace {
 TEST_F(SearchScope, ExternalScopeKernelReplacesBuiltinsAndNestedBlockOverridesRemainVisible) {
@@ -175,16 +177,16 @@ TEST_F(SearchScope, ExternalScopeKernelReplacesBuiltinsAndNestedBlockOverridesRe
   auto session = fhenomenon::Session::create(runtime);
   unsigned block_calls = 0, external_calls = 0;
   runtime.addRecipe({"contrib.search.score-block", "test.search.scope.block-replacement", 100,
-    [](const Request &request, std::string &) {
-      return request.inputs.size() == 3 && std::any_cast<SearchShape>(&request.attributes);
-    },
-    [&](Runtime &, const Request &request) {
-      ++block_calls;
-      auto product = native.op(FHN_HMULT, {request.inputs[0], request.inputs[1]});
-      for (auto shift = std::any_cast<SearchShape>(request.attributes).width / 2; shift; shift /= 2)
-        product = native.op(FHN_ADD_CC, {product, native.rotate(product, shift)});
-      return Values{product};
-    }});
+                     [](const Request &request, std::string &) {
+                       return request.inputs.size() == 3 && std::any_cast<SearchShape>(&request.attributes);
+                     },
+                     [&](Runtime &, const Request &request) {
+                       ++block_calls;
+                       auto product = native.op(FHN_HMULT, {request.inputs[0], request.inputs[1]});
+                       for (auto shift = std::any_cast<SearchShape>(request.attributes).width / 2; shift; shift /= 2)
+                         product = native.op(FHN_ADD_CC, {product, native.rotate(product, shift)});
+                       return Values{product};
+                     }});
   const auto run = [&] {
     return session->run([&](Scope &scope) {
       ScopedSearch search(scope);
@@ -198,35 +200,35 @@ TEST_F(SearchScope, ExternalScopeKernelReplacesBuiltinsAndNestedBlockOverridesRe
   EXPECT_EQ(selected(runtime, "contrib.search.scope.collection"), 1u);
   EXPECT_EQ(selected(runtime, "contrib.search.scope.block"), 1u);
   runtime.addScopeKernel({"test.search.scope.replacement", 100, 8,
-    [](const ScopeView &view, std::string &) {
-      std::size_t count = 0;
-      for (; count < view.size(); ++count) {
-        const auto &command = view.command(count);
-        if (command.operation != "contrib.search.score-block" || command.inputs.size() != 3 ||
-            command.outputs.size() != 1 || !std::any_cast<SearchShape>(&command.attributes))
-          break;
-        for (auto symbol : command.inputs)
-          if (!view.find(symbol))
-            return count;
-      }
-      return count;
-    },
-    [&](Runtime &rt, const ScopeView &view) {
-      ++external_calls;
-      const auto liveouts = view.liveOuts(view.size());
-      Values results(liveouts.size());
-      for (std::size_t i = 0; i < view.size(); ++i) {
-        const auto &command = view.command(i);
-        Values inputs;
-        for (auto symbol : command.inputs)
-          inputs.push_back(view.value(symbol));
-        auto block = rt.submit({command.operation, inputs, command.attributes}).at(0);
-        const auto output = std::find(liveouts.begin(), liveouts.end(), command.outputs[0]);
-        if (output != liveouts.end())
-          results[static_cast<std::size_t>(output - liveouts.begin())] = std::move(block);
-      }
-      return results;
-    }});
+                          [](const ScopeView &view, std::string &) {
+                            std::size_t count = 0;
+                            for (; count < view.size(); ++count) {
+                              const auto &command = view.command(count);
+                              if (command.operation != "contrib.search.score-block" || command.inputs.size() != 3 ||
+                                  command.outputs.size() != 1 || !std::any_cast<SearchShape>(&command.attributes))
+                                break;
+                              for (auto symbol : command.inputs)
+                                if (!view.find(symbol))
+                                  return count;
+                            }
+                            return count;
+                          },
+                          [&](Runtime &rt, const ScopeView &view) {
+                            ++external_calls;
+                            const auto liveouts = view.liveOuts(view.size());
+                            Values results(liveouts.size());
+                            for (std::size_t i = 0; i < view.size(); ++i) {
+                              const auto &command = view.command(i);
+                              Values inputs;
+                              for (auto symbol : command.inputs)
+                                inputs.push_back(view.value(symbol));
+                              auto block = rt.submit({command.operation, inputs, command.attributes}).at(0);
+                              const auto output = std::find(liveouts.begin(), liveouts.end(), command.outputs[0]);
+                              if (output != liveouts.end())
+                                results[static_cast<std::size_t>(output - liveouts.begin())] = std::move(block);
+                            }
+                            return results;
+                          }});
   auto replacement = ScopedSearch::results(run(), docs.shape);
   scoresEqual(client, replacement.scores);
   EXPECT_EQ(external_calls, 1u);
@@ -244,14 +246,16 @@ TEST_F(SearchScope, CopiedPreparationPayloadAndDifferentQueryCannotEnterSealedSc
   const auto fresh_q = client.encryptQuery(query());
   const auto docs = client.encryptDocuments(documents(8));
   auto prep = evaluator.prepareQuery(q);
-  auto copied = runtime.makeValue(prep.artifact.format(), ResourceKind::Artifact, 0,
-    [&] { return prep.artifact.payload(); }, prep.artifact.dependencies());
+  auto copied = runtime.makeValue(
+    prep.artifact.format(), ResourceKind::Artifact, 0, [&] { return prep.artifact.payload(); },
+    prep.artifact.dependencies());
   const auto baseline = runtime.stats().live_bytes;
   for (bool forged : {false, true}) {
     EXPECT_THROW(runtime.runScope([&](Scope &scope) {
       ScopedSearch search(scope);
       return search.score(forged ? q : fresh_q, docs, scope.input(forged ? copied : prep.artifact));
-    }), Error);
+    }),
+                 Error);
     EXPECT_EQ(runtime.stats().live_bytes, baseline);
   }
   EXPECT_EQ(selected(runtime, "contrib.search.scope.collection"), 0u);
@@ -302,11 +306,10 @@ TEST_F(SearchScope, CollectionSeparatesDifferentPreparationSymbolsAndBlockCapaci
     const auto qs = scope.input(q.ciphertext), block = scope.input(docs.blocks[0]);
     const auto first = scope.submit("contrib.search.prepare-query", {qs}, std::uint32_t{width}).at(0);
     const auto second = scope.submit("contrib.search.prepare-query", {qs}, std::uint32_t{width}).at(0);
-    return ScopeValues{
-      scope.submit("contrib.search.score-block", {qs, block, first}, docs.shape).at(0),
-      scope.submit("contrib.search.score-block", {qs, block, second}, docs.shape).at(0),
-      scope.submit("contrib.search.score-block", {qs, block, second}, small).at(0),
-      scope.submit("contrib.search.score-block", {qs, block, second}, small).at(0)};
+    return ScopeValues{scope.submit("contrib.search.score-block", {qs, block, first}, docs.shape).at(0),
+                       scope.submit("contrib.search.score-block", {qs, block, second}, docs.shape).at(0),
+                       scope.submit("contrib.search.score-block", {qs, block, second}, small).at(0),
+                       scope.submit("contrib.search.score-block", {qs, block, second}, small).at(0)};
   });
   ASSERT_EQ(values.size(), 4u);
   for (unsigned i = 0; i < values.size(); ++i)

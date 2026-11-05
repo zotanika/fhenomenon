@@ -85,8 +85,8 @@ void expectProducts(const std::vector<FhnComplex64> &result, const std::vector<F
   ASSERT_EQ(result.size(), sensor.size());
   ASSERT_EQ(result.size(), ref.size());
   for (std::size_t i = 0; i < result.size(); ++i) {
-    const auto expected = factor * std::complex(sensor[i].real, sensor[i].imag) *
-                          std::conj(std::complex(ref[i].real, ref[i].imag));
+    const auto expected =
+      factor * std::complex(sensor[i].real, sensor[i].imag) * std::conj(std::complex(ref[i].real, ref[i].imag));
     EXPECT_NEAR(result[i].real, expected.real(), 1e-5) << i;
     EXPECT_NEAR(result[i].imag, expected.imag(), 1e-5) << i;
   }
@@ -117,9 +117,8 @@ TEST_F(SpectralContributionTest, ReusesPreparedReferenceAcrossScopesAndExportsAl
   expectProducts(decode(native, outputs[3]), sensor, reference);
   auto manual = native.op(FHN_HMULT, {x, outputs[1]});
   expectProducts(decode(native, manual), sensor, reference);
-  auto reused = rt.runScope([&](Scope &scope) {
-    return ScopeValues{spectral.pair(scope, scope.input(x), scope.input(outputs[4]))};
-  });
+  auto reused = rt.runScope(
+    [&](Scope &scope) { return ScopeValues{spectral.pair(scope, scope.input(x), scope.input(outputs[4]))}; });
   EXPECT_TRUE(selected(rt, "contrib.spectral.scope.pair"));
   expectProducts(decode(native, reused.at(0)), sensor, reference);
 }
@@ -137,22 +136,23 @@ TEST_F(SpectralContributionTest, HonorsOverridesAndSupportsOrdinaryFallback) {
   EXPECT_TRUE(selected(rt, "contrib.spectral.pair.ordinary"));
   ScopeOptions baseline;
   baseline.use_kernels = false;
-  const auto ordinary = rt.runScope([&](Scope &scope) {
-    return ScopeValues{spectral.pair(scope, scope.input(x), scope.input(preparation))};
-  }, baseline);
+  const auto ordinary = rt.runScope(
+    [&](Scope &scope) { return ScopeValues{spectral.pair(scope, scope.input(x), scope.input(preparation))}; },
+    baseline);
   expectProducts(decode(native, ordinary.at(0)), sensor, reference);
-  rt.addRecipe({"contrib.spectral.pair", "test.pair.override", 100,
-                [](const Request &, std::string &) { return true; },
+  rt.addRecipe({"contrib.spectral.pair", "test.pair.override", 100, [](const Request &, std::string &) { return true; },
                 [](Runtime &, const Request &r) { return Values{r.inputs[0]}; }});
   for (bool useKernels : {true, false}) {
     ScopeOptions options;
     options.use_kernels = useKernels;
-    const auto out = rt.runScope([&](Scope &scope) {
-      auto ref = scope.input(preparation);
-      auto first = spectral.pair(scope, scope.input(x), ref);
-      auto second = spectral.pair(scope, scope.input(conjugate), ref);
-      return ScopeValues{second, first};
-    }, options);
+    const auto out = rt.runScope(
+      [&](Scope &scope) {
+        auto ref = scope.input(preparation);
+        auto first = spectral.pair(scope, scope.input(x), ref);
+        auto second = spectral.pair(scope, scope.input(conjugate), ref);
+        return ScopeValues{second, first};
+      },
+      options);
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0].identity(), conjugate.identity());
     EXPECT_EQ(out[1].identity(), x.identity());
@@ -187,8 +187,8 @@ TEST_F(SpectralContributionTest, RejectsForeignAndForgedPreparation) {
   const auto prepared = spectral.prepareReference(x);
   const auto &conjugate = prepared.first;
   const auto &preparation = prepared.second;
-  auto forged = rt.makeValue(preparation.format(), ResourceKind::Artifact, 0,
-                             [&] { return preparation.payload(); }, preparation.dependencies());
+  auto forged = rt.makeValue(
+    preparation.format(), ResourceKind::Artifact, 0, [&] { return preparation.payload(); }, preparation.dependencies());
   rejects(rt, {"contrib.spectral.pair", {x, forged}, {}});
   rejects(rt, {"contrib.spectral.pair", {x, conjugate}, {}});
   Runtime other;
@@ -199,7 +199,7 @@ TEST_F(SpectralContributionTest, RejectsForeignAndForgedPreparation) {
   NativeRuntime foreignNative(rt, foreignContext);
   auto release = [&](FhnBuffer *ptr) { foreignContext.buffer_free(foreignContext.context.get(), ptr); };
   std::unique_ptr<FhnBuffer, decltype(release)> foreignBuffer(foreignContext.buffer_alloc(foreignContext.context.get()),
-                                                            release);
+                                                              release);
   ASSERT_TRUE(foreignBuffer);
   auto create = symbol<FhnClientCreateFn>("ckks_fhn_client_create");
   std::unique_ptr<FhnClientCtx, FhnClientDestroyFn> foreignClient(create(foreignContext.context.get()), destroy);
@@ -211,6 +211,7 @@ TEST_F(SpectralContributionTest, RejectsForeignAndForgedPreparation) {
   rejects(other, {"contrib.spectral.pair", {otherX, preparation}, {}}, ErrorCode::InvalidRequest);
   EXPECT_THROW(other.runScope([&](Scope &scope) {
     return ScopeValues{spectral.prepareReference(scope, scope.input(otherX)).first};
-  }), Error);
+  }),
+               Error);
 }
 } // namespace

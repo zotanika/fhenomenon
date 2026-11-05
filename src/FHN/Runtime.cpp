@@ -199,16 +199,21 @@ void Runtime::addScopeKernel(ScopeKernel kernel) {
     throw Error(ErrorCode::InvalidRequest, "scope kernel requires name, positive span cap and callbacks");
   auto registered = std::make_shared<const ScopeKernel>(std::move(kernel));
   const auto position = std::find_if(impl_->scope_kernels.begin(), impl_->scope_kernels.end(),
-    [&](const auto &existing) { return existing->priority < registered->priority; });
+                                     [&](const auto &existing) { return existing->priority < registered->priority; });
   impl_->scope_kernels.insert(position, std::move(registered));
 }
-Values Runtime::runScope(const std::function<ScopeValues(Scope &)> &capture) { return runScope(capture, ScopeOptions{}); }
+Values Runtime::runScope(const std::function<ScopeValues(Scope &)> &capture) {
+  return runScope(capture, ScopeOptions{});
+}
 Values Runtime::runScope(const std::function<ScopeValues(Scope &)> &capture, ScopeOptions options) {
   if (impl_->scope_running || !capture)
     throw Error(ErrorCode::InvalidRequest, "scope requires a callback and cannot nest on the same runtime");
   struct Reset {
     Impl &impl;
-    ~Reset() { impl.capturing = false; impl.scope_running = false; }
+    ~Reset() {
+      impl.capturing = false;
+      impl.scope_running = false;
+    }
   } reset{*impl_};
   impl_->scope_running = true;
   const auto kernels = impl_->scope_kernels;

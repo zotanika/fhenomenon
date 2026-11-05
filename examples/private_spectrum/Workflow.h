@@ -1,7 +1,7 @@
 #pragma once
 
-#include "FHN/contrib/SpectralKernels.h"
 #include "Detector.h"
+#include "FHN/contrib/SpectralKernels.h"
 #include <memory>
 
 namespace fhenomenon {

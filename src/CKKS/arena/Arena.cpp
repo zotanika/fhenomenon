@@ -11,8 +11,7 @@ Arena::Arena(std::size_t capacity_bytes) : capacity_(roundUp(capacity_bytes)) {
 Arena::~Arena() { invalidateScopes(); }
 
 Arena::Arena(Arena &&other) noexcept
-  : slab_(std::move(other.slab_)), capacity_(other.capacity_), offset_(other.offset_),
-    high_water_(other.high_water_) {
+  : slab_(std::move(other.slab_)), capacity_(other.capacity_), offset_(other.offset_), high_water_(other.high_water_) {
   other.invalidateScopes();
   other.capacity_ = 0;
   other.offset_ = 0;

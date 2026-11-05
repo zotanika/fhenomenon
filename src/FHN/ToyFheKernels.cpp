@@ -44,12 +44,10 @@ static std::size_t toyfhe_norm_rot(int64_t d, std::size_t n) {
 // Validate kinds before touching the result, and compute through local values
 // so scalar and packed operations tolerate either physical operand alias.
 static bool toyfhe_is_cipher(const FhnBuffer *buf) {
-  return buf && (buf->kind == BufKind::Ciphertext ||
-                 (buf->kind == BufKind::CiphertextVec && !buf->ct_vec.empty()));
+  return buf && (buf->kind == BufKind::Ciphertext || (buf->kind == BufKind::CiphertextVec && !buf->ct_vec.empty()));
 }
 
-template <typename Op>
-static int toyfhe_unary(FhnBuffer *result, const FhnBuffer *a, Op op) {
+template <typename Op> static int toyfhe_unary(FhnBuffer *result, const FhnBuffer *a, Op op) {
   if (!result || !toyfhe_is_cipher(a))
     return -1;
   if (toyfhe_is_vec(a)) {
@@ -66,8 +64,7 @@ static int toyfhe_unary(FhnBuffer *result, const FhnBuffer *a, Op op) {
   return 0;
 }
 
-template <typename Op>
-static int toyfhe_binary(FhnBuffer *result, const FhnBuffer *a, const FhnBuffer *b, Op op) {
+template <typename Op> static int toyfhe_binary(FhnBuffer *result, const FhnBuffer *a, const FhnBuffer *b, Op op) {
   if (!result || !toyfhe_is_cipher(a) || !toyfhe_is_cipher(b) || a->kind != b->kind)
     return -1;
   if (toyfhe_is_vec(a)) {
@@ -94,23 +91,23 @@ static fhenomenon::toyfhe::Ciphertext toyfhe_negated(fhenomenon::toyfhe::Ciphert
 
 // --- Kernel implementations ------------------------------------------------
 
-static int toyfhe_add_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t *, const double *) {
+static int toyfhe_add_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                         const double *) {
   if (!ctx || !operands)
     return -1;
   return toyfhe_binary(result, operands[0], operands[1],
                        [&](const auto &a, const auto &b) { return ctx->engine.add(a, b); });
 }
 
-static int toyfhe_add_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t *, const double *fparams) {
+static int toyfhe_add_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                         const double *fparams) {
   if (!ctx || !operands || !fparams)
     return -1;
   return toyfhe_unary(result, operands[0], [&](const auto &a) { return ctx->engine.addPlain(a, fparams[0]); });
 }
 
-static int toyfhe_sub_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t *, const double *) {
+static int toyfhe_sub_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                         const double *) {
   if (!ctx || !operands)
     return -1;
   // ToyFHE has no direct subtract: negate b, then add slot by slot.
@@ -118,23 +115,23 @@ static int toyfhe_sub_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer 
                        [&](const auto &a, const auto &b) { return ctx->engine.add(a, toyfhe_negated(b)); });
 }
 
-static int toyfhe_negate(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *operands,
-                         const int64_t *, const double *) {
+static int toyfhe_negate(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                         const double *) {
   if (!operands)
     return -1;
   return toyfhe_unary(result, operands[0], toyfhe_negated);
 }
 
-static int toyfhe_mult_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t *, const double *) {
+static int toyfhe_mult_cc(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *) {
   if (!ctx || !operands)
     return -1;
   return toyfhe_binary(result, operands[0], operands[1],
                        [&](const auto &a, const auto &b) { return ctx->engine.multiply(a, b); });
 }
 
-static int toyfhe_mult_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands,
-                          const int64_t *, const double *fparams) {
+static int toyfhe_mult_cs(FhnBackendCtx *ctx, FhnBuffer *result, const FhnBuffer *const *operands, const int64_t *,
+                          const double *fparams) {
   if (!ctx || !operands || !fparams)
     return -1;
   return toyfhe_unary(result, operands[0], [&](const auto &a) { return ctx->engine.multiplyPlain(a, fparams[0]); });
@@ -326,7 +323,8 @@ int toyfhe_fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double 
   const long double half_plaintext_modulus = static_cast<long double>(ctx->params.t) / 2;
   for (uint32_t i = 0; i < count; ++i) {
     if (!std::isfinite(values[i]) ||
-        std::abs(std::round(static_cast<long double>(values[i]) * static_cast<long double>(ctx->params.scale))) >= half_plaintext_modulus)
+        std::abs(std::round(static_cast<long double>(values[i]) * static_cast<long double>(ctx->params.scale))) >=
+          half_plaintext_modulus)
       return -1;
   }
   try {

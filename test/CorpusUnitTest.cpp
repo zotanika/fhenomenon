@@ -301,8 +301,10 @@ TEST(CorpusBackend, IsolatedNativeClientSurvivesMovesAndPreparesEvaluationKeys) 
   double actual[4]{};
   EXPECT_EQ(replacement->encryptPacked(input, values, 4), 0);
   EXPECT_EQ(replacement->decryptPacked(input, actual, 4), 0);
-  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], values[i], 1e-6);
-  FhnInstruction inst{}; inst.opcode = FHN_HMULT;
+  for (size_t i = 0; i < 4; ++i)
+    EXPECT_NEAR(actual[i], values[i], 1e-6);
+  FhnInstruction inst{};
+  inst.opcode = FHN_HMULT;
   FhnProgram program{FHN_ABI_VERSION, 1, &inst, 0, nullptr, 0, nullptr};
   EXPECT_EQ(replacement->prepare(&program), 0);
   replacement->bufferFree()(replacement->ctx(), input);

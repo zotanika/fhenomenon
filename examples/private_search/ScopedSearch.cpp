@@ -16,9 +16,8 @@ ScopedSearch::ScopedSearch(fhenomenon::runtime::Scope &scope) : scope_(scope) {}
 fhenomenon::runtime::ScopeValue ScopedSearch::prepareQuery(const EncryptedQuery &query) {
   return scope_.submit("contrib.search.prepare-query", {scope_.input(query.ciphertext)}, std::uint32_t{width}).at(0);
 }
-fhenomenon::runtime::ScopeValues ScopedSearch::score(
-  const EncryptedQuery &query, const EncryptedDocuments &documents,
-  std::optional<fhenomenon::runtime::ScopeValue> preparation) {
+fhenomenon::runtime::ScopeValues ScopedSearch::score(const EncryptedQuery &query, const EncryptedDocuments &documents,
+                                                     std::optional<fhenomenon::runtime::ScopeValue> preparation) {
   const auto count = blocks(documents.shape);
   if (documents.blocks.size() != count)
     throw std::invalid_argument("scoped search ciphertext count does not match document layout");
@@ -37,8 +36,8 @@ fhenomenon::runtime::ScopeValues ScopedSearch::score(
   }
   return results;
 }
-fhenomenon::runtime::ScopeValues ScopedSearch::exportResults(
-  fhenomenon::runtime::ScopeValue preparation, const fhenomenon::runtime::ScopeValues &scores) {
+fhenomenon::runtime::ScopeValues ScopedSearch::exportResults(fhenomenon::runtime::ScopeValue preparation,
+                                                             const fhenomenon::runtime::ScopeValues &scores) {
   fhenomenon::runtime::ScopeValues exports{preparation};
   exports.insert(exports.end(), scores.begin(), scores.end());
   return exports;

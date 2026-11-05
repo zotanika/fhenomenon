@@ -19,13 +19,13 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
-#include <complex>
 #include <cmath>
+#include <complex>
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <limits>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -573,8 +573,8 @@ int fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double *values
     return -1;
   // Bound FFT intermediates as well as scaled coefficients so finite but
   // enormous inputs cannot become infinity inside Cheddar's BigInt encoder.
-  const double safe_magnitude = std::numeric_limits<double>::max() / static_cast<double>(count) /
-                                std::max(1.0, scale) / 2.0;
+  const double safe_magnitude =
+    std::numeric_limits<double>::max() / static_cast<double>(count) / std::max(1.0, scale) / 2.0;
   for (uint32_t i = 0; i < count; ++i)
     if (!std::isfinite(values[i]) || std::abs(values[i]) > safe_magnitude)
       return -1;
@@ -596,8 +596,7 @@ int fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double *values
 }
 
 int fhn_decrypt_vec_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *values, uint32_t count) {
-  if (!ctx || !isCiphertext(in) || !values || count == 0 ||
-      static_cast<uint64_t>(in->ct.GetNumSlots()) != count)
+  if (!ctx || !isCiphertext(in) || !values || count == 0 || static_cast<uint64_t>(in->ct.GetNumSlots()) != count)
     return -1;
   try {
     cheddar::Plaintext<word> plaintext;

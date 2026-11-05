@@ -275,8 +275,8 @@ bool encodeVector(RnsPolyView &plain, const FhnComplex64 *values, uint32_t count
     new (slots + i) std::complex<double>(values[i].real, values[i].imag);
   return encoding::encode(plain, slots, count, scale, tables, arena);
 }
-bool decodeVector(double *values, uint32_t count, ConstRnsPolyView plain, double scale,
-                  const EvaluationTables &tables, Arena &arena) {
+bool decodeVector(double *values, uint32_t count, ConstRnsPolyView plain, double scale, const EvaluationTables &tables,
+                  Arena &arena) {
   return encoding::decode(values, count, plain, scale, tables, arena);
 }
 bool decodeVector(FhnComplex64 *values, uint32_t count, ConstRnsPolyView plain, double scale,
@@ -294,8 +294,7 @@ bool decodeVector(FhnComplex64 *values, uint32_t count, ConstRnsPolyView plain, 
   return true;
 }
 
-template <typename Slot>
-int encryptVector(FhnClientCtx *client, FhnBuffer *out, const Slot *values, uint32_t count) {
+template <typename Slot> int encryptVector(FhnClientCtx *client, FhnBuffer *out, const Slot *values, uint32_t count) {
   if (!client || !out || out->owner != client->backend || !values || !count || (count & (count - 1)))
     return -1;
   try {
@@ -318,8 +317,7 @@ int encryptVector(FhnClientCtx *client, FhnBuffer *out, const Slot *values, uint
     return -1;
   }
 }
-template <typename Slot>
-int decryptVector(FhnClientCtx *client, const FhnBuffer *in, Slot *values, uint32_t count) {
+template <typename Slot> int decryptVector(FhnClientCtx *client, const FhnBuffer *in, Slot *values, uint32_t count) {
   if (!client || !ready(client->backend, in) || !values || count != in->logical_slots)
     return -1;
   try {

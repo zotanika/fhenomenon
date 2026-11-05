@@ -36,10 +36,8 @@ struct Client::Impl {
   }
 
   Impl(Runtime &runtime, const std::string &path)
-    : library(dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL), dlclose),
-      services(computeOnly(path)),
-      owner(nullptr, symbol<FhnClientDestroyFn>("ckks_fhn_client_destroy")),
-      native(runtime, services),
+    : library(dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL), dlclose), services(computeOnly(path)),
+      owner(nullptr, symbol<FhnClientDestroyFn>("ckks_fhn_client_destroy")), native(runtime, services),
       encrypt(symbol<FhnClientEncryptVectorComplex64Fn>("ckks_fhn_client_encrypt_vec_c64")),
       decrypt(symbol<FhnClientDecryptVectorComplex64Fn>("ckks_fhn_client_decrypt_vec_c64")) {
     require(bool(library), "cannot load native CKKS library");
@@ -83,7 +81,8 @@ struct Client::Impl {
 
   Bins decode(const Value &value) const {
     std::array<FhnComplex64, binCount> decoded{};
-    require(decrypt(owner.get(), native.buffer(value), decoded.data(), decoded.size()) == 0, "client decryption failed");
+    require(decrypt(owner.get(), native.buffer(value), decoded.data(), decoded.size()) == 0,
+            "client decryption failed");
     Bins result{};
     for (unsigned bin = 0; bin < binCount; ++bin)
       result[bin] = {decoded[bin].real, decoded[bin].imag};

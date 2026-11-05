@@ -36,7 +36,6 @@ int toyfhe_fhn_decrypt_vec_i64(FhnBackendCtx *ctx, const FhnBuffer *in, int64_t 
 int toyfhe_fhn_encrypt_vec_f64(FhnBackendCtx *ctx, FhnBuffer *out, const double *values, uint32_t count);
 int toyfhe_fhn_decrypt_vec_f64(FhnBackendCtx *ctx, const FhnBuffer *in, double *values, uint32_t count);
 
-
 // Convenience readers for tests/examples (decrypt ciphertext buffers in place)
 int64_t toyfhe_fhn_buffer_read_int(FhnBackendCtx *ctx, FhnBuffer *buf);
 double toyfhe_fhn_buffer_read_double(FhnBackendCtx *ctx, FhnBuffer *buf);

@@ -1,5 +1,5 @@
-#include "Workflow.h"
 #include "Detector.h"
+#include "Workflow.h"
 #include <dlfcn.h>
 #include <gtest/gtest.h>
 #include <limits>
@@ -15,7 +15,7 @@ class PrivateSpectrumWorkflow : public ::testing::Test {
     // Keep the plugin loaded across tests and repetitions. Apple ASan can
     // retain global registrations after unloading an instrumented dylib.
     static const std::unique_ptr<void, decltype(&dlclose)> library{
-        dlopen(FHN_NATIVE_TEST_LIBRARY, RTLD_NOW | RTLD_LOCAL), dlclose};
+      dlopen(FHN_NATIVE_TEST_LIBRARY, RTLD_NOW | RTLD_LOCAL), dlclose};
     ASSERT_NE(library, nullptr) << dlerror();
   }
 };

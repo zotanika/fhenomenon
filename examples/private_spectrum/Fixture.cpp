@@ -81,9 +81,8 @@ std::optional<Diagnostic> diagnostic(const Spectrum &data, unsigned sensor, unsi
   const double denominator = power.real() * reference.real();
   const double magnitude = std::abs(cross);
   if (!std::isfinite(denominator) || !std::isfinite(magnitude) || !std::isfinite(power.imag()) ||
-      !std::isfinite(reference.imag()) || power.real() <= floor || reference.real() <= floor ||
-      denominator <= floor || magnitude <= floor || std::abs(power.imag()) > tolerance ||
-      std::abs(reference.imag()) > tolerance)
+      !std::isfinite(reference.imag()) || power.real() <= floor || reference.real() <= floor || denominator <= floor ||
+      magnitude <= floor || std::abs(power.imag()) > tolerance || std::abs(reference.imag()) > tolerance)
     return std::nullopt;
   const double coherence = std::norm(cross) / denominator;
   if (!std::isfinite(coherence) || coherence > 1 + tolerance)

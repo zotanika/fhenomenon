@@ -1,8 +1,8 @@
 #include "FHN/FhnDefaultExecutor.h"
 
 #include <algorithm>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 namespace fhenomenon {
 
@@ -177,8 +177,8 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
     return call(FHN_ROTATE, buffers[inst.result_id], ops, inst.params, inst.fparams) == 0;
   }
   case FHN_HROT_ADD: {
-    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] ||
-        buffers[inst.result_id] == buffers[inst.operands[1]] || !supports(FHN_ADD_CC))
+    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] || buffers[inst.result_id] == buffers[inst.operands[1]] ||
+        !supports(FHN_ADD_CC))
       return false;
     // Decompose HROT part first
     FhnInstruction hrot_inst = inst;
@@ -196,8 +196,7 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
     return call(FHN_ADD_CC, buffers[inst.result_id], add_ops, inst.params, inst.fparams) == 0;
   }
   case FHN_HCONJ_ADD: {
-    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] ||
-        buffers[inst.result_id] == buffers[inst.operands[1]])
+    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] || buffers[inst.result_id] == buffers[inst.operands[1]])
       return false;
     if (!dispatch_.count(static_cast<int>(FHN_CONJUGATE)) || !dispatch_.count(static_cast<int>(FHN_ADD_CC)))
       return false;
@@ -210,8 +209,7 @@ bool FhnDefaultExecutor::decompose(FhnBackendCtx *ctx, const FhnInstruction &ins
   case FHN_MAD: {
     // res = a * fparams[0] + b. The multiply lands in the result buffer
     // before b is read, so b must be present and must not alias res.
-    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] ||
-        buffers[inst.result_id] == buffers[inst.operands[1]])
+    if (inst.operands[1] == 0 || !buffers[inst.operands[1]] || buffers[inst.result_id] == buffers[inst.operands[1]])
       return false;
     if (!dispatch_.count(static_cast<int>(FHN_MULT_CS)) || !dispatch_.count(static_cast<int>(FHN_ADD_CC)))
       return false;

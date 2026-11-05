@@ -10,9 +10,12 @@ using namespace fhenomenon::runtime;
 
 const char *modeName(Mode mode) {
   switch (mode) {
-    case Mode::Tile: return "pair tile";
-    case Mode::Pair: return "ordinary pair recipes";
-    case Mode::Native: return "native operations";
+  case Mode::Tile:
+    return "pair tile";
+  case Mode::Pair:
+    return "ordinary pair recipes";
+  case Mode::Native:
+    return "native operations";
   }
   throw std::invalid_argument("invalid monitor mode");
 }
@@ -77,8 +80,7 @@ PreparationEvidence EncryptedMonitor::append(const EncryptedFrame &frame) {
     const auto referencePower = cross(scope, reference, conjugate, preparation);
     const auto sensorCross = cross(scope, sensor, conjugate, preparation);
     const auto sensorPower = power(scope, sensor);
-    ScopeValues exports{conjugate, referencePower, sensorCross,
-                        add(scope, referencePower, accumulated_.power[0]),
+    ScopeValues exports{conjugate, referencePower, sensorCross, add(scope, referencePower, accumulated_.power[0]),
                         add(scope, sensorPower, accumulated_.power[1])};
     if (mode_ != Mode::Native)
       exports.push_back(preparation);
@@ -107,10 +109,8 @@ PreparationEvidence EncryptedMonitor::append(const EncryptedFrame &frame) {
     const auto thirdPower = power(scope, third);
     const auto fourthPower = power(scope, fourth);
     return ScopeValues{add(scope, scope.input(sensorCross), accumulated_.cross[1]),
-                       add(scope, thirdCross, accumulated_.cross[2]),
-                       add(scope, fourthCross, accumulated_.cross[3]),
-                       add(scope, thirdPower, accumulated_.power[2]),
-                       add(scope, fourthPower, accumulated_.power[3])};
+                       add(scope, thirdCross, accumulated_.cross[2]), add(scope, fourthCross, accumulated_.cross[3]),
+                       add(scope, thirdPower, accumulated_.power[2]), add(scope, fourthPower, accumulated_.power[3])};
   });
 
   // Commit the new state only after both scopes succeed. The ADD outputs
@@ -221,9 +221,8 @@ void printExecutionEvidence(const Runtime &runtime, const ExecutionEvidence &evi
             << "  Retained ciphertexts: 7 per completed window, 0 after reset\n"
             << "  Peak accounted bytes " << runtime.stats().peak_live_bytes << " (excludes keys and scratch)\n";
   if (evidence.preparations)
-    std::cout << "  Reference preparations " << evidence.preparations << ", all reused across scopes"
-              << " (first " << evidence.firstPreparation.prepared << " imported as "
-              << evidence.firstPreparation.reused << ")\n";
+    std::cout << "  Reference preparations " << evidence.preparations << ", all reused across scopes" << " (first "
+              << evidence.firstPreparation.prepared << " imported as " << evidence.firstPreparation.reused << ")\n";
   std::set<std::string> seen;
   for (const auto &event : runtime.trace()) {
     if (event.kind != TraceKind::Selected || (event.operation == "scope.span" && event.recipe == "runtime.submit"))

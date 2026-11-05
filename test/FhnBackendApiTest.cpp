@@ -78,7 +78,6 @@ TEST(FhnBackendApi, DeviceTypeEnum) {
   EXPECT_EQ(FHN_DEVICE_ASIC, 3);
 }
 
-
 // FhnLevelEffect crosses the backend C ABI as a 32-bit integer. Unknown
 // values must survive transport so the planner can reject them safely.
 static_assert(sizeof(FhnLevelEffect) == sizeof(uint32_t), "ABI 1 level effect width changed");

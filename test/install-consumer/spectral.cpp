@@ -74,8 +74,7 @@ int main(int argc, char **argv) {
     for (std::size_t which = 0; which < 4; ++which) {
       std::array<FhnComplex64, 4> actual{};
       const auto &value = which < 3 ? result[which + 1] : continued[0];
-      require(decrypt(client.get(), native.buffer(value), actual.data(), actual.size()) == 0,
-              "complex decrypt failed");
+      require(decrypt(client.get(), native.buffer(value), actual.data(), actual.size()) == 0, "complex decrypt failed");
       for (std::size_t i = 0; i < samples.size(); ++i) {
         const std::complex<double> x(samples[i].real, samples[i].imag);
         const auto power = x * std::conj(x), square = std::conj(x) * std::conj(x);

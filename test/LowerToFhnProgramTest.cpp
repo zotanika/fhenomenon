@@ -2,9 +2,9 @@
 #include "FHN/fhn_program.h"
 #include "Fhenon.h"
 #include "Scheduler/ASTNode.h"
+#include "Scheduler/ASTPass.h"
 #include "Scheduler/Operation.h"
 #include "Scheduler/Planner.h"
-#include "Scheduler/ASTPass.h"
 #include <gtest/gtest.h>
 
 using namespace fhenomenon;
@@ -264,9 +264,9 @@ TEST(LowerToFhnProgram, AssignmentDoesNotRequireTheOverwrittenValueAsAnInput) {
   auto source = std::make_shared<Fhenon<int>>(5);
   auto op = std::make_shared<Operation<int>>(OperationType::Assignment, destination, source);
   Planner<int> plan;
-  plan.addRoot(std::make_shared<OperatorNode<int>>(
-      op, OperationType::Assignment, std::make_shared<OperandNode<int>>(destination),
-      std::make_shared<OperandNode<int>>(source), destination));
+  plan.addRoot(std::make_shared<OperatorNode<int>>(op, OperationType::Assignment,
+                                                   std::make_shared<OperandNode<int>>(destination),
+                                                   std::make_shared<OperandNode<int>>(source), destination));
   LowerToFhnProgram::EntityBindings<int> bindings;
   auto *program = LowerToFhnProgram{}.lower(plan, &bindings);
   ASSERT_NE(program, nullptr);

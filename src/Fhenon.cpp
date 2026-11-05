@@ -186,9 +186,8 @@ template <typename T> Fhenon<T> &Fhenon<T>::operator=(Fhenon &&other) noexcept {
 
 template <typename T> Fhenon<T> Fhenon<T>::operator+(const T &scalar) const {
   LOG_MESSAGE("=====Operator Add of Fhenon with scalar=====");
-  auto entity = Session::isRecording()
-                  ? Session::getSession()->makeTemporary(scalar, this->getProfile())
-                  : std::make_shared<Fhenon<T>>(scalar);
+  auto entity = Session::isRecording() ? Session::getSession()->makeTemporary(scalar, this->getProfile())
+                                       : std::make_shared<Fhenon<T>>(scalar);
   entity->setScalar();
   entity->belong(this->getProfile());
   LOG_MESSAGE("=============================");
@@ -269,9 +268,8 @@ template <typename T> Fhenon<T> Fhenon<T>::operator*(const Fhenon<T> &other) con
 }
 
 template <typename T> Fhenon<T> Fhenon<T>::operator*(const T &scalar) const {
-  auto entity = Session::isRecording()
-                  ? Session::getSession()->makeTemporary(scalar, this->getProfile())
-                  : std::make_shared<Fhenon<T>>(scalar);
+  auto entity = Session::isRecording() ? Session::getSession()->makeTemporary(scalar, this->getProfile())
+                                       : std::make_shared<Fhenon<T>>(scalar);
   entity->setScalar();
   entity->belong(this->getProfile());
   return *this * *entity;

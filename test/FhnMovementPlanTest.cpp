@@ -4,10 +4,10 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <vector>
-#include <map>
 #include <limits>
+#include <map>
 #include <set>
+#include <vector>
 
 using namespace fhenomenon;
 using fhenomenon::testutil::ProgramBuilder;
@@ -411,33 +411,38 @@ TEST(FhnMovementPlan, OutOfRangeEffectIsRejected) {
   }
 }
 
-
 // Regression documentation of the byte-mode policy's limit: knowing all
 // future uses does not make greedy farthest-use eviction globally optimal
 // when buffer sizes differ. Both schedules start after input normalization.
 TEST(FhnMovementPlan, VariableSizeFarthestUseHasCheaperFeasibleAlternative) {
-  auto prog = ProgramBuilder().input(2).input(3)
-    .inst_p0(FHN_LEVEL_DOWN, 4, 3, 0)
-    .inst_p0(FHN_LEVEL_DOWN, 5, 2, 2)
-    .inst_p0(FHN_LEVEL_DOWN, 6, 5, 0)
-    .inst_p0(FHN_LEVEL_DOWN, 7, 3, 1)
-    .inst_p0(FHN_LEVEL_DOWN, 8, 2, 2)
-    .inst_p0(FHN_LEVEL_DOWN, 9, 4, 0)
-    .inst_p0(FHN_LEVEL_DOWN, 10, 6, 0)
-    .inst_p0(FHN_LEVEL_DOWN, 11, 4, 0)
-    .inst_p0(FHN_LEVEL_DOWN, 12, 10, 0).output(12).build();
+  auto prog = ProgramBuilder()
+                .input(2)
+                .input(3)
+                .inst_p0(FHN_LEVEL_DOWN, 4, 3, 0)
+                .inst_p0(FHN_LEVEL_DOWN, 5, 2, 2)
+                .inst_p0(FHN_LEVEL_DOWN, 6, 5, 0)
+                .inst_p0(FHN_LEVEL_DOWN, 7, 3, 1)
+                .inst_p0(FHN_LEVEL_DOWN, 8, 2, 2)
+                .inst_p0(FHN_LEVEL_DOWN, 9, 4, 0)
+                .inst_p0(FHN_LEVEL_DOWN, 10, 6, 0)
+                .inst_p0(FHN_LEVEL_DOWN, 11, 4, 0)
+                .inst_p0(FHN_LEVEL_DOWN, 12, 10, 0)
+                .output(12)
+                .build();
   FhnLevelModel model;
   model.fresh_level = 2;
   model.bytes_by_level = {1, 2, 3};
   model.effects[FHN_LEVEL_DOWN] = FHN_LEVEL_SET_PARAM0;
   auto plan = FhnMovementPlan::analyze(*prog, {12}, 7, FhnEvictionPolicy::Belady, &model);
   ASSERT_TRUE(plan);
-  const std::map<uint32_t, uint64_t> bytes = {{2,3}, {3,3}, {4,1}, {5,3}, {6,1}, {7,2},
-                                            {8,3}, {9,1}, {10,1}, {11,1}, {12,1}};
+  const std::map<uint32_t, uint64_t> bytes = {{2, 3}, {3, 3}, {4, 1},  {5, 3},  {6, 1}, {7, 2},
+                                              {8, 3}, {9, 1}, {10, 1}, {11, 1}, {12, 1}};
   uint64_t greedy_bytes = 0;
   for (uint32_t i = 0; i < 9; ++i) {
-    for (auto id : plan->at(i).evict) greedy_bytes += bytes.at(id);
-    for (auto id : plan->at(i).prefetch) greedy_bytes += bytes.at(id);
+    for (auto id : plan->at(i).evict)
+      greedy_bytes += bytes.at(id);
+    for (auto id : plan->at(i).prefetch)
+      greedy_bytes += bytes.at(id);
   }
   EXPECT_EQ(plan->stats().evict_count + plan->stats().prefetch_count, 10u);
   EXPECT_EQ(greedy_bytes, 22u);
@@ -446,7 +451,7 @@ TEST(FhnMovementPlan, VariableSizeFarthestUseHasCheaperFeasibleAlternative) {
   // the larger buffer 3; later drop 2 at i2 and 4 at i4. Check every peak
   // and each use, rather than merely asserting a claimed oracle score.
   const std::vector<std::vector<uint32_t>> evictions = {{}, {3}, {2}, {}, {4}, {}, {}, {}, {}};
-  const std::vector<std::vector<uint32_t>> frees = {{}, {}, {5}, {3,7}, {2,8}, {9}, {6}, {4,11}, {10}};
+  const std::vector<std::vector<uint32_t>> frees = {{}, {}, {5}, {3, 7}, {2, 8}, {9}, {6}, {4, 11}, {10}};
   std::set<uint32_t> resident;
   uint64_t alternative_transfers = 0, alternative_bytes = 0;
   for (uint32_t i = 0; i < 9; ++i) {
@@ -463,9 +468,11 @@ TEST(FhnMovementPlan, VariableSizeFarthestUseHasCheaperFeasibleAlternative) {
     }
     ASSERT_TRUE(resident.insert(inst.result_id).second);
     uint64_t peak_bytes = 0;
-    for (auto id : resident) peak_bytes += bytes.at(id);
+    for (auto id : resident)
+      peak_bytes += bytes.at(id);
     EXPECT_LE(peak_bytes, 7u);
-    for (auto id : frees[i]) ASSERT_EQ(resident.erase(id), 1u);
+    for (auto id : frees[i])
+      ASSERT_EQ(resident.erase(id), 1u);
   }
   EXPECT_EQ(resident, (std::set<uint32_t>{12}));
   EXPECT_EQ(alternative_transfers, 8u);
@@ -509,7 +516,6 @@ TEST(FhnMovementPlan, SemanticSnapshotAcceptsEqualCopiesAndDetectsEveryArrayFiel
   EXPECT_TRUE(plan->matches(*copy));
 }
 
-
 TEST(FhnMovementPlan, RejectsUnrepresentableByteWorkingSet) {
   auto prog = ProgramBuilder().input(1).inst(FHN_NEGATE, 2, 1).output(2).build();
   FhnLevelModel model;
@@ -521,8 +527,8 @@ TEST(FhnMovementPlan, RejectsUnrepresentableByteWorkingSet) {
 }
 
 TEST(FhnMovementPlan, ByteBudgetAdmissionDoesNotWrapAccumulatedResidency) {
-  auto prog = ProgramBuilder().input(1).inst(FHN_NEGATE, 2, 1)
-                .inst(FHN_NEGATE, 3, 1).inst(FHN_NEGATE, 4, 1).output(4).build();
+  auto prog =
+    ProgramBuilder().input(1).inst(FHN_NEGATE, 2, 1).inst(FHN_NEGATE, 3, 1).inst(FHN_NEGATE, 4, 1).output(4).build();
   FhnLevelModel model;
   model.fresh_level = 0;
   model.bytes_by_level = {uint64_t{1} << 62};

@@ -52,8 +52,8 @@ class FhnMovementPlan {
     uint32_t high_water = 0; // max simultaneously scheduled resident buffers
     uint32_t alloc_count = 0;
     uint32_t prefetch_count = 0;
-    uint32_t evict_count = 0; // instruction-scheduled evictions only
-    uint64_t high_water_bytes = 0; // max simultaneously resident bytes (model only, else 0)
+    uint32_t evict_count = 0;         // instruction-scheduled evictions only
+    uint64_t high_water_bytes = 0;    // max simultaneously resident bytes (model only, else 0)
     uint32_t initial_evict_count = 0; // normalization calls, separate from transfers
   };
 

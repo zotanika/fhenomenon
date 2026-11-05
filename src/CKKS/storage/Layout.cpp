@@ -85,8 +85,7 @@ bool RnsBasis::wellFormed(std::string *error) const {
     return fail(error, "basis has no limbs");
   }
   if (limbs > kMaxLimbs) {
-    return fail(error,
-                "basis has " + std::to_string(limbs) + " limbs, over the bound of " + std::to_string(kMaxLimbs));
+    return fail(error, "basis has " + std::to_string(limbs) + " limbs, over the bound of " + std::to_string(kMaxLimbs));
   }
   return true;
 }

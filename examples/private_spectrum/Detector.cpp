@@ -32,8 +32,8 @@ Evidence aboveThreshold(double value, double threshold, double margin) {
   return Evidence::Uncertain;
 }
 
-Evidence gainEvidence(std::complex<double> baseline, unsigned baselineFrames,
-                      std::complex<double> current, unsigned frames) {
+Evidence gainEvidence(std::complex<double> baseline, unsigned baselineFrames, std::complex<double> current,
+                      unsigned frames) {
   if (!validPower(baseline) || !validPower(current))
     return Evidence::Uncertain;
   const double before = baseline.real() / baselineFrames;
@@ -51,8 +51,7 @@ Evidence coherenceEvidence(const Spectrum &window, unsigned sensor, unsigned bin
   const auto power = window.power[sensor][bin];
   const auto reference = window.power[0][bin];
   const auto cross = window.cross[sensor][bin];
-  if (!validPower(power) || !validPower(reference) || !std::isfinite(cross.real()) ||
-      !std::isfinite(cross.imag()))
+  if (!validPower(power) || !validPower(reference) || !std::isfinite(cross.real()) || !std::isfinite(cross.imag()))
     return Evidence::Uncertain;
   if (power.real() <= powerFloor || reference.real() <= powerFloor)
     return Evidence::Negative;
@@ -73,14 +72,14 @@ Evidence both(Evidence a, Evidence b) {
   return Evidence::Uncertain;
 }
 
-Evidence binEvidence(const Spectrum &baseline, unsigned baselineFrames,
-                     const Spectrum &window, unsigned frames, unsigned bin) {
+Evidence binEvidence(const Spectrum &baseline, unsigned baselineFrames, const Spectrum &window, unsigned frames,
+                     unsigned bin) {
   auto reference = gainEvidence(baseline.power[0][bin], baselineFrames, window.power[0][bin], frames);
   // Its self cross spectrum equals its power; do not accept a malformed anchor.
   const auto referenceCross = window.cross[0][bin];
   const auto referencePower = window.power[0][bin];
-  if (!std::isfinite(referenceCross.real()) || !std::isfinite(referenceCross.imag()) ||
-      !validPower(referencePower) || std::abs(referenceCross - referencePower) > tolerance)
+  if (!std::isfinite(referenceCross.real()) || !std::isfinite(referenceCross.imag()) || !validPower(referencePower) ||
+      std::abs(referenceCross - referencePower) > tolerance)
     reference = Evidence::Uncertain;
   if (reference == Evidence::Negative)
     return Evidence::Negative;
@@ -88,9 +87,9 @@ Evidence binEvidence(const Spectrum &baseline, unsigned baselineFrames,
   unsigned positive = 0;
   unsigned uncertain = 0;
   for (unsigned sensor = 1; sensor < sensorCount; ++sensor) {
-    const auto participation = both(
-      gainEvidence(baseline.power[sensor][bin], baselineFrames, window.power[sensor][bin], frames),
-      coherenceEvidence(window, sensor, bin));
+    const auto participation =
+      both(gainEvidence(baseline.power[sensor][bin], baselineFrames, window.power[sensor][bin], frames),
+           coherenceEvidence(window, sensor, bin));
     positive += participation == Evidence::Positive;
     uncertain += participation == Evidence::Uncertain;
   }
@@ -115,7 +114,7 @@ const char *alarmName(Alarm alarm) {
 }
 
 JointDetector::JointDetector(const Spectrum &baseline, unsigned baselineFrames)
-    : baseline_(baseline), baselineFrames_(baselineFrames) {
+  : baseline_(baseline), baselineFrames_(baselineFrames) {
   validateFrames(baselineFrames);
 }
 
@@ -126,8 +125,7 @@ Alarm JointDetector::observe(const Spectrum &window, unsigned frames) {
   for (unsigned bin = 0; bin < binCount; ++bin) {
     const auto evidence = binEvidence(baseline_, baselineFrames_, window, frames, bin);
     shared |= evidence == Evidence::Positive && previousPositive_[bin];
-    uncertain |= evidence == Evidence::Uncertain ||
-                 (evidence == Evidence::Positive && previousUncertain_[bin]);
+    uncertain |= evidence == Evidence::Uncertain || (evidence == Evidence::Positive && previousUncertain_[bin]);
     previousPositive_[bin] = evidence == Evidence::Positive;
     previousUncertain_[bin] = evidence == Evidence::Uncertain;
   }

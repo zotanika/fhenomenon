@@ -28,8 +28,8 @@ void usage(std::ostream &out) {
 unsigned frameCount(std::string_view input) {
   unsigned count = 0;
   const auto result = std::from_chars(input.data(), input.data() + input.size(), count);
-  if (result.ec != std::errc{} || result.ptr != input.data() + input.size() ||
-      count < private_spectrum::minFrames || count > private_spectrum::maxFrames)
+  if (result.ec != std::errc{} || result.ptr != input.data() + input.size() || count < private_spectrum::minFrames ||
+      count > private_spectrum::maxFrames)
     throw std::invalid_argument("--frames requires an integer from 2 to 16");
   return count;
 }
@@ -65,8 +65,7 @@ int main(int argc, char **argv) {
         scenario = argv[++i];
         if (scenario != "all" && scenario != "normal" && scenario != "local" && scenario != "shared")
           throw std::invalid_argument("--scenario requires all, normal, local, or shared");
-      }
-      else if (option == "-h" || option == "--help")
+      } else if (option == "-h" || option == "--help")
         help = true;
       else
         throw std::invalid_argument("unknown or incomplete option " + std::string(option));

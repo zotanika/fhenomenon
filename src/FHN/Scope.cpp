@@ -164,8 +164,8 @@ Values Scope::execute(const ScopeValues &exports, const std::vector<std::shared_
           if (attempts == impl_->options.max_match_attempts)
             throw Error(ErrorCode::BudgetExceeded, "scope match attempt cap exceeded");
           ++attempts;
-          const auto window = std::min({kernel->max_commands, impl_->options.max_lookahead,
-                                        impl_->commands.size() - cursor});
+          const auto window =
+            std::min({kernel->max_commands, impl_->options.max_lookahead, impl_->commands.size() - cursor});
           ScopeView candidate(*this, cursor, window);
           detail = "start=" + std::to_string(cursor) + " count=" + std::to_string(window) +
                    " liveins=" + std::to_string(candidate.liveIns(window).size()) +
@@ -196,8 +196,8 @@ Values Scope::execute(const ScopeValues &exports, const std::vector<std::shared_
       ScopeView span(*this, cursor, count);
       const auto liveins = span.liveIns(count);
       const auto liveouts = span.liveOuts(count);
-      detail = "start=" + std::to_string(cursor) + " count=" + std::to_string(count) + " liveins=" + std::to_string(liveins.size()) +
-                " liveouts=" + std::to_string(liveouts.size());
+      detail = "start=" + std::to_string(cursor) + " count=" + std::to_string(count) +
+               " liveins=" + std::to_string(liveins.size()) + " liveouts=" + std::to_string(liveouts.size());
       record(TraceKind::Selected, name, detail);
       Values outputs;
       ScopeValues symbols;

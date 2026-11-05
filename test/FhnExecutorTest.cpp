@@ -718,38 +718,39 @@ TEST(FhnExecutorMovement, BudgetedExecutionCorrectUnderLru) {
   movementFree(nullptr, buffers[7]);
 }
 
-
 namespace {
 int test_mult_cs(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops, const int64_t *, const double *fp) {
   reinterpret_cast<TestBuffer *>(result)->value =
     reinterpret_cast<const TestBuffer *>(ops[0])->value * static_cast<int64_t>(fp[0]);
   return 0;
 }
-int test_native_hrot_add(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops,
-                         const int64_t *, const double *) {
+int test_native_hrot_add(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops, const int64_t *,
+                         const double *) {
   reinterpret_cast<TestBuffer *>(result)->value =
     reinterpret_cast<const TestBuffer *>(ops[0])->value * 10 + reinterpret_cast<const TestBuffer *>(ops[1])->value;
   return 0;
 }
-int test_native_hconj_add(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops,
-                          const int64_t *, const double *) {
+int test_native_hconj_add(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops, const int64_t *,
+                          const double *) {
   reinterpret_cast<TestBuffer *>(result)->value =
     -reinterpret_cast<const TestBuffer *>(ops[0])->value + reinterpret_cast<const TestBuffer *>(ops[1])->value;
   return 0;
 }
-int test_native_mad(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops,
-                    const int64_t *, const double *fp) {
+int test_native_mad(FhnBackendCtx *, FhnBuffer *result, const FhnBuffer *const *ops, const int64_t *,
+                    const double *fp) {
   reinterpret_cast<TestBuffer *>(result)->value =
     reinterpret_cast<const TestBuffer *>(ops[0])->value * static_cast<int64_t>(fp[0]) +
     reinterpret_cast<const TestBuffer *>(ops[1])->value;
   return 0;
 }
 
-}
+} // namespace
 
 TEST(FhnExecutor, FusedFallbackRejectsPhysicalAddendAliasBeforeWriting) {
-  FhnKernelEntry entries[] = {{FHN_ROTATE, test_rotate, "rotate"}, {FHN_CONJUGATE, test_negate, "conjugate"},
-                              {FHN_MULT_CS, test_mult_cs, "mult_cs"}, {FHN_ADD_CC, test_add_cc, "add"}};
+  FhnKernelEntry entries[] = {{FHN_ROTATE, test_rotate, "rotate"},
+                              {FHN_CONJUGATE, test_negate, "conjugate"},
+                              {FHN_MULT_CS, test_mult_cs, "mult_cs"},
+                              {FHN_ADD_CC, test_add_cc, "add"}};
   FhnKernelTable table{4, entries};
   FhnDefaultExecutor executor(&table);
   FhnKernelEntry native_entries[] = {{FHN_HROT_ADD, test_native_hrot_add, "hrot_add"},
@@ -800,13 +801,27 @@ TEST(FhnExecutorMovement, SameLengthStalePlanRejectsBeforeHooksOrKernels) {
     ASSERT_TRUE(plan);
     // Mutate the original storage, not merely a second program pointer.
     switch (field) {
-    case 0: original->instructions[0].result_id = 4; break;
-    case 1: original->instructions[0].operands[1] = 1; break;
-    case 2: original->input_ids[1] = 4; break;
-    case 3: original->output_ids[0] = 4; break;
-    case 4: original->instructions[0].opcode = FHN_NEGATE; break;
-    case 5: original->instructions[0].params[3] = 42; break;
-    case 6: original->instructions[0].fparams[1] = -0.0; break;
+    case 0:
+      original->instructions[0].result_id = 4;
+      break;
+    case 1:
+      original->instructions[0].operands[1] = 1;
+      break;
+    case 2:
+      original->input_ids[1] = 4;
+      break;
+    case 3:
+      original->output_ids[0] = 4;
+      break;
+    case 4:
+      original->instructions[0].opcode = FHN_NEGATE;
+      break;
+    case 5:
+      original->instructions[0].params[3] = 42;
+      break;
+    case 6:
+      original->instructions[0].fparams[1] = -0.0;
+      break;
     }
     FhnBuffer *buffers[5] = {};
     buffers[1] = movementAlloc(nullptr);
@@ -823,7 +838,8 @@ TEST(FhnExecutorMovement, SameLengthStalePlanRejectsBeforeHooksOrKernels) {
     EXPECT_EQ(world.kernel_calls, 0);
     EXPECT_EQ(world.device_vals.at(buffers[1]), 10);
     EXPECT_EQ(world.device_vals.at(buffers[2]), 20);
-    if (buffers[3]) movementFree(nullptr, buffers[3]);
+    if (buffers[3])
+      movementFree(nullptr, buffers[3]);
     movementFree(nullptr, buffers[1]);
     movementFree(nullptr, buffers[2]);
     movementFree(nullptr, extra);
@@ -844,17 +860,21 @@ TEST(FhnExecutorMovement, BudgetNormalizesResidentInputsBeforeFirstAllocation) {
       buffers[i] = movementAlloc(nullptr);
       world.device_vals[buffers[i]] = i * 10;
     }
-    if (mixed_residency) movementEvict(nullptr, buffers[2]);
+    if (mixed_residency)
+      movementEvict(nullptr, buffers[2]);
     world.log.clear();
     FhnDefaultExecutor executor(&movementTable);
     FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, movementPrefetch, movementEvict};
     EXPECT_EQ(executor.execute(hooks, prog.get(), buffers, *plan), 0);
-    if (buffers[4]) EXPECT_EQ(world.device_vals.at(buffers[4]), 30);
+    if (buffers[4])
+      EXPECT_EQ(world.device_vals.at(buffers[4]), 30);
     EXPECT_LE(world.peak, 3u);
     EXPECT_TRUE(world.host_vals.count(buffers[3]));
-    if (world.host_vals.count(buffers[3])) EXPECT_EQ(world.host_vals.at(buffers[3]), 30);
+    if (world.host_vals.count(buffers[3]))
+      EXPECT_EQ(world.host_vals.at(buffers[3]), 30);
     for (int i = 1; i <= 4; ++i)
-      if (buffers[i]) movementFree(nullptr, buffers[i]);
+      if (buffers[i])
+        movementFree(nullptr, buffers[i]);
   }
 }
 
@@ -868,17 +888,16 @@ TEST(FhnExecutorMovement, BudgetRejectsPartialMovementHooksBeforeAnyWork) {
     FhnBuffer *buffers[] = {nullptr, movementAlloc(nullptr), nullptr};
     world.log.clear();
     FhnDefaultExecutor executor(&movementTable);
-    FhnMovementHooks hooks{nullptr, movementAlloc, movementFree,
-                          missing == 0 ? nullptr : movementPrefetch,
-                          missing == 1 ? nullptr : movementEvict};
+    FhnMovementHooks hooks{nullptr, movementAlloc, movementFree, missing == 0 ? nullptr : movementPrefetch,
+                           missing == 1 ? nullptr : movementEvict};
     EXPECT_NE(executor.execute(hooks, prog.get(), buffers, *plan), 0);
     EXPECT_TRUE(world.log.empty());
     EXPECT_EQ(world.kernel_calls, 0);
     movementFree(nullptr, buffers[1]);
-    if (buffers[2]) movementFree(nullptr, buffers[2]);
+    if (buffers[2])
+      movementFree(nullptr, buffers[2]);
   }
 }
-
 
 TEST(FhnExecutorMovement, BudgetValidatesAllInputsBeforeNormalization) {
   MovementWorld world;
@@ -918,7 +937,6 @@ TEST(FhnExecutorMovement, BudgetWithoutMovementHooksRetainsSingleSpaceBehavior) 
   movementFree(nullptr, buffers[3]);
 }
 
-
 TEST(FhnExecutor, HmultRejectsEitherMissingStageBeforeMultiply) {
   auto prog = ProgramBuilder().input(1).input(2).inst(FHN_HMULT, 3, 1, 2).output(3).build();
   for (auto only_stage : {FHN_RELINEARIZE, FHN_RESCALE}) {
@@ -933,12 +951,10 @@ TEST(FhnExecutor, HmultRejectsEitherMissingStageBeforeMultiply) {
   }
 }
 
-
 TEST(FhnExecutorMovement, RejectsPhysicalInputAliasesBeforeAnyHook) {
   MovementWorld world;
   g_world = &world;
-  auto prog = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2)
-                .inst(FHN_ADD_CC, 4, 1, 1).output(4).build();
+  auto prog = ProgramBuilder().input(1).input(2).inst(FHN_ADD_CC, 3, 1, 2).inst(FHN_ADD_CC, 4, 1, 1).output(4).build();
   auto plan = FhnMovementPlan::analyze(*prog, {1, 2, 3, 4}, 3);
   ASSERT_TRUE(plan);
   auto *input = movementAlloc(nullptr);
@@ -953,8 +969,11 @@ TEST(FhnExecutorMovement, RejectsPhysicalInputAliasesBeforeAnyHook) {
   EXPECT_TRUE(world.log.empty());
   EXPECT_EQ(world.kernel_calls, 0);
   EXPECT_TRUE(world.device_vals.count(input));
-  if (world.device_vals.count(input)) EXPECT_EQ(world.device_vals.at(input), 11);
+  if (world.device_vals.count(input))
+    EXPECT_EQ(world.device_vals.at(input), 11);
   movementFree(nullptr, input);
-  if (buffers[3]) movementFree(nullptr, buffers[3]);
-  if (buffers[4]) movementFree(nullptr, buffers[4]);
+  if (buffers[3])
+    movementFree(nullptr, buffers[3]);
+  if (buffers[4])
+    movementFree(nullptr, buffers[4]);
 }

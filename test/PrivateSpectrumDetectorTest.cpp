@@ -1,6 +1,6 @@
 #include "Detector.h"
-#include <gtest/gtest.h>
 #include <cmath>
+#include <gtest/gtest.h>
 #include <limits>
 
 namespace {
@@ -18,15 +18,15 @@ Spectrum unitSpectrum(unsigned frames = 2) {
   return result;
 }
 
-Spectrum raised(unsigned bin = 3, std::initializer_list<unsigned> sensors = {0, 1, 3},
-                double gain = 4, double coherence = 1, unsigned frames = 2) {
+Spectrum raised(unsigned bin = 3, std::initializer_list<unsigned> sensors = {0, 1, 3}, double gain = 4,
+                double coherence = 1, unsigned frames = 2) {
   auto result = unitSpectrum(frames);
   for (auto sensor : sensors)
     result.power[sensor][bin] = frames * gain;
   for (unsigned sensor = 0; sensor < sensorCount; ++sensor) {
     const double magnitude = std::sqrt(result.power[sensor][bin].real() * result.power[0][bin].real());
-    result.cross[sensor][bin] = sensor == 0 ? std::complex<double>{magnitude, 0}
-                                         : std::complex<double>{0, magnitude * std::sqrt(coherence)};
+    result.cross[sensor][bin] =
+      sensor == 0 ? std::complex<double>{magnitude, 0} : std::complex<double>{0, magnitude * std::sqrt(coherence)};
   }
   return result;
 }
@@ -184,8 +184,7 @@ TEST(PrivateSpectrumDetector, InvalidOptionalParticipantDoesNotVetoKnownQuorum) 
 }
 
 TEST(PrivateSpectrumDetector, InvalidBaselineCannotProduceAnAlarm) {
-  for (double power : {-1.0, std::numeric_limits<double>::infinity(),
-                       std::numeric_limits<double>::quiet_NaN()}) {
+  for (double power : {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()}) {
     auto baseline = unitSpectrum();
     baseline.power[0][3] = power;
     JointDetector detector(baseline, 2);
@@ -254,9 +253,8 @@ TEST(PrivateSpectrumFixture, OnlySpecifiedSensorAndBinAmplitudesChange) {
       for (unsigned frame = 0; frame < 4; ++frame)
         for (unsigned sensor = 0; sensor < sensorCount; ++sensor)
           for (unsigned bin = 0; bin < binCount; ++bin) {
-            const bool boosted = bin == 3 &&
-                                 ((scenario == Scenario::LocalDisturbance && sensor == 1) ||
-                                  (scenario == Scenario::SharedOscillation && sensor != 2));
+            const bool boosted = bin == 3 && ((scenario == Scenario::LocalDisturbance && sensor == 1) ||
+                                              (scenario == Scenario::SharedOscillation && sensor != 2));
             EXPECT_EQ(window[frame][sensor][bin], original[frame][sensor][bin] * (boosted ? 2.0 : 1.0));
           }
   }

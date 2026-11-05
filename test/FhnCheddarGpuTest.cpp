@@ -425,14 +425,14 @@ TEST_F(CheddarGpuTest, RotateUnpreparedDistanceFails) {
   fhn_program_free(prog);
 }
 
-
 TEST_F(CheddarGpuTest, PackedDoubleRoundTripValidatesExactCountAndFiniteValues) {
   auto bufs = allocBuffers(2);
   const std::vector<double> input = {1.25, -2.5, 0.125, 3.75};
   ASSERT_EQ(encrypt_vector_(ctx(), bufs[0], input.data(), 4), 0);
   std::vector<double> actual(4);
   ASSERT_EQ(decrypt_vector_(ctx(), bufs[0], actual.data(), 4), 0);
-  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], input[i], 1e-3);
+  for (size_t i = 0; i < 4; ++i)
+    EXPECT_NEAR(actual[i], input[i], 1e-3);
   EXPECT_NE(encrypt_vector_(nullptr, bufs[0], input.data(), 4), 0);
   EXPECT_NE(encrypt_vector_(ctx(), nullptr, input.data(), 4), 0);
   EXPECT_NE(encrypt_vector_(ctx(), bufs[0], nullptr, 4), 0);
@@ -444,7 +444,8 @@ TEST_F(CheddarGpuTest, PackedDoubleRoundTripValidatesExactCountAndFiniteValues) 
     EXPECT_NE(encrypt_vector_(ctx(), bufs[0], invalid, 4), 0);
   }
   ASSERT_EQ(decrypt_vector_(ctx(), bufs[0], actual.data(), 4), 0);
-  for (size_t i = 0; i < 4; ++i) EXPECT_NEAR(actual[i], input[i], 1e-3);
+  for (size_t i = 0; i < 4; ++i)
+    EXPECT_NEAR(actual[i], input[i], 1e-3);
   actual.assign(4, 123.0);
   EXPECT_NE(decrypt_vector_(nullptr, bufs[0], actual.data(), 4), 0);
   EXPECT_NE(decrypt_vector_(ctx(), nullptr, actual.data(), 4), 0);
