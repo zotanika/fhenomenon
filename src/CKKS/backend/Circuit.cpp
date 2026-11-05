@@ -25,10 +25,19 @@ bool compatible(Signature a, Signature b) {
   return a.slots == b.slots && a.layout.poly == b.layout.poly && a.layout.num_polys == b.layout.num_polys &&
          sameScale(a.layout.scale, b.layout.scale);
 }
-int64_t checked(__int128 value) {
-  if (value < INT64_MIN || value > INT64_MAX)
+int64_t checked(bool overflowed, int64_t value) {
+  if (overflowed)
     throw std::invalid_argument("affine coefficient exceeds signed 64-bit range");
-  return static_cast<int64_t>(value);
+  return value;
+}
+int64_t checkedProduct(int64_t a, int64_t b) {
+  int64_t out = 0;
+  return checked(__builtin_mul_overflow(a, b, &out), out);
+}
+// sign is +1 or -1; subtracting directly keeps INT64_MIN coefficients exact.
+int64_t checkedSum(int64_t a, int64_t b, int64_t sign) {
+  int64_t out = 0;
+  return checked(sign < 0 ? __builtin_sub_overflow(a, b, &out) : __builtin_add_overflow(a, b, &out), out);
 }
 bool integer(double value, int64_t &out) {
   if (!std::isfinite(value) || std::trunc(value) != value)
@@ -45,7 +54,7 @@ struct Form {
 };
 Form scaled(Form form, int64_t coefficient) {
   for (auto &term : form.terms)
-    term.second = checked(static_cast<__int128>(term.second) * coefficient);
+    term.second = checkedProduct(term.second, coefficient);
   if (!coefficient)
     form.terms.clear();
   form.constant *= static_cast<double>(coefficient);
@@ -56,7 +65,7 @@ Form scaled(Form form, int64_t coefficient) {
 Form sum(Form a, const Form &b, int64_t sign) {
   for (auto [id, coefficient] : b.terms) {
     auto &target = a.terms[id];
-    target = checked(static_cast<__int128>(target) + static_cast<__int128>(coefficient) * sign);
+    target = checkedSum(target, coefficient, sign);
     if (!target)
       a.terms.erase(id);
   }
