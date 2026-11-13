@@ -6,7 +6,13 @@ extern "C" {
 #endif
 
 typedef struct FhnPlaintext FhnPlaintext;
-typedef enum FhnPlaintextPurpose { FHN_PLAINTEXT_ADD = 0, FHN_PLAINTEXT_MULTIPLY = 1 } FhnPlaintextPurpose;
+/* The sentinel widens the C++ value range to int, so validating an arbitrary
+   caller value is defined behaviour. It is never a valid purpose. */
+typedef enum FhnPlaintextPurpose {
+  FHN_PLAINTEXT_ADD = 0,
+  FHN_PLAINTEXT_MULTIPLY = 1,
+  FHN_PLAINTEXT_PURPOSE_MAX_ENUM = 0x7FFFFFFF
+} FhnPlaintextPurpose;
 
 /* Optional additive version-1 group. Resolve all symbols together. Preparation
    encodes public real values; it holds no key material or ciphertext snapshot.
