@@ -17,6 +17,12 @@ flowchart LR
 
 ## Live public example
 
+[Request #21](https://github.com/zotanika/fhenomenon/issues/21) was created by
+GitHub Actions from [this completed run](https://github.com/zotanika/fhenomenon/actions/runs/43382483074).
+Its measured encrypted matrix multiplication accounted for 3.706166 s of a
+7.528460 s mean Scope (49.23%, three samples). These numbers characterize only
+that fixture and runner. They do not establish a replacement kernel's speedup.
+
 The [example workflow](../.github/workflows/kernel-request-demo.yml) builds the
 public CPU provider and runs [a small training fixture](../python/examples/kernel_issue_demo.py).
 The fixture uses the ordinary model in `python/examples/model_training.py`: a

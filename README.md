@@ -25,6 +25,7 @@ flowchart TD
   S --> T[Measurements bound to graph and implementation]
   G --> R[Kernel engineering requests]
   T --> R
+  R --> I[Local draft or explicit GitHub publication]
 ```
 
 The frontend captures forward computation, loss, activation backpropagation and
@@ -38,6 +39,14 @@ node coverage and selected implementation. Measured costs can support a
 conditional estimate for replacing that work. The estimate is not a measured
 speedup: a replacement that changes packing, levels or downstream work requires
 recompilation and a new whole-program measurement.
+
+The [issue-generation example](docs/kernel-engineering-issues.md) runs a small
+encrypted training Scope, ranks measured contracts and creates or reuses a GitHub
+issue. A [completed workflow run](https://github.com/zotanika/fhenomenon/actions/runs/43382483074)
+generated [request #21](https://github.com/zotanika/fhenomenon/issues/21) for an
+encrypted matrix multiplication, including its contract, measured cost and
+acceptance conditions. This uses the insecure `NativeTest` fixture, not a
+full-size model benchmark.
 
 See [the model API](docs/model-compiler.md),
 [tensor contribution contracts](docs/tensor-kernel-contributions.md) and
