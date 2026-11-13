@@ -1,0 +1,10 @@
+[package]
+name = "fhenomenon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Independent Rust implementation of Fhenomenon runtime and scope contracts"
+
+[dev-dependencies]
+serde_json = "1.0"

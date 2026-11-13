@@ -1,0 +1,302 @@
+#include "Backend/Builtin.h"
+#include "Utils/log.h"
+
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+
+namespace fhenomenon {
+
+BuiltinBackend::BuiltinBackend() {
+  initialize();
+
+  // Initialize FHN executor. The FHN backend context owns the ToyFHE engine
+  // and its keys; everything reaches them through the data plane and kernels.
+  // ctx_core_ shares ownership with buffer deleters, so the context outlives
+  // any buffer still held by an entity when the backend is destroyed.
+  ctx_core_ = std::shared_ptr<FhnBackendCtx>(toyfhe_fhn_create(nullptr), &toyfhe_fhn_destroy);
+  fhn_ctx_ = ctx_core_.get();
+  fhn_table_ = toyfhe_fhn_get_kernels(fhn_ctx_);
+  fhn_executor_ = std::make_unique<FhnDefaultExecutor>(fhn_table_);
+  // ToyFHE has a single memory space and exports no movement hooks, but it
+  // does declare a flat level model directly (no dlsym resolution needed).
+  runtime_ = {fhn_ctx_, fhn_executor_.get(),    toyfhe_fhn_buffer_alloc, toyfhe_fhn_buffer_free,         nullptr,
+              nullptr,  toyfhe_fhn_fresh_level, toyfhe_fhn_level_bytes,  toyfhe_fhn_opcode_level_effect, ctx_core_};
+}
+
+BuiltinBackend::~BuiltinBackend() {
+  fhn_executor_.reset();
+  fhn_ctx_ = nullptr;
+  ctx_core_.reset(); // context destroyed once the last buffer releases it
+}
+
+std::shared_ptr<FhnBuffer> BuiltinBackend::makeBuffer() const {
+  FhnBuffer *raw = toyfhe_fhn_buffer_alloc(fhn_ctx_);
+  if (!raw) {
+    throw std::runtime_error("BuiltinBackend: toyfhe_fhn_buffer_alloc failed");
+  }
+  // The deleter shares ownership of the context, so a buffer held by an
+  // entity that outlives the backend still frees against a live context.
+  auto core = ctx_core_;
+  return std::shared_ptr<FhnBuffer>(raw, [core](FhnBuffer *buf) { toyfhe_fhn_buffer_free(core.get(), buf); });
+}
+
+std::shared_ptr<FhnBuffer> BuiltinBackend::bufferOf(const FhenonBase &entity, const char *opName) const {
+  const auto *ct = std::any_cast<FhnCiphertext>(&entity.ciphertext_);
+  if (!ct || ct->owner != this) {
+    throw std::runtime_error(std::string("BuiltinBackend: ") + opName + ": operand was not encrypted by this backend");
+  }
+  return ct->buffer;
+}
+
+std::shared_ptr<FhnBuffer> BuiltinBackend::runSingleOp(FhnOpCode op, FhnBuffer *a, FhnBuffer *b, double fparam) const {
+  const uint32_t num_inputs = b ? 2u : 1u;
+  std::unique_ptr<FhnProgram, decltype(&fhn_program_free)> prog(fhn_program_alloc(1, num_inputs, 1), &fhn_program_free);
+  if (!prog) {
+    throw std::runtime_error("BuiltinBackend: fhn_program_alloc failed");
+  }
+
+  // Buffer ids: a = 1, optional b = 2, result = next.
+  const uint32_t result_id = num_inputs + 1;
+  prog->instructions[0].opcode = op;
+  prog->instructions[0].result_id = result_id;
+  prog->instructions[0].operands[0] = 1;
+  prog->input_ids[0] = 1;
+  if (b) {
+    prog->instructions[0].operands[1] = 2;
+    prog->input_ids[1] = 2;
+  }
+  prog->instructions[0].fparams[0] = fparam;
+  prog->output_ids[0] = result_id;
+
+  auto result = makeBuffer();
+  FhnBuffer *buffers[4] = {nullptr, a, nullptr, nullptr};
+  buffers[2] = b ? b : result.get();
+  if (b) {
+    buffers[3] = result.get();
+  }
+
+  const int rc = fhn_executor_->execute(fhn_ctx_, prog.get(), buffers);
+  if (rc != 0) {
+    throw std::runtime_error("BuiltinBackend: FHN executor failed with rc=" + std::to_string(rc));
+  }
+  return result;
+}
+
+void BuiltinBackend::ensureReady() const {
+  // nothing to do — the FHN context owns the engine and keys.
+}
+
+void BuiltinBackend::initialize() {
+  // no-op — the FHN context owns the engine and keys.
+}
+
+void BuiltinBackend::generateKeys() {
+  // no-op — the FHN context generates its keys on creation.
+}
+
+void BuiltinBackend::loadKeys([[maybe_unused]] const std::string &publicKeyPath,
+                              [[maybe_unused]] const std::string &secretKeyPath) {
+  LOG_MESSAGE("BuiltinBackend: loadKeys is a no-op.");
+}
+
+void BuiltinBackend::saveKeys([[maybe_unused]] const std::string &publicKeyPath,
+                              [[maybe_unused]] const std::string &secretKeyPath) {
+  LOG_MESSAGE("BuiltinBackend: saveKeys is a no-op.");
+}
+
+void BuiltinBackend::transform(FhenonBase &entity, [[maybe_unused]] const Parameter &params) const {
+  ensureReady();
+  auto type = entity.type();
+
+  // Host-side data plane: encryption never goes through the kernel table.
+  if (type == typeid(int)) {
+    auto &derivedEntity = dynamic_cast<Fhenon<int> &>(entity);
+    auto buffer = makeBuffer();
+    if (toyfhe_fhn_encrypt_i64(fhn_ctx_, buffer.get(), derivedEntity.getValue()) != 0) {
+      throw std::runtime_error("BuiltinBackend: toyfhe_fhn_encrypt_i64 failed");
+    }
+    entity.ciphertext_ = FhnCiphertext{buffer, this};
+    entity.isEncrypted_ = true;
+    LOG_MESSAGE("BuiltinBackend: Encrypted int value " << derivedEntity.getValue());
+  } else if (type == typeid(double)) {
+    auto &derivedEntity = dynamic_cast<Fhenon<double> &>(entity);
+    auto buffer = makeBuffer();
+    if (toyfhe_fhn_encrypt_f64(fhn_ctx_, buffer.get(), derivedEntity.getValue()) != 0) {
+      throw std::runtime_error("BuiltinBackend: toyfhe_fhn_encrypt_f64 failed");
+    }
+    entity.ciphertext_ = FhnCiphertext{buffer, this};
+    entity.isEncrypted_ = true;
+    LOG_MESSAGE("BuiltinBackend: Encrypted double value " << derivedEntity.getValue());
+  } else if (type == typeid(float)) {
+    auto &derivedEntity = dynamic_cast<Fhenon<float> &>(entity);
+    auto buffer = makeBuffer();
+    if (toyfhe_fhn_encrypt_f64(fhn_ctx_, buffer.get(), static_cast<double>(derivedEntity.getValue())) != 0) {
+      throw std::runtime_error("BuiltinBackend: toyfhe_fhn_encrypt_f64 failed");
+    }
+    entity.ciphertext_ = FhnCiphertext{buffer, this};
+    entity.isEncrypted_ = true;
+    LOG_MESSAGE("BuiltinBackend: Encrypted float value " << derivedEntity.getValue());
+  } else {
+    throw std::runtime_error("BuiltinBackend: Unsupported type for encryption");
+  }
+}
+
+namespace {
+template <typename T>
+std::shared_ptr<FhenonBase> makeResultFhenon(const Fhenon<T> &reference, FhnCiphertext ciphertext) {
+  auto resultFhenon = std::make_shared<Fhenon<T>>(0);
+  resultFhenon->ciphertext_ = std::move(ciphertext);
+  resultFhenon->isEncrypted_ = true;
+  resultFhenon->setProfile(reference.getProfile());
+  return resultFhenon;
+}
+
+// Dispatch on the reference entity's runtime type so the result Fhenon<T>
+// matches it; the ciphertext itself is type-agnostic on the FHN data plane.
+std::shared_ptr<FhenonBase> makeTypedResult(const FhenonBase &reference, FhnCiphertext ciphertext, const char *opName) {
+  auto type = reference.type();
+  if (type == typeid(int)) {
+    return makeResultFhenon(dynamic_cast<const Fhenon<int> &>(reference), std::move(ciphertext));
+  }
+  if (type == typeid(double)) {
+    return makeResultFhenon(dynamic_cast<const Fhenon<double> &>(reference), std::move(ciphertext));
+  }
+  if (type == typeid(float)) {
+    return makeResultFhenon(dynamic_cast<const Fhenon<float> &>(reference), std::move(ciphertext));
+  }
+  throw std::runtime_error(std::string("BuiltinBackend: Unsupported type for ") + opName);
+}
+} // namespace
+
+std::shared_ptr<FhenonBase> BuiltinBackend::add(const FhenonBase &a, const FhenonBase &b) const {
+  ensureReady();
+
+  if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_.has_value() || !b.ciphertext_.has_value()) {
+    throw std::runtime_error("BuiltinBackend: Cannot add unencrypted Fhenon values");
+  }
+
+  auto ctA = bufferOf(a, "add");
+  auto ctB = bufferOf(b, "add");
+  auto result = runSingleOp(FHN_ADD_CC, ctA.get(), ctB.get(), 0.0);
+  LOG_MESSAGE("BuiltinBackend: Performed FHN addition (ADD_CC)");
+  return makeTypedResult(a, FhnCiphertext{std::move(result), this}, "add");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::multiply(const FhenonBase &a, const FhenonBase &b) const {
+  ensureReady();
+  if (!a.isEncrypted_ || !b.isEncrypted_ || !a.ciphertext_.has_value() || !b.ciphertext_.has_value()) {
+    throw std::runtime_error("BuiltinBackend: Cannot multiply unencrypted Fhenon values");
+  }
+
+  if (a.type() != b.type()) {
+    throw std::runtime_error("BuiltinBackend: Cannot multiply Fhenon values of different types");
+  }
+
+  auto ctA = bufferOf(a, "multiply");
+  auto ctB = bufferOf(b, "multiply");
+  auto result = runSingleOp(FHN_HMULT, ctA.get(), ctB.get(), 0.0);
+  LOG_MESSAGE("BuiltinBackend: Performed FHN multiplication (HMULT)");
+  return makeTypedResult(a, FhnCiphertext{std::move(result), this}, "multiply");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::addPlain([[maybe_unused]] const FhenonBase &a,
+                                                     [[maybe_unused]] double scalar) {
+  ensureReady();
+  if (!a.isEncrypted_ || !a.ciphertext_.has_value()) {
+    throw std::runtime_error("BuiltinBackend: Cannot add plain to unencrypted Fhenon value");
+  }
+  auto ctA = bufferOf(a, "addPlain");
+  auto result = runSingleOp(FHN_ADD_CS, ctA.get(), nullptr, scalar);
+  LOG_MESSAGE("BuiltinBackend: FHN addPlain (ADD_CS) with scalar " << scalar);
+  return makeTypedResult(a, FhnCiphertext{std::move(result), this}, "addPlain");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::multiplyPlain([[maybe_unused]] const FhenonBase &a,
+                                                          [[maybe_unused]] double scalar) {
+  ensureReady();
+  if (!a.isEncrypted_ || !a.ciphertext_.has_value()) {
+    throw std::runtime_error("BuiltinBackend: Cannot multiply plain with unencrypted Fhenon value");
+  }
+  auto ctA = bufferOf(a, "multiplyPlain");
+  auto result = runSingleOp(FHN_MULT_CS, ctA.get(), nullptr, scalar);
+  LOG_MESSAGE("BuiltinBackend: FHN multiplyPlain (MULT_CS) with scalar " << scalar);
+  return makeTypedResult(a, FhnCiphertext{std::move(result), this}, "multiplyPlain");
+}
+
+std::any BuiltinBackend::decrypt(const FhenonBase &entity) const {
+  ensureReady();
+
+  if (!entity.isEncrypted_ || !entity.ciphertext_.has_value()) {
+    auto type = entity.type();
+    if (type == typeid(int)) {
+      const auto &derivedEntity = dynamic_cast<const Fhenon<int> &>(entity);
+      return derivedEntity.getValue();
+    } else if (type == typeid(double)) {
+      const auto &derivedEntity = dynamic_cast<const Fhenon<double> &>(entity);
+      return derivedEntity.getValue();
+    } else if (type == typeid(float)) {
+      const auto &derivedEntity = dynamic_cast<const Fhenon<float> &>(entity);
+      return derivedEntity.getValue();
+    }
+    return {};
+  }
+
+  auto type = entity.type();
+  auto ct = bufferOf(entity, "decrypt");
+  if (type == typeid(int)) {
+    int64_t value = 0;
+    if (toyfhe_fhn_decrypt_i64(fhn_ctx_, ct.get(), &value) != 0) {
+      throw std::runtime_error("BuiltinBackend: toyfhe_fhn_decrypt_i64 failed");
+    }
+    LOG_MESSAGE("BuiltinBackend: Decrypted int value " << value);
+    return static_cast<int>(value);
+  } else if (type == typeid(double)) {
+    double value = 0.0;
+    if (toyfhe_fhn_decrypt_f64(fhn_ctx_, ct.get(), &value) != 0) {
+      throw std::runtime_error("BuiltinBackend: toyfhe_fhn_decrypt_f64 failed");
+    }
+    LOG_MESSAGE("BuiltinBackend: Decrypted double value " << value);
+    return value;
+  } else if (type == typeid(float)) {
+    double value = 0.0;
+    if (toyfhe_fhn_decrypt_f64(fhn_ctx_, ct.get(), &value) != 0) {
+      throw std::runtime_error("BuiltinBackend: toyfhe_fhn_decrypt_f64 failed");
+    }
+    LOG_MESSAGE("BuiltinBackend: Decrypted float value " << static_cast<float>(value));
+    return static_cast<float>(value);
+  }
+  return {};
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::bitAnd([[maybe_unused]] const FhenonBase &a,
+                                                   [[maybe_unused]] const FhenonBase &b) const {
+  throw std::runtime_error("Bitwise AND not supported by BuiltinBackend");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::bitOr([[maybe_unused]] const FhenonBase &a,
+                                                  [[maybe_unused]] const FhenonBase &b) const {
+  throw std::runtime_error("Bitwise OR not supported by BuiltinBackend");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::bitXor([[maybe_unused]] const FhenonBase &a,
+                                                   [[maybe_unused]] const FhenonBase &b) const {
+  throw std::runtime_error("Bitwise XOR not supported by BuiltinBackend");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::compareEq([[maybe_unused]] const FhenonBase &a,
+                                                      [[maybe_unused]] const FhenonBase &b) const {
+  throw std::runtime_error("Equality comparison not supported by BuiltinBackend");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::compareLt([[maybe_unused]] const FhenonBase &a,
+                                                      [[maybe_unused]] const FhenonBase &b) const {
+  throw std::runtime_error("Less than comparison not supported by BuiltinBackend");
+}
+
+std::shared_ptr<FhenonBase> BuiltinBackend::compareLe([[maybe_unused]] const FhenonBase &a,
+                                                      [[maybe_unused]] const FhenonBase &b) const {
+  throw std::runtime_error("Less equal comparison not supported by BuiltinBackend");
+}
+
+} // namespace fhenomenon

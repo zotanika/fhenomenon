@@ -108,4 +108,5 @@ variants. Every warmup and timed execution checks all 64 logical output values
 against the original independent oracle. All modes share ciphertexts and keys;
 only the explicit region reference has compiler entrypoints available. Setup,
 preparation, retained bytes and warm complete-app samples are reported
-separately. See the [measurement report](matvec-preparation-validation-2026-10-31.md).
+separately. Run the benchmark on the target provider and hardware before
+comparing implementation costs.

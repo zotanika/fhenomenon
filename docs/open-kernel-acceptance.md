@@ -26,8 +26,8 @@ adoption claim.
 | `logreg` | Three dot products, each transformed by $3d - d^3$, then summed. | Execution of that polynomial, not validation of a logistic model. |
 | `psi-eq` | AND of 32 aligned-pair equality results. | Exact Boolean requirements, not a private set intersection protocol. |
 
-These descriptions follow `benchmarks/corpus/corpus_shapes.cpp`. The current
-`examples/resnet_circuit.cpp` computes plaintext vectors and ReLU. It is not an
+These descriptions follow `cpp/benchmarks/corpus/corpus_shapes.cpp`. The current
+`cpp/examples/resnet_circuit.cpp` computes plaintext vectors and ReLU. It is not an
 encrypted integration test.
 
 ## First release: independent contribution on genuine CKKS

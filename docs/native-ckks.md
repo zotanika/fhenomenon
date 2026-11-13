@@ -73,6 +73,32 @@ component counts and scales within relative $10^{-12}$; there is no automatic sc
 or level alignment. Plaintext-buffer and boolean/comparison opcodes are not
 advertised. The circuit author remains responsible for numerical headroom.
 
+### Optional public packed plaintexts
+
+`FHN/fhn_plaintext_api.h` defines a separate optional version-1 extension;
+existing raw opcodes and the backend vtable are unchanged. Resolve the
+`ckks_fhn_plaintext_*` symbols to query storage, encode an immutable public real
+vector, multiply or add it to a ciphertext, query its bytes and free it. The
+preparation binds the compute context, logical slot count, level and scale. It
+can be reused with different compatible encrypted inputs. It contains public
+coefficients and has no secret-key dependency.
+
+Multiply preparation uses the dropped prime as its encoding scale: application
+consumes one level and preserves the input scale, including for integer or zero
+weights. Add preparation uses the input scale and consumes no level. Short
+power-of-two vectors repeat across physical slots. Apply calls use the provider's
+preallocated workspace and support output aliases; rejected calls leave outputs
+unchanged. Free preparations before their context and unload the provider last.
+
+The separately linked `Fhenomenon::PublicLinearKernels` contribution exposes
+`PublicLinearRuntime::prepareRow` and `dot`. It reserves encoded public rows
+before allocation, reuses them across scopes and accounts temporary publication
+buffers. A row is multiplied, reduced with rotations/additions, then biased.
+Every output slot contains the resulting scalar.
+`PublicLinearContributionTest` validates prepared rows and output ownership.
+The separate tensor provider also exposes a packed public-linear contribution;
+see [provider coverage](kernel-providers.md).
+
 ## Client and evaluator lifetime
 
 The additive `fhn_client_create/destroy/prepare/encrypt_vec_f64/decrypt_vec_f64`
@@ -88,7 +114,7 @@ each element is the C-compatible `FhnComplex64 { double real, imag; }` from
 the exact logical count. Rejected calls leave the output unchanged. The real
 and complex functions share the same ciphertext representation: real decryption
 returns its real projection. ABI version 1 and the vtable layout remain unchanged.
-See the [complex monitoring example](../examples/private_spectrum/README.md) for
+See the [complex monitoring example](../cpp/examples/private_spectrum/README.md) for
 scoped cross-spectrum evaluation through a separately linked contribution.
 
 Create a compute context, then one client for it. `client_prepare(program)`

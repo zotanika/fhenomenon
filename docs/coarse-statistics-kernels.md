@@ -39,7 +39,7 @@ greater than the logical slot count. Partial reductions retain that slot count.
 The native C implementation resides in its own translation unit and reuses
 existing private region arithmetic. It does not invoke the circuit compiler.
 The contribution registration/publication code lives outside the core library
-in `contributions/stats/StatsKernels.cpp` and uses public headers only.
+in `cpp/contributions/stats/StatsKernels.cpp` and uses public headers only.
 
 ## Shared intermediate boundaries
 
@@ -121,12 +121,6 @@ uses the context's existing scratch. Scratch, evaluation keys and tables are
 excluded from the runtime's retained-slab budget, as in the base runtime.
 
 ## Validation and measurement
-
-See the [measured results and validation](coarse-statistics-validation-2026-10-31.md)
-for the statistics speedup, the inconclusive packed-dot result and exact scope.
-The subsequent [matvec investigation](matvec-preparation-validation-2026-10-31.md)
-keeps the dot formula fixed and measures explicit reusable preparations through
-a separate contribution, with the runtime core unchanged.
 
 `fhn-bench-runtime` retains the original immediate, shared-rotation-preparation
 and explicit-region modes. It adds contributed and split modes for `stats` and

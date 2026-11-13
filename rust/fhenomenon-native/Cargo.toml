@@ -1,0 +1,11 @@
+[package]
+name = "fhenomenon-native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shared native CKKS provider for the independent Fhenomenon Rust runtime"
+
+[dependencies]
+fhenomenon = { path = "../fhenomenon", version = "0.1.0" }
+libloading = "0.8"

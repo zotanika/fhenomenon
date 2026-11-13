@@ -123,7 +123,7 @@ The callback executes once using ordinary public C++ control flow. `Scope::input
 retains a concrete Value from the same Runtime and deduplicates exact identity.
 `Scope::submit(operation, inputs, owning_attributes, output_count)` records a
 request, including zero/multiple outputs. It returns opaque `ScopeValue` symbols,
-which cannot be inspected, decrypted or converted to boolean. Symbols are valid
+whose secret contents cannot be inspected, decrypted or converted to boolean. Symbols are valid
 only in that recording; concrete exported Values can cross scopes. Capture
 requires owning immutable attributes, never references to temporary buffers.
 The Runtime must outlive a native Session.
@@ -134,7 +134,8 @@ read-only matcher and executor. The matcher receives a bounded `ScopeView` and
 returns a prefix length, or zero to decline. Higher priorities win; registration
 order resolves ties. This is a local selection policy, not an optimal global
 plan. The scope registry is snapshotted before capture. Ordinary recipe selection
-still snapshots per submission. Missing span matches fall back to one ordinary
+still snapshots per submission; a contracted scope additionally freezes both
+registries for its duration. Missing span matches fall back to one ordinary
 `Runtime::submit` request.
 
 `ScopeView` exposes commands and any currently concrete values without requiring
@@ -148,6 +149,17 @@ results after their last use, while explicit exports and Value dependencies
 retain their resources. Callback export order and duplicates are preserved.
 Views are borrowed for one callback and must not be retained.
 
+`Runtime::inspectScope(capture, inspect, options)` records and validates a scope
+without running matchers, kernels or ordinary recipes. Capture executes once;
+the inspector receives the full borrowed `ScopeView`, bounded by the command
+cap rather than matcher lookahead. `view.subview(offset, length)` exposes a
+contiguous candidate while preserving liveness against the complete recording:
+later uses outside the candidate and explicit exports still count. Registry
+mutation, nested scopes, immediate submission and value creation are rejected
+during inspection. This API reports structure; it does not change dispatch or
+estimate execution cost. An application can use it to inspect candidate spans
+without executing model operations.
+
 Scope callbacks, matchers and executors are trusted host extensions. Matchers
 must be read-only; immediate `submit` and `makeValue` on this Runtime are rejected
 during capture and matching. Executors may compose ordinary requests. Nested
@@ -156,6 +168,48 @@ and mixed Fhenon recording. Recording failures execute no captured commands.
 Executor failures release unpublished results and never retry another kernel;
 they do not undo an extension's external side effects. `scope.span` trace events
 show the chosen kernel, command start/count and live-in/live-out counts.
+
+### Public contracts for complete graphs
+
+Set `ScopeOptions::contract` to an owning `shared_ptr<const ScopeContract>` to
+enable symbolic inference. All three callbacks are required:
+
+- `describe(Value)` describes an imported resource.
+- `infer(operation, input_descriptors, attributes)` describes every output of a
+  recorded command, or rejects it before any command executes.
+- `validate(Value, descriptor)` checks provider-specific properties of a produced
+  resource before its span outputs are published.
+
+`ScopeDescriptor` contains `format`, `kind`, `bytes`, and opaque public `metadata`.
+The core validates format/kind/bytes; the provider owns the metadata schema and
+its inference rules. For example, a provider can propagate shape, ciphertext
+level, scale and representation without evaluating encrypted data. Both
+`scope.descriptor(symbol)` during capture and `view.descriptor(symbol)` during
+matching expose this public information, including for non-concrete outputs.
+Descriptor references during capture must not be retained across recording calls.
+
+The callbacks are metadata-only: Runtime submission, allocation and recursive
+recording are rejected while they run. Callback functions are copied when a
+scope is created; referenced application state must remain valid and immutable.
+This is a trusted extension contract, not a sandbox against arbitrary native
+code. Actual output validation applies to ordinary recipes and contributed
+multi-command kernels alike. Legacy scopes without a contract retain their
+existing behavior. A contract validates the provider's declared operation rules;
+it does not prove numerical accuracy or replace recipe/kernel selection with an
+optimal global planner.
+
+`runtime.scopeStats()` reports the latest admitted run or inspection independently
+of trace retention: commands, values, imports, input edges, exports, completed
+commands, ordinary-recipe spans and kernel spans. Failed runs preserve the
+progress before failure. Recorded and completed counts distinguish a graph that
+was merely captured from one that executed. Internal work inside a provider
+operation is not counted as additional scope commands.
+
+Large graphs use growing capture buffers, span-local live-in deduplication and
+last-use release lists. Intermediate lifetime handling no longer scans the whole
+value table after each span. The graph still occupies host memory; structural
+caps and retained-resource budgets do not account for arbitrary attribute
+payloads, callback temporaries, keys or provider workspace.
 
 ### Scope options: limits, selection and fallback
 
@@ -174,8 +228,10 @@ change an already-created Session.
 | `max_lookahead` | `32` | Maximum number of consecutive commands shown to one matcher. The actual window is the minimum of this value, that kernel's `max_commands`, and the number of commands remaining. A smaller window limits eligible spans by truncating the view rather than raising an overflow error. |
 | `max_match_attempts` | `4096` | Total `ScopeKernel::match` calls permitted across the entire run, including declines. The counter does not reset at each command. It does not count ordinary recipe applicability checks or requests composed inside an executor. |
 | `use_kernels` | `true` | Enables contributed scope-span matching. With `false`, each recorded command goes through ordinary `Runtime::submit` while capture, dependency tracking, resource release and exports remain active. |
+| `contract` | null | Optional public descriptor inference and produced-resource validation; freezes recipe/kernel registration during the scope. |
+| `max_duration_ms` | `0` | Wall-clock budget beginning at capture. Zero means unlimited. Checked when capture finishes and at execution span boundaries; a running callback or provider operation cannot be preempted. |
 
-All six numeric fields must be positive, even with `use_kernels = false`.
+All six structural caps must be positive, even with `use_kernels = false`.
 A zero field raises `InvalidRequest` before the capture callback runs. Exceeding
 `max_commands`, `max_values` or `max_input_edges` raises `BudgetExceeded` during
 recording. `max_exports` is checked after the callback returns, before any
@@ -234,7 +290,7 @@ memory. They do not guarantee a latency bound or the fastest kernel choice.
 There is no speculative replay, encrypted branch exploration, automatic key
 discovery or automatic reuse discovery.
 
-The [search scope contribution](../contributions/search/README.md#native-session-scopes)
+The [search scope contribution](../cpp/contributions/search/README.md#native-session-scopes)
 selects multi-block and single-block implementations over separately recorded
 requests. Its query preparation survives both ordinary commands and later scopes.
 `NativeRuntime` also provides scoped physical op/rotation adapters and public
@@ -271,7 +327,7 @@ adds an explicit reusable source artifact, complete dots, products and partial
 reductions. Fixed-multiplier companions and rotation maps survive separate
 requests and ordinary intermediate commands, without changing the runtime core.
 
-`test/install-consumer/rotation_contribution.cpp` is compiled separately using
+`cpp/test/install-consumer/rotation_contribution.cpp` is compiled separately using
 only installed public headers. It registers `example.rotation-pair`, a
 multi-output recipe composing two `native.rotate` requests that share one
 caller-supplied preparation. The installed consumer also passes an immediate
@@ -293,9 +349,6 @@ rotates across modes. This is a comparison between paths of this project, not
 an OpenFHE/SEAL/HEaaN benchmark. The explicit region example chooses a 32 MiB
 reservation; it is not an automatically determined optimum.
 
-The [2026-10-31 validation report](lightweight-runtime-validation-2026-10-31.md)
-records tests, measured costs and review corrections. Complete timing samples
-are in [the result JSON](../benchmarks/results/2026-10-31-lightweight-runtime-release.json).
 
 `stats` computes sums and scaled population variances of two 64-slot datasets;
 `matvec-fused` computes an encrypted $8 \times 8$ matrix/vector example with eight

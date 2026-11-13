@@ -7,7 +7,8 @@ whole affine expression or a sum of products before choosing arithmetic and
 storage. The existing `FhnProgram` opcode interface remains available with its
 original physical semantics.
 
-Measured application coverage and timings: [validation report](circuit-execution-validation-2026-10-28.md).
+The corpus benchmark below checks numerical results and records complete
+application timings for the selected provider.
 
 ## Public API
 
@@ -92,7 +93,7 @@ Baseline execution failures are reported explicitly; an app newly enabled by
 compilation has no baseline speedup. The plaintext oracle evaluates the original
 corpus graph, independently of the imported circuit and native execution.
 
-The current user-owned `examples/resnet_circuit.cpp` runs plaintext vectors and
+The current user-owned `cpp/examples/resnet_circuit.cpp` runs plaintext vectors and
 ReLU, so it is not included as encrypted application evidence. The ordinary
 `Fhenon`/`Session` frontend still defaults to its existing backend; using this
 circuit path is explicit. This implementation does not add bootstrapping, GPU

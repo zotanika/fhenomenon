@@ -7,8 +7,43 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
+  python-model-sdk:
+    name: Python Model SDK
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install public SDK with CPU PyTorch
+      run: |
+        python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.7.1'
+        python -m pip install './python[ml]'
+
+    - name: Test installed public SDK
+      run: python -m unittest discover -s python/tests -v
+
+    - name: Build native tensor libraries
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=OFF -DBUILD_DOCUMENTATION=OFF
+        cmake --build build --target fhn_tensor_runtime -j2
+
+    - name: Test encrypted execution and implementation identity
+      env:
+        FHN_LIBRARY_DIR: ${{ github.workspace }}/build/lib
+      run: |
+        python -m unittest \
+          python.native_tests.test_backend python.native_tests.test_runtime \
+          python.native_tests.test_scoped_runtime python.native_tests.test_scoped_tensor \
+          python.native_tests.test_tensor_kernels python.native_tests.test_library_identity \
+          python.native_tests.test_semantic_measurements python.native_tests.test_model_compiler
+
   build-and-test:
-    name: Build and Test
+    name: C++ Build and Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,7 +54,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: false  # cheddar-fhe requires CUDA, skip on CI
+        submodules: false
 
     - name: Install dependencies (Ubuntu)
       if: runner.os == 'Linux'
@@ -45,9 +80,29 @@ jobs:
 
     - name: Build without tests or LTO
       run: |
-        cmake -S . -B build-no-tests -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+        cmake -S cpp -B build-no-tests -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
           -DBUILD_TEST=OFF -DBUILD_DOCUMENTATION=OFF -DDISABLE_LTO=ON
         cmake --build build-no-tests
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Rust formatting and lint
+      working-directory: rust
+      run: |
+        cargo fmt --all -- --check
+        cargo clippy --workspace --all-targets -- -D warnings
+
+    - name: Rust tests with shared native provider
+      working-directory: rust
+      shell: bash
+      run: |
+        extension=so
+        if [ "${{ runner.os }}" = "macOS" ]; then extension=dylib; fi
+        FHN_NATIVE_TEST_LIBRARY="${{ github.workspace }}/build/lib/libckks_fhn.${extension}" \
+          cargo test --workspace
 
     # ctest pipes gtest's fully-buffered stdout, so a crashing binary loses
     # its output tail and hides which case trapped. Re-run each case in its

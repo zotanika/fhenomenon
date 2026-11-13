@@ -1,0 +1,772 @@
+{
+  "version": 1,
+  "integer_bytes": 8,
+  "cases": [
+    {
+      "name": "chain_and_duplicate_exports",
+      "inputs": [
+        2,
+        3
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            1
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            2,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        3,
+        2,
+        3
+      ],
+      "repeat_first_import": true,
+      "expected": [
+        7,
+        5,
+        7
+      ],
+      "aliases": [
+        [
+          0,
+          2
+        ]
+      ],
+      "stats": {
+        "commands": 2,
+        "values": 4,
+        "imports": 2,
+        "input_edges": 4,
+        "exports": 3,
+        "executed_commands": 2,
+        "recipe_spans": 2,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "empty_scope_exports_identity",
+      "inputs": [
+        7
+      ],
+      "commands": [],
+      "exports": [
+        0,
+        0
+      ],
+      "expected": [
+        7,
+        7
+      ],
+      "aliases": [
+        [
+          0,
+          1
+        ]
+      ],
+      "stats": {
+        "commands": 0,
+        "values": 1,
+        "imports": 1,
+        "input_edges": 0,
+        "exports": 2,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "multi_zero_and_dead_outputs",
+      "inputs": [
+        4
+      ],
+      "commands": [
+        {
+          "op": "split",
+          "inputs": [
+            0
+          ],
+          "outputs": 2
+        },
+        {
+          "op": "observe",
+          "inputs": [
+            1
+          ],
+          "outputs": 0
+        }
+      ],
+      "exports": [
+        0
+      ],
+      "expected": [
+        4
+      ],
+      "stats": {
+        "commands": 2,
+        "values": 3,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 1,
+        "executed_commands": 2,
+        "recipe_spans": 2,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "dead_terminal_output",
+      "inputs": [
+        4
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [],
+      "expected": [],
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 0,
+        "executed_commands": 1,
+        "recipe_spans": 1,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "command_cap_prevents_all_execution",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            1,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1
+      ],
+      "caps": {
+        "max_commands": 1
+      },
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "output_value_cap",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "split",
+          "inputs": [
+            0
+          ],
+          "outputs": 2
+        }
+      ],
+      "exports": [],
+      "caps": {
+        "max_values": 2
+      },
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 0,
+        "values": 1,
+        "imports": 1,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "import_value_cap",
+      "inputs": [
+        1,
+        2
+      ],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_values": 1
+      },
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 0,
+        "values": 1,
+        "imports": 1,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "input_edges_count_duplicate_uses",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1
+      ],
+      "caps": {
+        "max_input_edges": 1
+      },
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 0,
+        "values": 1,
+        "imports": 1,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "export_cap_counts_aliases",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1,
+        1
+      ],
+      "caps": {
+        "max_exports": 1
+      },
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "contract_output_count_rejected",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 2
+        }
+      ],
+      "exports": [],
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 1,
+        "imports": 1,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "late_contract_error",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "invalid",
+          "inputs": [
+            1
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [],
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "allocation_budget_cleans_unpublished_result",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1
+      ],
+      "runtime_bytes": 8,
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 1,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "recipe_output_descriptor_rejected",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1
+      ],
+      "bad_output": true,
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 2,
+        "exports": 1,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "missing_recipe_is_unsupported",
+      "inputs": [
+        1
+      ],
+      "commands": [
+        {
+          "op": "missing",
+          "inputs": [
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1
+      ],
+      "error": "Unsupported",
+      "stats": {
+        "commands": 1,
+        "values": 2,
+        "imports": 1,
+        "input_edges": 1,
+        "exports": 1,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "fused_span_preserves_intermediate_liveout",
+      "inputs": [
+        2
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            1,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            1,
+            2
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        1,
+        3
+      ],
+      "kernel": "two_adds",
+      "expected": [
+        4,
+        10
+      ],
+      "stats": {
+        "commands": 3,
+        "values": 4,
+        "imports": 1,
+        "input_edges": 6,
+        "exports": 2,
+        "executed_commands": 3,
+        "recipe_spans": 1,
+        "kernel_spans": 1
+      }
+    },
+    {
+      "name": "lookahead_shortens_matching_without_error",
+      "inputs": [
+        2
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            1,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        2
+      ],
+      "kernel": "two_adds",
+      "caps": {
+        "max_lookahead": 1
+      },
+      "expected": [
+        6
+      ],
+      "stats": {
+        "commands": 2,
+        "values": 3,
+        "imports": 1,
+        "input_edges": 4,
+        "exports": 1,
+        "executed_commands": 2,
+        "recipe_spans": 2,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "matching_cap_counts_declines",
+      "inputs": [
+        2
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            1,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        2
+      ],
+      "kernel": "decline",
+      "caps": {
+        "max_match_attempts": 1
+      },
+      "error": "BudgetExceeded",
+      "stats": {
+        "commands": 2,
+        "values": 3,
+        "imports": 1,
+        "input_edges": 4,
+        "exports": 1,
+        "executed_commands": 1,
+        "recipe_spans": 1,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "disabled_kernels_skip_matching_cap",
+      "inputs": [
+        2
+      ],
+      "commands": [
+        {
+          "op": "add",
+          "inputs": [
+            0,
+            0
+          ],
+          "outputs": 1
+        },
+        {
+          "op": "add",
+          "inputs": [
+            1,
+            0
+          ],
+          "outputs": 1
+        }
+      ],
+      "exports": [
+        2
+      ],
+      "kernel": "decline",
+      "caps": {
+        "max_match_attempts": 1
+      },
+      "use_kernels": false,
+      "expected": [
+        6
+      ],
+      "stats": {
+        "commands": 2,
+        "values": 3,
+        "imports": 1,
+        "input_edges": 4,
+        "exports": 1,
+        "executed_commands": 2,
+        "recipe_spans": 2,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "zero_max_commands",
+      "inputs": [],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_commands": 0
+      },
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 0,
+        "imports": 0,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "zero_max_values",
+      "inputs": [],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_values": 0
+      },
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 0,
+        "imports": 0,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "zero_max_input_edges",
+      "inputs": [],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_input_edges": 0
+      },
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 0,
+        "imports": 0,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "zero_max_exports",
+      "inputs": [],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_exports": 0
+      },
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 0,
+        "imports": 0,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "zero_max_lookahead",
+      "inputs": [],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_lookahead": 0
+      },
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 0,
+        "imports": 0,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    },
+    {
+      "name": "zero_max_match_attempts",
+      "inputs": [],
+      "commands": [],
+      "exports": [],
+      "caps": {
+        "max_match_attempts": 0
+      },
+      "error": "InvalidRequest",
+      "stats": {
+        "commands": 0,
+        "values": 0,
+        "imports": 0,
+        "input_edges": 0,
+        "exports": 0,
+        "executed_commands": 0,
+        "recipe_spans": 0,
+        "kernel_spans": 0
+      }
+    }
+  ]
+}
