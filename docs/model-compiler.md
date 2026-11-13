@@ -129,6 +129,11 @@ cross-operator fusion and automatic optimal partitioning are not implemented.
 
 ## Engineering requests and measured costs
 
+[The issue-automation example](kernel-engineering-issues.md) runs an encrypted
+training Scope, ranks its measured semantic contracts and creates or reuses a
+GitHub issue. The SDK also emits local Markdown/JSON drafts for review before
+publication; compilation itself has no network side effects.
+
 `program.kernel_requests()` groups secret operations by semantic signature. Each
 request includes exact node coverage, input/output contracts, scalar keyword
 arguments, selected implementation name/version, declined candidates and

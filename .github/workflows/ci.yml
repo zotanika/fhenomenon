@@ -40,7 +40,8 @@ jobs:
           python.native_tests.test_backend python.native_tests.test_runtime \
           python.native_tests.test_scoped_runtime python.native_tests.test_scoped_tensor \
           python.native_tests.test_tensor_kernels python.native_tests.test_library_identity \
-          python.native_tests.test_semantic_measurements python.native_tests.test_model_compiler
+          python.native_tests.test_semantic_measurements python.native_tests.test_model_compiler \
+          python.native_tests.test_kernel_issue_demo
 
   build-and-test:
     name: C++ Build and Test

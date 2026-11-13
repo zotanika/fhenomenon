@@ -7,6 +7,7 @@ from .tensor import Tensor, TensorEngine, ReferenceVectorBackend
 from .torch_frontend import CapturedModel, capture_training
 from .kernels import native_tensor_registry, runtime_environment
 from .costs import price_kernel_requests
+from .requests import derive_kernel_issues
 
 __all__ = [
     "NodeContract",
@@ -25,4 +26,5 @@ __all__ = [
     "native_tensor_registry",
     "runtime_environment",
     "price_kernel_requests",
+    "derive_kernel_issues",
 ]

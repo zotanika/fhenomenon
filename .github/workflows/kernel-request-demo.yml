@@ -1,0 +1,97 @@
+name: Kernel engineering request example
+
+on:
+  # Only changes to this public fixture trigger automatic publication.
+  # Ordinary model code, PRs and private-repository pushes never do.
+  push:
+    branches: [main]
+    paths: [python/examples/kernel_issue_demo.py]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Create or reuse one issue from the public fixture
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kernel-request-publication
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    if: github.event_name == 'workflow_dispatch' || (!github.event.repository.private && !github.event.repository.fork)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install capture dependencies
+        run: |
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.7.1'
+          python -m pip install './python[ml]'
+      - name: Check request derivation and publication protocol
+        run: python -m unittest discover -s python/tests -q
+      - name: Build the native CPU provider
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=OFF -DBUILD_DOCUMENTATION=OFF
+          cmake --build build --target fhn_tensor_runtime -j2
+      - name: Execute and validate encrypted training
+        env:
+          FHN_LIBRARY_DIR: ${{ github.workspace }}/build/lib
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/python/examples/kernel_issue_demo.py
+          EVIDENCE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python -m python.examples.kernel_issue_demo \
+            --output build/kernel-request-report.json \
+            --source-url "$SOURCE_URL" --evidence-url "$EVIDENCE_URL"
+          python -m fhenomenon.kernel_issues draft build/kernel-request-report.json \
+            --output build/kernel-request-drafts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kernel-request-evidence
+          path: |
+            build/kernel-request-report.json
+            build/kernel-request-drafts/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: measure
+    if: github.event_name == 'push' || inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: kernel-request-evidence
+          path: build
+      - name: Create or reuse the derived issue
+        env:
+          PYTHONPATH: python
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python -m fhenomenon.kernel_issues submit build/kernel-request-drafts/*.json \
+            --repository "$ISSUE_REPOSITORY" --publish > build/kernel-issue-result.json
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          result = json.loads(Path('build/kernel-issue-result.json').read_text())
+          print(json.dumps(result))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write(f"Kernel request {result['status']}: {result['url']}\n")
+          PY
